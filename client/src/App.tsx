@@ -8,6 +8,8 @@ import Home from "@/pages/home";
 import Survey from "@/pages/survey";
 import Admin from "@/pages/admin";
 import Caregivers from "@/pages/caregivers";
+import Reports from "@/pages/reports";
+import Settings from "@/pages/settings";
 
 function Router() {
   return (
@@ -16,6 +18,8 @@ function Router() {
       <Route path="/survey/:checkInId" component={Survey} />
       <Route path="/admin" component={Admin} />
       <Route path="/admin/caregivers" component={Caregivers} />
+      <Route path="/admin/reports" component={Reports} />
+      <Route path="/admin/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
   );
