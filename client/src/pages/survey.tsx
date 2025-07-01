@@ -9,7 +9,7 @@ export default function Survey() {
   const { checkInId } = useParams();
 
   const { data: checkInDetails, isLoading, error } = useQuery({
-    queryKey: ["/api/survey", checkInId],
+    queryKey: [`/api/survey/${checkInId}`],
     enabled: !!checkInId,
   });
 
