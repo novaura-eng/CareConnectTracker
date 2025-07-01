@@ -69,6 +69,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteCaregiver(id: number): Promise<void> {
+    // Check if caregiver has associated patients
+    const associatedPatients = await db.select().from(patients).where(eq(patients.caregiverId, id));
+    
+    if (associatedPatients.length > 0) {
+      throw new Error(`Cannot delete caregiver. ${associatedPatients.length} patient(s) are still assigned to this caregiver. Please reassign or remove patients first.`);
+    }
+    
+    // Check if caregiver has associated weekly check-ins
+    const associatedCheckIns = await db.select().from(weeklyCheckIns).where(eq(weeklyCheckIns.caregiverId, id));
+    
+    if (associatedCheckIns.length > 0) {
+      throw new Error(`Cannot delete caregiver. ${associatedCheckIns.length} weekly check-in(s) are associated with this caregiver. Please remove check-ins first.`);
+    }
+    
     await db.delete(caregivers).where(eq(caregivers.id, id));
   }
 

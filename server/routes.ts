@@ -88,7 +88,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Caregiver deleted successfully" });
     } catch (error) {
       console.error("Error deleting caregiver:", error);
-      res.status(500).json({ message: "Internal server error" });
+      const errorMessage = error instanceof Error ? error.message : "Internal server error";
+      res.status(400).json({ message: errorMessage });
     }
   });
 

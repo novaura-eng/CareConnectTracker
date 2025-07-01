@@ -92,10 +92,11 @@ export default function Caregivers() {
         description: "Caregiver has been successfully removed from the system.",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      const errorMessage = error?.message || "Failed to delete caregiver. Please try again.";
       toast({
-        title: "Error",
-        description: "Failed to delete caregiver. Please try again.",
+        title: "Cannot Delete Caregiver",
+        description: errorMessage,
         variant: "destructive",
       });
     },
