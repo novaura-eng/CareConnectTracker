@@ -92,6 +92,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get patients by caregiver
+  app.get("/api/patients/:caregiverId", async (req, res) => {
+    try {
+      const caregiverId = parseInt(req.params.caregiverId);
+      const patients = await storage.getPatientsByCaregiver(caregiverId);
+      res.json(patients);
+    } catch (error) {
+      console.error("Error fetching patients:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Create weekly check-in
   app.post("/api/check-ins", async (req, res) => {
     try {

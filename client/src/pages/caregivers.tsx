@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,9 +19,16 @@ import Sidebar from "@/components/layout/sidebar";
 export default function Caregivers() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedCaregiver, setSelectedCaregiver] = useState<Caregiver | null>(null);
+  const [showPatients, setShowPatients] = useState(false);
 
   const { data: caregivers, isLoading } = useQuery<Caregiver[]>({
     queryKey: ["/api/caregivers"],
+  });
+
+  const { data: patients } = useQuery<any[]>({
+    queryKey: [`/api/patients/${selectedCaregiver?.id}`],
+    enabled: !!selectedCaregiver && showPatients,
   });
 
   const form = useForm<InsertCaregiver>({
@@ -38,25 +45,59 @@ export default function Caregivers() {
 
   const createMutation = useMutation({
     mutationFn: async (data: InsertCaregiver) => {
-      return apiRequest("POST", "/api/caregivers", data);
+      if (selectedCaregiver) {
+        // Update existing caregiver
+        return apiRequest("PUT", `/api/caregivers/${selectedCaregiver.id}`, data);
+      } else {
+        // Create new caregiver
+        return apiRequest("POST", "/api/caregivers", data);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/caregivers"] });
       setIsDialogOpen(false);
+      setSelectedCaregiver(null);
       form.reset();
       toast({
-        title: "Caregiver Added",
-        description: "New caregiver has been successfully added to the system.",
+        title: selectedCaregiver ? "Caregiver Updated" : "Caregiver Added",
+        description: selectedCaregiver 
+          ? "Caregiver information has been successfully updated."
+          : "New caregiver has been successfully added to the system.",
       });
     },
     onError: (error) => {
       toast({
         title: "Error",
-        description: "Failed to add caregiver. Please try again.",
+        description: selectedCaregiver 
+          ? "Failed to update caregiver. Please try again."
+          : "Failed to add caregiver. Please try again.",
         variant: "destructive",
       });
     },
   });
+
+  // Reset form when dialog state changes
+  React.useEffect(() => {
+    if (selectedCaregiver && isDialogOpen) {
+      form.reset({
+        name: selectedCaregiver.name,
+        phone: selectedCaregiver.phone,
+        email: selectedCaregiver.email || "",
+        address: selectedCaregiver.address || "",
+        emergencyContact: selectedCaregiver.emergencyContact || "",
+        isActive: selectedCaregiver.isActive,
+      });
+    } else if (!selectedCaregiver && isDialogOpen) {
+      form.reset({
+        name: "",
+        phone: "",
+        email: "",
+        address: "",
+        emergencyContact: "",
+        isActive: true,
+      });
+    }
+  }, [selectedCaregiver, isDialogOpen, form]);
 
   const getInitials = (name: string) => {
     return name
@@ -88,16 +129,19 @@ export default function Caregivers() {
                 <h1 className="text-2xl font-bold text-slate-900">Caregiver Management</h1>
                 <p className="mt-1 text-sm text-slate-600">Manage caregiver profiles and contact information</p>
               </div>
-              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <Dialog open={isDialogOpen} onOpenChange={(open) => {
+                setIsDialogOpen(open);
+                if (!open) setSelectedCaregiver(null);
+              }}>
                 <DialogTrigger asChild>
-                  <Button>
+                  <Button onClick={() => setSelectedCaregiver(null)}>
                     <Plus className="mr-2 h-4 w-4" />
                     Add Caregiver
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
-                    <DialogTitle>Add New Caregiver</DialogTitle>
+                    <DialogTitle>{selectedCaregiver ? "Edit Caregiver" : "Add New Caregiver"}</DialogTitle>
                   </DialogHeader>
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-4">
@@ -180,7 +224,10 @@ export default function Caregivers() {
                           Cancel
                         </Button>
                         <Button type="submit" disabled={createMutation.isPending}>
-                          {createMutation.isPending ? "Adding..." : "Add Caregiver"}
+                          {createMutation.isPending 
+                            ? (selectedCaregiver ? "Updating..." : "Adding...") 
+                            : (selectedCaregiver ? "Update Caregiver" : "Add Caregiver")
+                          }
                         </Button>
                       </div>
                     </form>
@@ -344,10 +391,24 @@ export default function Caregivers() {
                               </TableCell>
                               <TableCell>
                                 <div className="flex space-x-2">
-                                  <Button variant="ghost" size="sm">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedCaregiver(caregiver);
+                                      setIsDialogOpen(true);
+                                    }}
+                                  >
                                     Edit
                                   </Button>
-                                  <Button variant="ghost" size="sm">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedCaregiver(caregiver);
+                                      setShowPatients(true);
+                                    }}
+                                  >
                                     View Patients
                                   </Button>
                                 </div>
@@ -364,6 +425,43 @@ export default function Caregivers() {
           </div>
         </main>
       </div>
+
+      {/* Patients View Dialog */}
+      <Dialog open={showPatients} onOpenChange={setShowPatients}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Patients for {selectedCaregiver?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            {patients && patients.length > 0 ? (
+              <div className="space-y-4">
+                {patients.map((patient: any) => (
+                  <div key={patient.id} className="border border-slate-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-medium text-slate-900">{patient.name}</h3>
+                        <p className="text-sm text-slate-600">Medicaid ID: {patient.medicaidId}</p>
+                        {patient.address && (
+                          <p className="text-sm text-slate-500">{patient.address}</p>
+                        )}
+                      </div>
+                      <Badge variant={patient.isActive ? "secondary" : "outline"}>
+                        {patient.isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <User className="h-12 w-12 mx-auto mb-4 text-slate-300" />
+                <p className="text-lg font-medium text-slate-500">No patients found</p>
+                <p className="text-sm text-slate-400">This caregiver has no assigned patients yet</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
