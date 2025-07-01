@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Survey from "@/pages/survey";
 import Admin from "@/pages/admin";
+import Caregivers from "@/pages/caregivers";
 
 function Router() {
   return (
@@ -14,6 +15,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/survey/:checkInId" component={Survey} />
       <Route path="/admin" component={Admin} />
+      <Route path="/admin/caregivers" component={Caregivers} />
       <Route component={NotFound} />
     </Switch>
   );
