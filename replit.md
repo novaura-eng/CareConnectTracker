@@ -1,8 +1,8 @@
-# CareConnect Pro - Replit Configuration
+# Silver CareConnect - Replit Configuration
 
 ## Overview
 
-CareConnect Pro is a healthcare application designed for home care agencies to manage weekly check-ins with family caregivers. The system automates the process of sending surveys via SMS, collecting responses about patient care, and providing administrative dashboards for monitoring compliance and health incidents.
+Silver CareConnect is a healthcare application designed for home care agencies to manage weekly check-ins with family caregivers. The system automates the process of sending surveys via SMS, collecting responses about patient care, and providing administrative dashboards for monitoring compliance and health incidents.
 
 ## System Architecture
 
@@ -90,6 +90,7 @@ The application uses a monorepo structure with separate build processes for clie
 ```
 Changelog:
 - July 01, 2025. Initial setup
+- July 01, 2025. Rebranded from CareConnect Pro to Silver CareConnect with custom logo integration
 ```
 
 ## User Preferences

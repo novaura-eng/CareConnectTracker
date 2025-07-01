@@ -1,6 +1,7 @@
 import { HeartHandshake, ClipboardCheck, Users, BarChart3, Settings } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import logoPath from "@assets/image_1751386830041.png";
 
 const navigation = [
   { name: "Weekly Check-ins", href: "/admin", icon: ClipboardCheck },
@@ -19,8 +20,8 @@ export default function Sidebar() {
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <HeartHandshake className="h-6 w-6 text-healthcare-500" />
-              <span className="text-lg font-semibold text-slate-900">CareConnect Pro</span>
+              <img src={logoPath} alt="Silver CareConnect Logo" className="h-6 w-6" />
+              <span className="text-lg font-semibold text-slate-900">Silver CareConnect</span>
             </div>
           </div>
         </div>
@@ -30,8 +31,8 @@ export default function Sidebar() {
       <div className="hidden lg:flex lg:flex-shrink-0 lg:fixed lg:inset-y-0">
         <div className="flex flex-col w-64 bg-white border-r border-slate-200">
           <div className="flex items-center h-16 px-6 border-b border-slate-200">
-            <HeartHandshake className="h-8 w-8 text-healthcare-500 mr-3" />
-            <span className="text-xl font-bold text-slate-900">CareConnect Pro</span>
+            <img src={logoPath} alt="Silver CareConnect Logo" className="h-8 w-8 mr-3" />
+            <span className="text-xl font-bold text-slate-900">Silver CareConnect</span>
           </div>
           
           <nav className="flex-1 px-4 py-6 space-y-2">
@@ -64,7 +65,7 @@ export default function Sidebar() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-slate-900">Administrator</p>
-                <p className="text-xs text-slate-500">CareConnect Pro</p>
+                <p className="text-xs text-slate-500">Silver CareConnect</p>
               </div>
             </div>
           </div>

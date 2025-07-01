@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HeartHandshake, Users, BarChart3, Settings } from "lucide-react";
 import { Link } from "wouter";
+import logoPath from "@assets/image_1751386830041.png";
 
 export default function Home() {
   return (
@@ -10,8 +11,8 @@ export default function Home() {
       <header className="bg-white shadow-sm border-b border-slate-200">
         <div className="px-4 py-6 sm:px-6 lg:px-8">
           <div className="flex items-center space-x-3">
-            <HeartHandshake className="h-8 w-8 text-healthcare-500" />
-            <h1 className="text-3xl font-bold text-slate-900">CareConnect Pro</h1>
+            <img src={logoPath} alt="Silver CareConnect Logo" className="h-8 w-8" />
+            <h1 className="text-3xl font-bold text-slate-900">Silver CareConnect</h1>
           </div>
           <p className="mt-2 text-slate-600">
             Automated weekly check-ins for home care agencies
@@ -25,7 +26,7 @@ export default function Home() {
           {/* Welcome Section */}
           <div className="text-center mb-12">
             <h2 className="text-2xl font-bold text-slate-900 mb-4">
-              Welcome to CareConnect Pro
+              Welcome to Silver CareConnect
             </h2>
             <p className="text-lg text-slate-600 max-w-2xl mx-auto">
               Streamline your home care agency operations with automated weekly check-ins,
