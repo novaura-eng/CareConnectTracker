@@ -80,6 +80,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete caregiver
+  app.delete("/api/caregivers/:id", async (req, res) => {
+    try {
+      const caregiverId = parseInt(req.params.id);
+      await storage.deleteCaregiver(caregiverId);
+      res.json({ message: "Caregiver deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting caregiver:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Create patient
   app.post("/api/patients", async (req, res) => {
     try {

@@ -21,6 +21,7 @@ export interface IStorage {
   getCaregiverByPhone(phone: string): Promise<Caregiver | undefined>;
   createCaregiver(caregiver: InsertCaregiver): Promise<Caregiver>;
   getAllCaregivers(): Promise<Caregiver[]>;
+  deleteCaregiver(id: number): Promise<void>;
   
   // Patient methods
   getPatient(id: number): Promise<Patient | undefined>;
@@ -65,6 +66,10 @@ export class DatabaseStorage implements IStorage {
 
   async getAllCaregivers(): Promise<Caregiver[]> {
     return await db.select().from(caregivers).where(eq(caregivers.isActive, true));
+  }
+
+  async deleteCaregiver(id: number): Promise<void> {
+    await db.delete(caregivers).where(eq(caregivers.id, id));
   }
 
   async getPatient(id: number): Promise<Patient | undefined> {

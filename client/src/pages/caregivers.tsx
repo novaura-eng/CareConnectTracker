@@ -9,9 +9,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Phone, Mail, MapPin, User, AlertCircle } from "lucide-react";
+import { Plus, Phone, Mail, MapPin, User, AlertCircle, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import Sidebar from "@/components/layout/sidebar";
@@ -21,6 +22,8 @@ export default function Caregivers() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedCaregiver, setSelectedCaregiver] = useState<Caregiver | null>(null);
   const [showPatients, setShowPatients] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [caregiverToDelete, setCaregiverToDelete] = useState<Caregiver | null>(null);
 
   const { data: caregivers, isLoading } = useQuery<Caregiver[]>({
     queryKey: ["/api/caregivers"],
@@ -71,6 +74,28 @@ export default function Caregivers() {
         description: selectedCaregiver 
           ? "Failed to update caregiver. Please try again."
           : "Failed to add caregiver. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (caregiverId: number) => {
+      return apiRequest("DELETE", `/api/caregivers/${caregiverId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/caregivers"] });
+      setDeleteConfirmOpen(false);
+      setCaregiverToDelete(null);
+      toast({
+        title: "Caregiver Deleted",
+        description: "Caregiver has been successfully removed from the system.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to delete caregiver. Please try again.",
         variant: "destructive",
       });
     },
@@ -411,6 +436,17 @@ export default function Caregivers() {
                                   >
                                     View Patients
                                   </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => {
+                                      setCaregiverToDelete(caregiver);
+                                      setDeleteConfirmOpen(true);
+                                    }}
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
                                 </div>
                               </TableCell>
                             </TableRow>
@@ -462,6 +498,35 @@ export default function Caregivers() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Caregiver</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{caregiverToDelete?.name}</strong>? 
+              This action cannot be undone. All associated data including patients and check-ins may be affected.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setCaregiverToDelete(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (caregiverToDelete) {
+                  deleteMutation.mutate(caregiverToDelete.id);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
