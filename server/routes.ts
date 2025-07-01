@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertSurveyResponseSchema } from "@shared/schema";
+import { insertSurveyResponseSchema, insertPatientSchema, insertWeeklyCheckInSchema } from "@shared/schema";
 import { smsService } from "./services/sms";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -76,6 +76,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(caregivers);
     } catch (error) {
       console.error("Error fetching caregivers:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create patient
+  app.post("/api/patients", async (req, res) => {
+    try {
+      const validatedData = insertPatientSchema.parse(req.body);
+      const patient = await storage.createPatient(validatedData);
+      res.json(patient);
+    } catch (error) {
+      console.error("Error creating patient:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create weekly check-in
+  app.post("/api/check-ins", async (req, res) => {
+    try {
+      const validatedData = insertWeeklyCheckInSchema.parse(req.body);
+      const checkIn = await storage.createWeeklyCheckIn(validatedData);
+      res.json(checkIn);
+    } catch (error) {
+      console.error("Error creating check-in:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
