@@ -1,0 +1,75 @@
+import { HeartHandshake, ClipboardCheck, Users, BarChart3, Settings } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { cn } from "@/lib/utils";
+
+const navigation = [
+  { name: "Weekly Check-ins", href: "/admin", icon: ClipboardCheck },
+  { name: "Caregivers", href: "/admin/caregivers", icon: Users },
+  { name: "Reports", href: "/admin/reports", icon: BarChart3 },
+  { name: "Settings", href: "/admin/settings", icon: Settings },
+];
+
+export default function Sidebar() {
+  const [location] = useLocation();
+
+  return (
+    <>
+      {/* Mobile navigation */}
+      <nav className="bg-white shadow-sm border-b border-slate-200 lg:hidden">
+        <div className="px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <HeartHandshake className="h-6 w-6 text-healthcare-500" />
+              <span className="text-lg font-semibold text-slate-900">CareConnect Pro</span>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Desktop sidebar */}
+      <div className="hidden lg:flex lg:flex-shrink-0 lg:fixed lg:inset-y-0">
+        <div className="flex flex-col w-64 bg-white border-r border-slate-200">
+          <div className="flex items-center h-16 px-6 border-b border-slate-200">
+            <HeartHandshake className="h-8 w-8 text-healthcare-500 mr-3" />
+            <span className="text-xl font-bold text-slate-900">CareConnect Pro</span>
+          </div>
+          
+          <nav className="flex-1 px-4 py-6 space-y-2">
+            {navigation.map((item) => {
+              const Icon = item.icon;
+              const isActive = location === item.href || (item.href !== "/admin" && location.startsWith(item.href));
+              
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors",
+                    isActive
+                      ? "text-primary-600 bg-primary-50"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                  )}
+                >
+                  <Icon className={cn("mr-3 h-5 w-5", isActive ? "text-primary-600" : "")} />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </nav>
+          
+          <div className="p-4 border-t border-slate-200">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
+                <span className="text-sm font-medium text-white">AD</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-900">Administrator</p>
+                <p className="text-xs text-slate-500">CareConnect Pro</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
