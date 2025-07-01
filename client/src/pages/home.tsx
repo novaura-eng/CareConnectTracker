@@ -15,7 +15,7 @@ export default function Home() {
             <h1 className="text-3xl font-bold text-slate-900">Silver CareConnect</h1>
           </div>
           <p className="mt-2 text-slate-600">
-            Automated weekly check-ins for home care agencies
+            Powered by TrustNet CareFlow
           </p>
         </div>
       </header>
@@ -29,8 +29,7 @@ export default function Home() {
               Welcome to Silver CareConnect
             </h2>
             <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-              Streamline your home care agency operations with automated weekly check-ins,
-              comprehensive reporting, and proactive caregiver support.
+              Automated weekly caregiver check-ins with comprehensive reporting and proactive caregiver support.
             </p>
           </div>
 
