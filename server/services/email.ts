@@ -1,12 +1,11 @@
-import { MailService } from '@sendgrid/mail';
+import sgMail from '@sendgrid/mail';
 
 const apiKey = process.env.SENDGRID_API_KEY;
 if (!apiKey) {
   throw new Error("SENDGRID_API_KEY environment variable must be set");
 }
 
-const mailService = new MailService();
-mailService.setApiKey(apiKey);
+sgMail.setApiKey(apiKey);
 
 interface EmailParams {
   to: string;
@@ -27,7 +26,7 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
     if (params.text) emailData.text = params.text;
     if (params.html) emailData.html = params.html;
     
-    await mailService.send(emailData);
+    await sgMail.send(emailData);
     return true;
   } catch (error: any) {
     console.error('SendGrid email error:', error);

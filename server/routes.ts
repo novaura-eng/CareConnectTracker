@@ -215,7 +215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json({ message: "Test email sent successfully" });
       } else {
         res.status(500).json({ 
-          message: "Failed to send email. Check that your SendGrid API key has 'Mail Send' permissions and verify the sender email address in SendGrid settings." 
+          message: "SendGrid configuration issue - check console logs for details"
         });
       }
     } catch (error) {
