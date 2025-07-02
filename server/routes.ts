@@ -207,13 +207,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         checkInDetails.patient.name,
         surveyUrl,
         weekStart,
-        weekEnd
+        weekEnd,
+        email // Use the recipient's email as sender for testing
       );
 
       if (success) {
         res.json({ message: "Test email sent successfully" });
       } else {
-        res.status(500).json({ message: "Failed to send email" });
+        res.status(500).json({ 
+          message: "Failed to send email. Check that your SendGrid API key has 'Mail Send' permissions and verify the sender email address in SendGrid settings." 
+        });
       }
     } catch (error) {
       console.error("Error sending test email:", error);

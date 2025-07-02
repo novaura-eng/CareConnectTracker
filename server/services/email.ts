@@ -29,8 +29,11 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
     
     await mailService.send(emailData);
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('SendGrid email error:', error);
+    if (error.response?.body?.errors) {
+      console.error('SendGrid error details:', error.response.body.errors);
+    }
     return false;
   }
 }
@@ -139,7 +142,7 @@ export async function sendCaregiverWeeklyEmail(
   surveyUrl: string,
   weekStart: string,
   weekEnd: string,
-  fromEmail: string = "noreply@trustnetcareflow.com"
+  fromEmail: string = "test@example.com"
 ): Promise<boolean> {
   const { subject, html, text } = createCaregiverEmailTemplate(
     caregiverName,
