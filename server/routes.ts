@@ -198,6 +198,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const baseUrl = req.protocol + '://' + req.get('host');
       const surveyUrl = `${baseUrl}/survey/${checkInId}`;
       
+      console.log('Test email - Base URL:', baseUrl);
+      console.log('Test email - Survey URL:', surveyUrl);
+      
       const weekStart = new Date(checkInDetails.checkIn.weekStartDate).toLocaleDateString();
       const weekEnd = new Date(checkInDetails.checkIn.weekEndDate).toLocaleDateString();
       
