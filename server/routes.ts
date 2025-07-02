@@ -195,10 +195,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Test data not found" });
       }
 
-      const baseUrl = req.protocol + '://' + req.get('host');
-      const surveyUrl = `${baseUrl}/survey/${checkInId}`;
+      // Always use the public Replit domain for email links
+      const replitDomain = `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.replit.dev`;
+      const surveyUrl = `${replitDomain}/survey/${checkInId}`;
       
-      console.log('Test email - Base URL:', baseUrl);
       console.log('Test email - Survey URL:', surveyUrl);
       
       const weekStart = new Date(checkInDetails.checkIn.weekStartDate).toLocaleDateString();
