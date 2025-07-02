@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertSurveyResponseSchema, insertPatientSchema, insertWeeklyCheckInSchema } from "@shared/schema";
 import { smsService } from "./services/sms";
+import { sendCaregiverWeeklyEmail } from "./services/email";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Get survey form by check-in ID
@@ -173,6 +174,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Reminder sent successfully" });
     } catch (error) {
       console.error("Error sending reminder:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Test email endpoint
+  app.post("/api/admin/test-email", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email address is required" });
+      }
+
+      // Get the test check-in details
+      const checkInId = 7; // Using our test check-in
+      const checkInDetails = await storage.getWeeklyCheckInWithDetails(checkInId);
+      
+      if (!checkInDetails) {
+        return res.status(404).json({ message: "Test data not found" });
+      }
+
+      const baseUrl = req.protocol + '://' + req.get('host');
+      const surveyUrl = `${baseUrl}/survey/${checkInId}`;
+      
+      const weekStart = new Date(checkInDetails.checkIn.weekStartDate).toLocaleDateString();
+      const weekEnd = new Date(checkInDetails.checkIn.weekEndDate).toLocaleDateString();
+      
+      const success = await sendCaregiverWeeklyEmail(
+        email,
+        checkInDetails.caregiver.name,
+        checkInDetails.patient.name,
+        surveyUrl,
+        weekStart,
+        weekEnd
+      );
+
+      if (success) {
+        res.json({ message: "Test email sent successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to send email" });
+      }
+    } catch (error) {
+      console.error("Error sending test email:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
