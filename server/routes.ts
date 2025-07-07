@@ -81,6 +81,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all patients
+  app.get("/api/patients", async (req, res) => {
+    try {
+      const patients = await storage.getAllPatients();
+      res.json(patients);
+    } catch (error) {
+      console.error("Error fetching patients:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Delete caregiver
   app.delete("/api/caregivers/:id", async (req, res) => {
     try {
@@ -175,6 +186,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error sending reminder:", error);
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Manual survey creation endpoint
+  app.post("/api/admin/manual-survey", async (req, res) => {
+    try {
+      const { caregiverId, patientId } = req.body;
+      
+      if (!caregiverId || !patientId) {
+        return res.status(400).json({ message: "Caregiver ID and Patient ID are required" });
+      }
+
+      // Get current week dates
+      const currentDate = new Date();
+      const weekStart = new Date(currentDate);
+      weekStart.setDate(currentDate.getDate() - currentDate.getDay() + 1);
+      weekStart.setHours(0, 0, 0, 0);
+      
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999);
+
+      // Create weekly check-in
+      const checkIn = await storage.createWeeklyCheckIn({
+        caregiverId,
+        patientId,
+        weekStartDate: weekStart,
+        weekEndDate: weekEnd,
+        isCompleted: false,
+        remindersSent: 0
+      });
+
+      // Get caregiver and patient details
+      const caregiver = await storage.getCaregiver(caregiverId);
+      const patient = await storage.getPatient(patientId);
+
+      if (!caregiver || !patient) {
+        return res.status(404).json({ message: "Caregiver or patient not found" });
+      }
+
+      // Generate survey URL
+      const surveyUrl = `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.replit.dev/survey/${checkIn.id}`;
+
+      res.json({
+        surveyId: checkIn.id,
+        surveyUrl,
+        caregiverName: caregiver.name,
+        patientName: patient.name,
+        weekStart: weekStart.toLocaleDateString(),
+        weekEnd: weekEnd.toLocaleDateString()
+      });
+    } catch (error) {
+      console.error("Manual survey creation error:", error);
+      res.status(500).json({ message: "Failed to create survey" });
     }
   });
 

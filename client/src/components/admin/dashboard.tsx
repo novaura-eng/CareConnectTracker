@@ -6,13 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Download, Send, Mail } from "lucide-react";
+import { Download, Send, Mail, Plus, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import ManualSurveyCreator from "./manual-survey-creator";
 
 export default function Dashboard() {
   const [testEmail, setTestEmail] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isManualSurveyOpen, setIsManualSurveyOpen] = useState(false);
   const { toast } = useToast();
 
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -111,10 +113,23 @@ export default function Dashboard() {
                 <Download className="mr-2 h-4 w-4" />
                 Export Report
               </Button>
-              <Button size="sm">
-                <Send className="mr-2 h-4 w-4" />
-                Send Reminders
-              </Button>
+              <Dialog open={isManualSurveyOpen} onOpenChange={setIsManualSurveyOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Survey
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[600px]">
+                  <DialogHeader>
+                    <DialogTitle>Manual Survey Creation</DialogTitle>
+                    <DialogDescription>
+                      Create survey links for your caregivers to send via email, text, or messaging apps.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <ManualSurveyCreator />
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </div>

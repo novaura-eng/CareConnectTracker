@@ -26,6 +26,7 @@ export interface IStorage {
   // Patient methods
   getPatient(id: number): Promise<Patient | undefined>;
   getPatientsByCaregiver(caregiverId: number): Promise<Patient[]>;
+  getAllPatients(): Promise<Patient[]>;
   createPatient(patient: InsertPatient): Promise<Patient>;
   
   // Weekly check-in methods
@@ -95,6 +96,10 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(patients).where(
       and(eq(patients.caregiverId, caregiverId), eq(patients.isActive, true))
     );
+  }
+
+  async getAllPatients(): Promise<Patient[]> {
+    return await db.select().from(patients).where(eq(patients.isActive, true));
   }
 
   async createPatient(insertPatient: InsertPatient): Promise<Patient> {
