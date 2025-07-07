@@ -17,9 +17,9 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/survey/:checkInId" component={Survey} />
       <Route path="/admin" component={Admin} />
-      <Route path="/admin/caregivers" component={Caregivers} />
-      <Route path="/admin/reports" component={Reports} />
-      <Route path="/admin/settings" component={Settings} />
+      <Route path="/caregivers" component={Caregivers} />
+      <Route path="/reports" component={Reports} />
+      <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
   );
