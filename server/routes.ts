@@ -227,7 +227,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Generate survey URL for deployed app
-      const surveyUrl = `https://${process.env.REPL_SLUG}-${process.env.REPL_OWNER}.replit.app/survey/${checkIn.id}`;
+      const surveyUrl = `https://care-connect-tracker-tim692.replit.app/survey/${checkIn.id}`;
 
       res.json({
         surveyId: checkIn.id,
@@ -261,7 +261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Always use the deployed Replit domain for email links
-      const replitDomain = `https://${process.env.REPL_SLUG}-${process.env.REPL_OWNER}.replit.app`;
+      const replitDomain = `https://care-connect-tracker-tim692.replit.app`;
       const surveyUrl = `${replitDomain}/survey/${checkInId}`;
       
       console.log('Test email - Survey URL:', surveyUrl);
