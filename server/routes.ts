@@ -226,8 +226,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Caregiver or patient not found" });
       }
 
-      // Generate survey URL
-      const surveyUrl = `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.replit.dev/survey/${checkIn.id}`;
+      // Generate survey URL for deployed app
+      const surveyUrl = `https://${process.env.REPL_SLUG}-${process.env.REPL_OWNER}.replit.app/survey/${checkIn.id}`;
 
       res.json({
         surveyId: checkIn.id,
@@ -260,8 +260,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Test data not found" });
       }
 
-      // Always use the public Replit domain for email links
-      const replitDomain = `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.replit.dev`;
+      // Always use the deployed Replit domain for email links
+      const replitDomain = `https://${process.env.REPL_SLUG}-${process.env.REPL_OWNER}.replit.app`;
       const surveyUrl = `${replitDomain}/survey/${checkInId}`;
       
       console.log('Test email - Survey URL:', surveyUrl);
