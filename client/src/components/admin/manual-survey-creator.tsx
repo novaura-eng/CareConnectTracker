@@ -33,8 +33,19 @@ export default function ManualSurveyCreator() {
 
   const createSurveyMutation = useMutation({
     mutationFn: async (data: SurveyCreation) => {
-      const response = await apiRequest("/api/admin/manual-survey", "POST", data);
-      return response;
+      const response = await fetch("/api/admin/manual-survey", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to create survey");
+      }
+      
+      return response.json();
     },
     onSuccess: (data) => {
       setSurveyLink(data.surveyUrl);
