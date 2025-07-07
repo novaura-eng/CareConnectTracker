@@ -5,9 +5,9 @@ import logoPath from "@assets/image_1751386830041.png";
 
 const navigation = [
   { name: "Weekly Check-ins", href: "/admin", icon: ClipboardCheck },
-  { name: "Caregivers", href: "/admin/caregivers", icon: Users },
-  { name: "Reports", href: "/admin/reports", icon: BarChart3 },
-  { name: "Settings", href: "/admin/settings", icon: Settings },
+  { name: "Caregivers", href: "/caregivers", icon: Users },
+  { name: "Reports", href: "/reports", icon: BarChart3 },
+  { name: "Settings", href: "/settings", icon: Settings },
 ];
 
 export default function Sidebar() {
