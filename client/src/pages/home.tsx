@@ -70,7 +70,7 @@ export default function Home() {
                   and care assignments in one centralized system.
                 </p>
                 <Button variant="outline" asChild className="w-full">
-                  <Link href="/admin">Manage Caregivers</Link>
+                  <Link href="/caregivers">Manage Caregivers</Link>
                 </Button>
               </CardContent>
             </Card>
@@ -90,7 +90,7 @@ export default function Home() {
                   and identify trends in caregiver feedback.
                 </p>
                 <Button variant="outline" asChild className="w-full">
-                  <Link href="/admin">View Reports</Link>
+                  <Link href="/reports">View Reports</Link>
                 </Button>
               </CardContent>
             </Card>
@@ -110,7 +110,7 @@ export default function Home() {
                   to match your agency's workflow.
                 </p>
                 <Button variant="outline" asChild className="w-full">
-                  <Link href="/admin">Settings</Link>
+                  <Link href="/settings">Settings</Link>
                 </Button>
               </CardContent>
             </Card>
