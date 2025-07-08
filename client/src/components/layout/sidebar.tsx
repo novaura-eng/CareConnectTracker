@@ -1,6 +1,8 @@
-import { HeartHandshake, ClipboardCheck, Users, User, BarChart3, Settings } from "lucide-react";
+import { HeartHandshake, ClipboardCheck, Users, User, BarChart3, Settings, LogOut } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 import logoPath from "@assets/image_1751386830041.png";
 
 const navigation = [
@@ -60,7 +62,7 @@ export default function Sidebar() {
           </nav>
           
           <div className="p-4 border-t border-slate-200">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3 mb-3">
               <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
                 <span className="text-sm font-medium text-white">AD</span>
               </div>
@@ -69,6 +71,15 @@ export default function Sidebar() {
                 <p className="text-xs text-slate-500">Silver CareConnect</p>
               </div>
             </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start text-slate-600 hover:text-red-600 hover:bg-red-50"
+              onClick={() => window.location.href = "/api/logout"}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
+            </Button>
           </div>
         </div>
       </div>

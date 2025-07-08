@@ -1,8 +1,11 @@
 import { 
+  users,
   caregivers, 
   patients, 
   weeklyCheckIns, 
   surveyResponses,
+  type User,
+  type UpsertUser,
   type Caregiver, 
   type InsertCaregiver,
   type Patient,
@@ -16,6 +19,10 @@ import { db } from "./db";
 import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
 
 export interface IStorage {
+  // User operations (for Replit Auth)
+  getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
+  
   // Caregiver methods
   getCaregiver(id: number): Promise<Caregiver | undefined>;
   getCaregiverByPhone(phone: string): Promise<Caregiver | undefined>;
@@ -47,6 +54,27 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // User operations (for Replit Auth)
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
+  }
+
   async getCaregiver(id: number): Promise<Caregiver | undefined> {
     const [caregiver] = await db.select().from(caregivers).where(eq(caregivers.id, id));
     return caregiver || undefined;

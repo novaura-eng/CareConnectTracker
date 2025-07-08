@@ -4,9 +4,25 @@ import { storage } from "./storage";
 import { insertSurveyResponseSchema, insertPatientSchema, insertWeeklyCheckInSchema } from "@shared/schema";
 import { smsService } from "./services/sms";
 import { sendCaregiverWeeklyEmail } from "./services/email";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Get survey form by check-in ID
+  // Auth middleware
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Get survey form by check-in ID (public route)
   app.get("/api/survey/:checkInId", async (req, res) => {
     try {
       const checkInId = parseInt(req.params.checkInId);
@@ -47,8 +63,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get dashboard stats
-  app.get("/api/admin/stats", async (req, res) => {
+  // Get dashboard stats (protected)
+  app.get("/api/admin/stats", isAuthenticated, async (req, res) => {
     try {
       const stats = await storage.getDashboardStats();
       res.json(stats);
@@ -58,8 +74,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get recent responses
-  app.get("/api/admin/responses", async (req, res) => {
+  // Get recent responses (protected)
+  app.get("/api/admin/responses", isAuthenticated, async (req, res) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
       const responses = await storage.getRecentResponses(limit);
@@ -70,8 +86,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all caregivers
-  app.get("/api/caregivers", async (req, res) => {
+  // Get all caregivers (protected)
+  app.get("/api/caregivers", isAuthenticated, async (req, res) => {
     try {
       const caregivers = await storage.getAllCaregivers();
       res.json(caregivers);
@@ -81,8 +97,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all patients
-  app.get("/api/patients", async (req, res) => {
+  // Get all patients (protected)
+  app.get("/api/patients", isAuthenticated, async (req, res) => {
     try {
       const patients = await storage.getAllPatients();
       res.json(patients);
@@ -92,8 +108,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete caregiver
-  app.delete("/api/caregivers/:id", async (req, res) => {
+  // Delete caregiver (protected)
+  app.delete("/api/caregivers/:id", isAuthenticated, async (req, res) => {
     try {
       const caregiverId = parseInt(req.params.id);
       await storage.deleteCaregiver(caregiverId);
@@ -105,8 +121,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create patient
-  app.post("/api/patients", async (req, res) => {
+  // Create patient (protected)
+  app.post("/api/patients", isAuthenticated, async (req, res) => {
     try {
       const validatedData = insertPatientSchema.parse(req.body);
       const patient = await storage.createPatient(validatedData);
@@ -117,8 +133,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get patients by caregiver
-  app.get("/api/patients/:caregiverId", async (req, res) => {
+  // Get patients by caregiver (protected)
+  app.get("/api/patients/:caregiverId", isAuthenticated, async (req, res) => {
     try {
       const caregiverId = parseInt(req.params.caregiverId);
       const patients = await storage.getPatientsByCaregiver(caregiverId);
@@ -129,8 +145,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create weekly check-in
-  app.post("/api/check-ins", async (req, res) => {
+  // Create weekly check-in (protected)
+  app.post("/api/check-ins", isAuthenticated, async (req, res) => {
     try {
       const validatedData = insertWeeklyCheckInSchema.parse(req.body);
       const checkIn = await storage.createWeeklyCheckIn(validatedData);
