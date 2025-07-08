@@ -19,7 +19,10 @@ export const patients = pgTable("patients", {
   name: text("name").notNull(),
   medicaidId: text("medicaid_id").notNull(),
   address: text("address"),
-  caregiverId: integer("caregiver_id").references(() => caregivers.id).notNull(),
+  phoneNumber: text("phone_number"),
+  emergencyContact: text("emergency_contact"),
+  medicalConditions: text("medical_conditions"),
+  caregiverId: integer("caregiver_id").references(() => caregivers.id),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
