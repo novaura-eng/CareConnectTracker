@@ -45,12 +45,15 @@ export default function Patients() {
 
   const createMutation = useMutation({
     mutationFn: async (data: InsertPatient) => {
+      console.log("Creating patient with data:", data);
       const response = await apiRequest("/api/patients", {
         method: "POST",
         body: JSON.stringify(data),
       });
       if (!response.ok) {
-        throw new Error("Failed to create patient");
+        const errorData = await response.text();
+        console.error("API Error:", response.status, errorData);
+        throw new Error(`Failed to create patient: ${response.status}`);
       }
       return response.json();
     },
@@ -63,10 +66,11 @@ export default function Patients() {
         description: "Patient created successfully",
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Patient creation error:", error);
       toast({
         title: "Error",
-        description: "Failed to create patient",
+        description: `Failed to create patient: ${error.message}`,
         variant: "destructive",
       });
     },

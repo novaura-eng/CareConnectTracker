@@ -155,11 +155,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create new patient
   app.post("/api/patients", async (req, res) => {
     try {
+      console.log("Creating patient with data:", req.body);
+      
+      // Validate required fields
+      if (!req.body.name || !req.body.medicaidId) {
+        return res.status(400).json({ message: "Name and Medicaid ID are required" });
+      }
+      
       const patient = await storage.createPatient(req.body);
+      console.log("Patient created successfully:", patient);
       res.json(patient);
     } catch (error) {
       console.error("Error creating patient:", error);
-      res.status(500).json({ message: "Internal server error" });
+      res.status(500).json({ message: "Internal server error", error: error.message });
     }
   });
 
