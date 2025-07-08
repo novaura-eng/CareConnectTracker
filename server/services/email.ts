@@ -141,7 +141,7 @@ export async function sendCaregiverWeeklyEmail(
   surveyUrl: string,
   weekStart: string,
   weekEnd: string,
-  fromEmail: string = "test@example.com"
+  fromEmail: string = "tbweil40@gmail.com"
 ): Promise<boolean> {
   const { subject, html, text } = createCaregiverEmailTemplate(
     caregiverName,

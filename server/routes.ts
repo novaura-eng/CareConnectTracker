@@ -300,7 +300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         surveyUrl,
         weekStart,
         weekEnd,
-        email // Use the recipient's email as sender for testing
+        "tbweil40@gmail.com" // Use verified SendGrid sender email
       );
 
       if (success) {
