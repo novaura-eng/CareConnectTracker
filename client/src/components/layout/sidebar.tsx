@@ -1,4 +1,4 @@
-import { HeartHandshake, ClipboardCheck, Users, BarChart3, Settings } from "lucide-react";
+import { HeartHandshake, ClipboardCheck, Users, User, BarChart3, Settings } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import logoPath from "@assets/image_1751386830041.png";
@@ -6,6 +6,7 @@ import logoPath from "@assets/image_1751386830041.png";
 const navigation = [
   { name: "Weekly Check-ins", href: "/admin", icon: ClipboardCheck },
   { name: "Caregivers", href: "/caregivers", icon: Users },
+  { name: "Patients", href: "/patients", icon: User },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
