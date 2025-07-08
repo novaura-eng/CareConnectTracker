@@ -46,8 +46,11 @@ export default function Patients() {
   const createMutation = useMutation({
     mutationFn: async (data: InsertPatient) => {
       console.log("Creating patient with data:", data);
-      const response = await apiRequest("/api/patients", {
+      const response = await fetch("/api/patients", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
       });
       if (!response.ok) {
