@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Heart, Shield, Users, MessageSquare, BarChart3, Clock } from "lucide-react";
+import { Shield, Users, MessageSquare, BarChart3, Clock } from "lucide-react";
+import logoPath from "@assets/image_1751386830041.png";
 
 export default function Landing() {
   return (
@@ -9,7 +10,7 @@ export default function Landing() {
         {/* Header */}
         <div className="text-center mb-12">
           <div className="flex justify-center items-center gap-3 mb-6">
-            <Heart className="w-12 h-12 text-blue-600" />
+            <img src={logoPath} alt="Silver CareConnect Logo" className="w-12 h-12" />
             <div>
               <h1 className="text-4xl font-bold text-gray-900">
                 Silver CareConnect
