@@ -103,6 +103,7 @@ Changelog:
 - July 08, 2025. Added professional landing page for public access with team login
 - July 08, 2025. Protected all admin routes while keeping survey links public
 - July 08, 2025. Fixed home page header alignment for proper display across screen sizes
+- July 08, 2025. Fixed survey page header alignment for email link access on all devices
 ```
 
 ## User Preferences
