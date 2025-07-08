@@ -73,10 +73,7 @@ export default function Patients() {
   });
 
   const onSubmit = (data: InsertPatient) => {
-    createMutation.mutate({
-      ...data,
-      caregiverId: data.caregiverId ? Number(data.caregiverId) : undefined,
-    });
+    createMutation.mutate(data);
   };
 
   const getCaregiverName = (caregiverId: number) => {
@@ -143,7 +140,10 @@ export default function Patients() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Assign Caregiver</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value?.toString()}>
+                          <Select 
+                            onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} 
+                            value={field.value?.toString()}
+                          >
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select caregiver" />
