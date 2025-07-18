@@ -104,6 +104,8 @@ Changelog:
 - July 08, 2025. Protected all admin routes while keeping survey links public
 - July 08, 2025. Fixed home page header alignment for proper display across screen sizes
 - July 08, 2025. Fixed survey page header alignment for email link access on all devices
+- July 18, 2025. Fixed duplicate webpage rendering issue by restructuring App component router logic
+- July 18, 2025. Updated email service to use verified SendGrid sender address (tbweil40@gmail.com)
 ```
 
 ## User Preferences

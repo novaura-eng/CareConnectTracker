@@ -15,29 +15,27 @@ import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
 import Sidebar from "@/components/layout/sidebar";
 
-function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
-
+function UnauthenticatedRouter() {
   return (
     <Switch>
-      {isLoading || !isAuthenticated ? (
-        <>
-          <Route path="/" component={Landing} />
-          <Route path="/survey/:checkInId" component={Survey} />
-          <Route component={Landing} />
-        </>
-      ) : (
-        <>
-          <Route path="/" component={Home} />
-          <Route path="/survey/:checkInId" component={Survey} />
-          <Route path="/admin" component={Admin} />
-          <Route path="/caregivers" component={Caregivers} />
-          <Route path="/patients" component={Patients} />
-          <Route path="/reports" component={Reports} />
-          <Route path="/settings" component={Settings} />
-          <Route component={NotFound} />
-        </>
-      )}
+      <Route path="/" component={Landing} />
+      <Route path="/survey/:checkInId" component={Survey} />
+      <Route component={Landing} />
+    </Switch>
+  );
+}
+
+function AuthenticatedRouter() {
+  return (
+    <Switch>
+      <Route path="/" component={Home} />
+      <Route path="/survey/:checkInId" component={Survey} />
+      <Route path="/admin" component={Admin} />
+      <Route path="/caregivers" component={Caregivers} />
+      <Route path="/patients" component={Patients} />
+      <Route path="/reports" component={Reports} />
+      <Route path="/settings" component={Settings} />
+      <Route component={NotFound} />
     </Switch>
   );
 }
@@ -59,7 +57,7 @@ function AuthWrapper() {
   if (isLoading || !isAuthenticated) {
     return (
       <div className="min-h-screen">
-        <Router />
+        <UnauthenticatedRouter />
       </div>
     );
   }
@@ -68,7 +66,7 @@ function AuthWrapper() {
     <div className="flex h-screen bg-gray-100">
       <Sidebar />
       <main className="flex-1 overflow-auto">
-        <Router />
+        <AuthenticatedRouter />
       </main>
     </div>
   );
