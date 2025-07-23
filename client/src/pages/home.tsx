@@ -2,26 +2,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HeartHandshake, Users, BarChart3, Settings } from "lucide-react";
 import { Link } from "wouter";
-import logoPath from "@assets/image_1751386830041.png";
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-          <div className="flex items-center space-x-3">
-            <img src={logoPath} alt="Silver CareConnect Logo" className="h-8 w-8 flex-shrink-0" />
-            <div className="min-w-0 flex-1">
-              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 truncate">Silver CareConnect</h1>
-              <p className="text-sm text-slate-600">
-                Powered by TrustNet CareFlow
-              </p>
-            </div>
-          </div>
-        </div>
-      </header>
-
       {/* Main Content */}
       <main className="px-4 py-8 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
