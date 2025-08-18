@@ -89,10 +89,7 @@ export default function Patients() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row h-screen bg-slate-50">
-      <Sidebar />
-      
-      <main className="flex-1 overflow-auto">
+    <main className="flex-1 overflow-auto">
         <div className="p-4 lg:p-6">
           {/* Header - Hidden on mobile to avoid duplication with mobile nav */}
           <div className="hidden lg:flex items-center justify-between mb-6">
@@ -378,6 +375,5 @@ export default function Patients() {
           </Card>
         </div>
       </main>
-    </div>
   );
 }

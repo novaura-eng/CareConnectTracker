@@ -144,8 +144,7 @@ export default function Caregivers() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row h-screen bg-slate-50">
-      <Sidebar />
+    <>
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header - Hidden on mobile to avoid duplication with mobile nav */}
         <header className="hidden lg:block bg-white shadow-sm border-b border-slate-200">
@@ -546,6 +545,6 @@ export default function Caregivers() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }
