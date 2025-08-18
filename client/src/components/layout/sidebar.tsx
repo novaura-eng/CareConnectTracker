@@ -89,10 +89,10 @@ export default function Sidebar() {
         )}>
           <div className="flex items-center h-16 px-3 border-b border-slate-200 relative">
             {!isCollapsed && (
-              <>
+              <div className="flex items-center flex-1 mr-8">
                 <img src={logoPath} alt="Silver CareConnect Logo" className="h-8 w-8 mr-3" />
                 <span className="text-xl font-bold text-slate-900 truncate">Silver CareConnect</span>
-              </>
+              </div>
             )}
             {isCollapsed && (
               <img src={logoPath} alt="Silver CareConnect Logo" className="h-8 w-8 mx-auto" />
