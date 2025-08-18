@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
+import { SidebarProvider, useSidebar } from "@/contexts/SidebarContext";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Landing from "@/pages/landing";
@@ -44,8 +45,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AuthWrapper />
-        <Toaster />
+        <SidebarProvider>
+          <AuthWrapper />
+          <Toaster />
+        </SidebarProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
@@ -62,10 +65,18 @@ function AuthWrapper() {
     );
   }
 
+  return <AuthenticatedLayout />;
+}
+
+function AuthenticatedLayout() {
+  const { isCollapsed } = useSidebar();
+
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-slate-50">
       <Sidebar />
-      <main className="flex-1 overflow-auto">
+      <main className={`flex-1 overflow-auto transition-all duration-300 ease-in-out ${
+        isCollapsed ? 'lg:ml-16' : 'lg:ml-64'
+      }`}>
         <AuthenticatedRouter />
       </main>
     </div>
