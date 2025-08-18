@@ -112,6 +112,7 @@ Changelog:
 - August 18, 2025. Updated survey responses to use boolean fields instead of text yes/no values
 - August 18, 2025. Added SUPABASE_DATABASE_URL and SUPABASE_ANON_KEY environment variables
 - August 18, 2025. Successfully migrated existing survey response data to new boolean schema
+- August 18, 2025. Fixed database connection issue - removed invalid Supabase JWT token from database URL configuration
 ```
 
 ## User Preferences
