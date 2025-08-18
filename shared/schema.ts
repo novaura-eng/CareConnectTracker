@@ -67,15 +67,15 @@ export const weeklyCheckIns = pgTable("weekly_check_ins", {
 export const surveyResponses = pgTable("survey_responses", {
   id: serial("id").primaryKey(),
   checkInId: integer("check_in_id").references(() => weeklyCheckIns.id).notNull(),
-  hospitalVisits: text("hospital_visits").notNull(), // 'yes' or 'no'
+  hospitalVisits: boolean("hospital_visits").default(false).notNull(),
   hospitalDetails: text("hospital_details"),
-  accidentsFalls: text("accidents_falls").notNull(), // 'yes' or 'no'
+  accidentsFalls: boolean("accidents_falls").default(false).notNull(),
   accidentDetails: text("accident_details"),
-  mentalHealth: text("mental_health").notNull(), // 'yes' or 'no'
+  mentalHealth: boolean("mental_health").default(false).notNull(),
   mentalHealthDetails: text("mental_health_details"),
-  physicalHealth: text("physical_health").notNull(), // 'yes' or 'no'
+  physicalHealth: boolean("physical_health").default(false).notNull(),
   physicalHealthDetails: text("physical_health_details"),
-  contactChanges: text("contact_changes").notNull(), // 'yes' or 'no'
+  contactChanges: boolean("contact_changes").default(false).notNull(),
   contactDetails: text("contact_details"),
   additionalComments: text("additional_comments"),
   submittedAt: timestamp("submitted_at").defaultNow().notNull(),

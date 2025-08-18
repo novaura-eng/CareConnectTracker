@@ -266,7 +266,7 @@ export class DatabaseStorage implements IStorage {
         and(
           gte(weeklyCheckIns.weekStartDate, currentWeekStart),
           lte(weeklyCheckIns.weekEndDate, currentWeekEnd),
-          sql`(${surveyResponses.hospitalVisits} = 'yes' OR ${surveyResponses.accidentsFalls} = 'yes' OR ${surveyResponses.mentalHealth} = 'yes' OR ${surveyResponses.physicalHealth} = 'yes')`
+          sql`(${surveyResponses.hospitalVisits} = true OR ${surveyResponses.accidentsFalls} = true OR ${surveyResponses.mentalHealth} = true OR ${surveyResponses.physicalHealth} = true)`
         )
       );
 

@@ -82,7 +82,9 @@ The application uses a monorepo structure with separate build processes for clie
 - Database migrations handled via Drizzle Kit
 
 #### Environment Configuration
-- `DATABASE_URL` - Neon PostgreSQL connection string
+- `SUPABASE_DATABASE_URL` - Supabase PostgreSQL connection string (production)
+- `DATABASE_URL` - Neon PostgreSQL connection string (development fallback)
+- `SUPABASE_ANON_KEY` - Supabase service role API key for database access
 - `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` - SMS service credentials
 - `TWILIO_PHONE_NUMBER` - Sender phone number for SMS notifications
 
@@ -106,6 +108,10 @@ Changelog:
 - July 08, 2025. Fixed survey page header alignment for email link access on all devices
 - July 18, 2025. Fixed duplicate webpage rendering issue by restructuring App component router logic
 - July 18, 2025. Updated email service to use verified SendGrid sender address (tbweil40@gmail.com)
+- August 18, 2025. Migrated database schema to Supabase PostgreSQL production environment
+- August 18, 2025. Updated survey responses to use boolean fields instead of text yes/no values
+- August 18, 2025. Added SUPABASE_DATABASE_URL and SUPABASE_ANON_KEY environment variables
+- August 18, 2025. Successfully migrated existing survey response data to new boolean schema
 ```
 
 ## User Preferences

@@ -13,15 +13,15 @@ import { apiRequest } from "@/lib/queryClient";
 import { HeartHandshake, Send } from "lucide-react";
 
 const surveySchema = z.object({
-  hospitalVisits: z.enum(["yes", "no"], { required_error: "Please select an option" }),
+  hospitalVisits: z.boolean({ required_error: "Please select an option" }),
   hospitalDetails: z.string().optional(),
-  accidentsFalls: z.enum(["yes", "no"], { required_error: "Please select an option" }),
+  accidentsFalls: z.boolean({ required_error: "Please select an option" }),
   accidentDetails: z.string().optional(),
-  mentalHealth: z.enum(["yes", "no"], { required_error: "Please select an option" }),
+  mentalHealth: z.boolean({ required_error: "Please select an option" }),
   mentalHealthDetails: z.string().optional(),
-  physicalHealth: z.enum(["yes", "no"], { required_error: "Please select an option" }),
+  physicalHealth: z.boolean({ required_error: "Please select an option" }),
   physicalHealthDetails: z.string().optional(),
-  contactChanges: z.enum(["yes", "no"], { required_error: "Please select an option" }),
+  contactChanges: z.boolean({ required_error: "Please select an option" }),
   contactDetails: z.string().optional(),
   additionalComments: z.string().optional(),
 });
@@ -39,19 +39,22 @@ export default function SurveyForm({ checkInDetails }: SurveyFormProps) {
   const form = useForm<SurveyFormData>({
     resolver: zodResolver(surveySchema),
     defaultValues: {
-      hospitalVisits: undefined,
+      hospitalVisits: false,
       hospitalDetails: "",
-      accidentsFalls: undefined,
+      accidentsFalls: false,
       accidentDetails: "",
-      mentalHealth: undefined,
+      mentalHealth: false,
       mentalHealthDetails: "",
-      physicalHealth: undefined,
+      physicalHealth: false,
       physicalHealthDetails: "",
-      contactChanges: undefined,
+      contactChanges: false,
       contactDetails: "",
       additionalComments: "",
     },
   });
+
+  // Watch form values for conditional rendering
+  const watchedValues = form.watch();
 
   const submitMutation = useMutation({
     mutationFn: async (data: SurveyFormData) => {
@@ -170,18 +173,18 @@ export default function SurveyForm({ checkInDetails }: SurveyFormProps) {
                         </p>
                         <FormControl>
                           <RadioGroup
-                            onValueChange={field.onChange}
-                            value={field.value}
+                            onValueChange={(value) => field.onChange(value === "true")}
+                            value={field.value?.toString()}
                             className="space-y-3"
                           >
                             <div className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
-                              <RadioGroupItem value="no" id="hospital-no" />
+                              <RadioGroupItem value="false" id="hospital-no" />
                               <label htmlFor="hospital-no" className="text-sm font-medium text-slate-700 cursor-pointer flex-1">
                                 No hospital visits
                               </label>
                             </div>
                             <div className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
-                              <RadioGroupItem value="yes" id="hospital-yes" />
+                              <RadioGroupItem value="true" id="hospital-yes" />
                               <label htmlFor="hospital-yes" className="text-sm font-medium text-slate-700 cursor-pointer flex-1">
                                 Yes, there were hospital visits
                               </label>
@@ -193,24 +196,26 @@ export default function SurveyForm({ checkInDetails }: SurveyFormProps) {
                     )}
                   />
                   
-                  <FormField
-                    control={form.control}
-                    name="hospitalDetails"
-                    render={({ field }) => (
-                      <FormItem className="mt-4">
-                        <FormLabel className="text-sm font-medium text-slate-700">
-                          If yes, please provide details:
-                        </FormLabel>
-                        <FormControl>
-                          <Textarea
-                            {...field}
-                            placeholder="Please describe the reason for the visit, date, and outcome..."
-                            rows={3}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+                  {watchedValues.hospitalVisits && (
+                    <FormField
+                      control={form.control}
+                      name="hospitalDetails"
+                      render={({ field }) => (
+                        <FormItem className="mt-4">
+                          <FormLabel className="text-sm font-medium text-slate-700">
+                            If yes, please provide details:
+                          </FormLabel>
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              placeholder="Please describe the reason for the visit, date, and outcome..."
+                              rows={3}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  )}
                 </CardContent>
               </Card>
 
@@ -230,18 +235,18 @@ export default function SurveyForm({ checkInDetails }: SurveyFormProps) {
                         </p>
                         <FormControl>
                           <RadioGroup
-                            onValueChange={field.onChange}
-                            value={field.value}
+                            onValueChange={(value) => field.onChange(value === "true")}
+                            value={field.value?.toString()}
                             className="space-y-3"
                           >
                             <div className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
-                              <RadioGroupItem value="no" id="accidents-no" />
+                              <RadioGroupItem value="false" id="accidents-no" />
                               <label htmlFor="accidents-no" className="text-sm font-medium text-slate-700 cursor-pointer flex-1">
                                 No accidents or falls
                               </label>
                             </div>
                             <div className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
-                              <RadioGroupItem value="yes" id="accidents-yes" />
+                              <RadioGroupItem value="true" id="accidents-yes" />
                               <label htmlFor="accidents-yes" className="text-sm font-medium text-slate-700 cursor-pointer flex-1">
                                 Yes, there were accidents or falls
                               </label>
@@ -253,24 +258,26 @@ export default function SurveyForm({ checkInDetails }: SurveyFormProps) {
                     )}
                   />
                   
-                  <FormField
-                    control={form.control}
-                    name="accidentDetails"
-                    render={({ field }) => (
-                      <FormItem className="mt-4">
-                        <FormLabel className="text-sm font-medium text-slate-700">
-                          If yes, please provide details:
-                        </FormLabel>
-                        <FormControl>
-                          <Textarea
-                            {...field}
-                            placeholder="Please describe what happened, when, and any actions taken..."
-                            rows={3}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+                  {watchedValues.accidentsFalls && (
+                    <FormField
+                      control={form.control}
+                      name="accidentDetails"
+                      render={({ field }) => (
+                        <FormItem className="mt-4">
+                          <FormLabel className="text-sm font-medium text-slate-700">
+                            If yes, please provide details:
+                          </FormLabel>
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              placeholder="Please describe what happened, when, and any actions taken..."
+                              rows={3}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  )}
                 </CardContent>
               </Card>
 
@@ -290,18 +297,18 @@ export default function SurveyForm({ checkInDetails }: SurveyFormProps) {
                         </p>
                         <FormControl>
                           <RadioGroup
-                            onValueChange={field.onChange}
-                            value={field.value}
+                            onValueChange={(value) => field.onChange(value === "true")}
+                            value={field.value?.toString()}
                             className="space-y-3"
                           >
                             <div className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
-                              <RadioGroupItem value="no" id="mental-no" />
+                              <RadioGroupItem value="false" id="mental-no" />
                               <label htmlFor="mental-no" className="text-sm font-medium text-slate-700 cursor-pointer flex-1">
                                 No changes in mental health
                               </label>
                             </div>
                             <div className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
-                              <RadioGroupItem value="yes" id="mental-yes" />
+                              <RadioGroupItem value="true" id="mental-yes" />
                               <label htmlFor="mental-yes" className="text-sm font-medium text-slate-700 cursor-pointer flex-1">
                                 Yes, there have been changes
                               </label>
@@ -313,24 +320,26 @@ export default function SurveyForm({ checkInDetails }: SurveyFormProps) {
                     )}
                   />
                   
-                  <FormField
-                    control={form.control}
-                    name="mentalHealthDetails"
-                    render={({ field }) => (
-                      <FormItem className="mt-4">
-                        <FormLabel className="text-sm font-medium text-slate-700">
-                          If yes, please describe the changes:
-                        </FormLabel>
-                        <FormControl>
-                          <Textarea
-                            {...field}
-                            placeholder="Please describe any changes in mood, behavior, or cognitive function..."
-                            rows={3}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+                  {watchedValues.mentalHealth && (
+                    <FormField
+                      control={form.control}
+                      name="mentalHealthDetails"
+                      render={({ field }) => (
+                        <FormItem className="mt-4">
+                          <FormLabel className="text-sm font-medium text-slate-700">
+                            If yes, please describe the changes:
+                          </FormLabel>
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              placeholder="Please describe any changes in mood, behavior, or cognitive function..."
+                              rows={3}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  )}
                 </CardContent>
               </Card>
 
@@ -350,18 +359,18 @@ export default function SurveyForm({ checkInDetails }: SurveyFormProps) {
                         </p>
                         <FormControl>
                           <RadioGroup
-                            onValueChange={field.onChange}
-                            value={field.value}
+                            onValueChange={(value) => field.onChange(value === "true")}
+                            value={field.value?.toString()}
                             className="space-y-3"
                           >
                             <div className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
-                              <RadioGroupItem value="no" id="physical-no" />
+                              <RadioGroupItem value="false" id="physical-no" />
                               <label htmlFor="physical-no" className="text-sm font-medium text-slate-700 cursor-pointer flex-1">
                                 No changes in physical health
                               </label>
                             </div>
                             <div className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
-                              <RadioGroupItem value="yes" id="physical-yes" />
+                              <RadioGroupItem value="true" id="physical-yes" />
                               <label htmlFor="physical-yes" className="text-sm font-medium text-slate-700 cursor-pointer flex-1">
                                 Yes, there have been changes
                               </label>
@@ -373,24 +382,26 @@ export default function SurveyForm({ checkInDetails }: SurveyFormProps) {
                     )}
                   />
                   
-                  <FormField
-                    control={form.control}
-                    name="physicalHealthDetails"
-                    render={({ field }) => (
-                      <FormItem className="mt-4">
-                        <FormLabel className="text-sm font-medium text-slate-700">
-                          If yes, please describe the changes:
-                        </FormLabel>
-                        <FormControl>
-                          <Textarea
-                            {...field}
-                            placeholder="Please describe any changes in mobility, appetite, sleep, or physical condition..."
-                            rows={3}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+                  {watchedValues.physicalHealth && (
+                    <FormField
+                      control={form.control}
+                      name="physicalHealthDetails"
+                      render={({ field }) => (
+                        <FormItem className="mt-4">
+                          <FormLabel className="text-sm font-medium text-slate-700">
+                            If yes, please describe the changes:
+                          </FormLabel>
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              placeholder="Please describe any changes in mobility, appetite, sleep, or physical condition..."
+                              rows={3}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  )}
                 </CardContent>
               </Card>
 
@@ -410,18 +421,18 @@ export default function SurveyForm({ checkInDetails }: SurveyFormProps) {
                         </p>
                         <FormControl>
                           <RadioGroup
-                            onValueChange={field.onChange}
-                            value={field.value}
+                            onValueChange={(value) => field.onChange(value === "true")}
+                            value={field.value?.toString()}
                             className="space-y-3"
                           >
                             <div className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
-                              <RadioGroupItem value="no" id="contact-no" />
+                              <RadioGroupItem value="false" id="contact-no" />
                               <label htmlFor="contact-no" className="text-sm font-medium text-slate-700 cursor-pointer flex-1">
                                 No changes to contact information
                               </label>
                             </div>
                             <div className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
-                              <RadioGroupItem value="yes" id="contact-yes" />
+                              <RadioGroupItem value="true" id="contact-yes" />
                               <label htmlFor="contact-yes" className="text-sm font-medium text-slate-700 cursor-pointer flex-1">
                                 Yes, there have been changes
                               </label>
@@ -433,24 +444,26 @@ export default function SurveyForm({ checkInDetails }: SurveyFormProps) {
                     )}
                   />
                   
-                  <FormField
-                    control={form.control}
-                    name="contactDetails"
-                    render={({ field }) => (
-                      <FormItem className="mt-4">
-                        <FormLabel className="text-sm font-medium text-slate-700">
-                          If yes, please provide updated information:
-                        </FormLabel>
-                        <FormControl>
-                          <Textarea
-                            {...field}
-                            placeholder="Please provide updated address, phone number, or emergency contact details..."
-                            rows={3}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+                  {watchedValues.contactChanges && (
+                    <FormField
+                      control={form.control}
+                      name="contactDetails"
+                      render={({ field }) => (
+                        <FormItem className="mt-4">
+                          <FormLabel className="text-sm font-medium text-slate-700">
+                            If yes, please provide updated information:
+                          </FormLabel>
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              placeholder="Please provide updated address, phone number, or emergency contact details..."
+                              rows={3}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  )}
                 </CardContent>
               </Card>
 
