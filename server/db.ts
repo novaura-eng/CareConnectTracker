@@ -5,7 +5,8 @@ import * as schema from "@shared/schema";
 
 neonConfig.webSocketConstructor = ws;
 
-// Use the standard DATABASE_URL provided by Replit PostgreSQL
+// For now, use Replit PostgreSQL until Supabase connection is resolved
+// TODO: Connect to Supabase when hostname db.ripejazpgtjutmjqfiql.supabase.co is accessible
 const databaseUrl = process.env.DATABASE_URL;
 
 if (!databaseUrl) {
