@@ -7,20 +7,20 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Main Content */}
-      <main className="px-4 py-8 sm:px-6 lg:px-8">
+      <main className="px-4 py-6 sm:px-6 lg:px-8 sm:py-8">
         <div className="max-w-4xl mx-auto">
           {/* Welcome Section */}
-          <div className="text-center mb-12">
-            <h2 className="text-2xl font-bold text-slate-900 mb-4">
+          <div className="text-center mb-8 sm:mb-12">
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-3 sm:mb-4">
               Welcome to Silver CareConnect
             </h2>
-            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto px-2">
               Automated weekly caregiver check-ins with comprehensive reporting and proactive caregiver support.
             </p>
           </div>
 
           {/* Feature Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
             <Card className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-3">

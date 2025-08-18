@@ -63,7 +63,7 @@ function AuthWrapper() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex flex-col lg:flex-row h-screen bg-slate-50">
       <Sidebar />
       <main className="flex-1 overflow-auto">
         <AuthenticatedRouter />

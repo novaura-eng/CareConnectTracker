@@ -62,21 +62,21 @@ export default function Dashboard() {
     <div className="flex-1 bg-slate-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-slate-200">
-        <div className="px-4 py-6 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
+        <div className="px-4 py-4 sm:py-6 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Weekly Check-ins Dashboard</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Weekly Check-ins Dashboard</h1>
               <p className="mt-1 text-sm text-slate-600">Monitor caregiver responses and track compliance</p>
             </div>
-            <div className="flex space-x-3">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" className="w-full sm:w-auto">
                     <Mail className="mr-2 h-4 w-4" />
                     Test Email
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="sm:max-w-[425px] mx-4">
                   <DialogHeader>
                     <DialogTitle>Send Test Email</DialogTitle>
                     <DialogDescription>
@@ -84,16 +84,13 @@ export default function Dashboard() {
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="email" className="text-right">
-                        Email
-                      </Label>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email Address</Label>
                       <Input
                         id="email"
                         value={testEmail}
                         onChange={(e) => setTestEmail(e.target.value)}
                         placeholder="your-email@example.com"
-                        className="col-span-3"
                         type="email"
                       />
                     </div>
@@ -103,24 +100,25 @@ export default function Dashboard() {
                       type="submit" 
                       onClick={() => testEmailMutation.mutate({ email: testEmail })}
                       disabled={!testEmail || testEmailMutation.isPending}
+                      className="w-full sm:w-auto"
                     >
                       {testEmailMutation.isPending ? "Sending..." : "Send Test Email"}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="w-full sm:w-auto">
                 <Download className="mr-2 h-4 w-4" />
                 Export Report
               </Button>
               <Dialog open={isManualSurveyOpen} onOpenChange={setIsManualSurveyOpen}>
                 <DialogTrigger asChild>
-                  <Button size="sm">
+                  <Button size="sm" className="w-full sm:w-auto">
                     <Plus className="mr-2 h-4 w-4" />
                     Create Survey
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[600px]">
+                <DialogContent className="sm:max-w-[600px] mx-4">
                   <DialogHeader>
                     <DialogTitle>Manual Survey Creation</DialogTitle>
                     <DialogDescription>
@@ -136,7 +134,7 @@ export default function Dashboard() {
       </header>
 
       {/* Dashboard Content */}
-      <main className="px-4 py-8 sm:px-6 lg:px-8">
+      <main className="px-4 py-6 sm:py-8 sm:px-6 lg:px-8">
         <StatsCards stats={stats} isLoading={statsLoading} />
         <ResponseTable responses={responses} isLoading={responsesLoading} />
       </main>

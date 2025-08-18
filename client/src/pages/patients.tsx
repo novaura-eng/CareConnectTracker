@@ -89,10 +89,10 @@ export default function Patients() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex flex-col lg:flex-row h-screen bg-slate-50">
       <Sidebar />
       
-      <main className="flex-1 lg:ml-64 overflow-auto">
+      <main className="flex-1 overflow-auto">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <div>

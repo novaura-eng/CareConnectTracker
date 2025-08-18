@@ -111,14 +111,14 @@ export default function SurveyForm({ checkInDetails }: SurveyFormProps) {
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:py-6 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div className="min-w-0 flex-1">
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 truncate">Weekly Caregiver Check-in</h1>
+              <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900">Weekly Caregiver Check-in</h1>
               <p className="mt-1 text-sm text-slate-600">Please complete your weekly check-in survey</p>
             </div>
             <div className="text-left sm:text-right flex-shrink-0">
-              <p className="text-sm text-slate-500">Week of</p>
+              <p className="text-xs sm:text-sm text-slate-500">Week of</p>
               <p className="text-sm font-medium text-slate-900">
                 {formatWeekRange(checkInDetails.checkIn.weekStartDate, checkInDetails.checkIn.weekEndDate)}
               </p>
@@ -128,7 +128,7 @@ export default function SurveyForm({ checkInDetails }: SurveyFormProps) {
       </header>
 
       {/* Survey Form */}
-      <main className="px-4 py-8 sm:px-6 lg:px-8">
+      <main className="px-4 py-6 sm:py-8 sm:px-6 lg:px-8">
         <div className="max-w-2xl mx-auto">
           {/* Welcome Card */}
           <Card className="mb-8">

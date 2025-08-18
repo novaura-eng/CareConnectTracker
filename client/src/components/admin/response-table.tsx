@@ -105,11 +105,11 @@ export default function ResponseTable({ responses, isLoading }: ResponseTablePro
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Recent Check-in Responses</CardTitle>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <CardTitle className="text-lg">Recent Check-in Responses</CardTitle>
           <div className="flex space-x-2">
             <Select defaultValue="all">
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-full sm:w-40">
                 <SelectValue placeholder="Filter" />
               </SelectTrigger>
               <SelectContent>
@@ -123,7 +123,69 @@ export default function ResponseTable({ responses, isLoading }: ResponseTablePro
         </div>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
+        {/* Mobile Card View */}
+        <div className="block md:hidden space-y-4">
+          {responses?.map((item, index) => (
+            <Card key={index} className="border border-slate-200">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
+                      <span className="text-sm font-medium text-slate-600">
+                        {getInitials(item.caregiver?.name || '')}
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-slate-900">
+                        {item.caregiver?.name}
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {item.caregiver?.phone}
+                      </div>
+                    </div>
+                  </div>
+                  {getStatusBadge(item.checkIn, item.response)}
+                </div>
+                
+                <div className="space-y-2 mb-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-slate-500">Patient:</span>
+                    <span className="text-sm font-medium">{item.patient?.name}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-slate-500">Week:</span>
+                    <span className="text-sm">{formatWeekRange(item.checkIn.weekStartDate, item.checkIn.weekEndDate)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-slate-500">Alerts:</span>
+                    <span className="text-sm">{getAlertBadge(item.response)}</span>
+                  </div>
+                </div>
+
+                <div className="flex space-x-2">
+                  {item.response ? (
+                    <Button variant="outline" size="sm" className="flex-1">
+                      <Eye className="h-4 w-4 mr-1" />
+                      View
+                    </Button>
+                  ) : (
+                    <Button variant="outline" size="sm" className="flex-1">
+                      <Clock className="h-4 w-4 mr-1" />
+                      Remind
+                    </Button>
+                  )}
+                  <Button variant="outline" size="sm" className="flex-1">
+                    <Phone className="h-4 w-4 mr-1" />
+                    Contact
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -198,13 +260,13 @@ export default function ResponseTable({ responses, isLoading }: ResponseTablePro
         </div>
 
         {/* Pagination */}
-        <div className="mt-6 flex items-center justify-between">
+        <div className="mt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="text-sm text-slate-700">
             Showing <span className="font-medium">1</span> to <span className="font-medium">
               {Math.min(10, responses?.length || 0)}
             </span> of <span className="font-medium">{responses?.length || 0}</span> results
           </div>
-          <div className="flex space-x-1">
+          <div className="flex justify-center sm:justify-end space-x-1">
             <Button variant="outline" size="sm" disabled>
               Previous
             </Button>

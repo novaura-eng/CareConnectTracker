@@ -144,9 +144,9 @@ export default function Caregivers() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex flex-col lg:flex-row h-screen bg-slate-50">
       <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden lg:ml-64">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header className="bg-white shadow-sm border-b border-slate-200">
           <div className="px-4 py-6 sm:px-6 lg:px-8">

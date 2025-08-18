@@ -1,8 +1,9 @@
-import { HeartHandshake, ClipboardCheck, Users, User, BarChart3, Settings, LogOut } from "lucide-react";
+import { HeartHandshake, ClipboardCheck, Users, User, BarChart3, Settings, LogOut, Menu, X } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 import logoPath from "@assets/image_1751386830041.png";
 
 const navigation = [
@@ -15,19 +16,67 @@ const navigation = [
 
 export default function Sidebar() {
   const [location] = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
     <>
-      {/* Mobile navigation */}
+      {/* Mobile navigation header */}
       <nav className="bg-white shadow-sm border-b border-slate-200 lg:hidden">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 sm:space-x-3">
               <img src={logoPath} alt="Silver CareConnect Logo" className="h-6 w-6" />
-              <span className="text-lg font-semibold text-slate-900">Silver CareConnect</span>
+              <span className="text-base sm:text-lg font-semibold text-slate-900 truncate">Silver CareConnect</span>
             </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="lg:hidden p-2"
+            >
+              {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
           </div>
         </div>
+        
+        {/* Mobile menu */}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden bg-white border-t border-slate-200 shadow-lg">
+            <div className="px-2 py-2 space-y-1">
+              {navigation.map((item) => {
+                const Icon = item.icon;
+                const isActive = location === item.href || (item.href !== "/admin" && location.startsWith(item.href));
+                
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={cn(
+                      "flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-colors",
+                      isActive
+                        ? "text-primary-600 bg-primary-50"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                    )}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Icon className={cn("mr-3 h-5 w-5", isActive ? "text-primary-600" : "")} />
+                    {item.name}
+                  </Link>
+                );
+              })}
+              <div className="pt-2 mt-2 border-t border-slate-200">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-slate-600 hover:text-slate-900"
+                  onClick={() => window.location.href = "/api/logout"}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Logout
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Desktop sidebar */}

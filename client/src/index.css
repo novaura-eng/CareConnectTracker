@@ -73,6 +73,30 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
+
+  /* Better mobile touch targets */
+  button, 
+  [role="button"], 
+  input, 
+  select, 
+  textarea {
+    min-height: 44px; /* iOS recommended touch target */
+  }
+
+  /* Better mobile text legibility */
+  @media (max-width: 640px) {
+    html {
+      -webkit-text-size-adjust: none; /* Prevent automatic text scaling */
+    }
+    
+    /* Ensure tables are scrollable on mobile */
+    table {
+      display: block;
+      max-width: 100%;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+  }
 }
 
 @layer utilities {
