@@ -25,8 +25,14 @@ const getOidcConfig = memoize(
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
+  
+  // Build Supabase connection string if available
+  const supabaseConnectionString = process.env.SUPABASE_PASSWORD 
+    ? `postgresql://postgres.ripejazpgtjutmjqfiql:${encodeURIComponent(process.env.SUPABASE_PASSWORD)}@aws-1-us-east-1.pooler.supabase.com:6543/postgres`
+    : null;
+  
   const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
+    conString: supabaseConnectionString || process.env.DATABASE_URL,
     createTableIfMissing: false,
     ttl: sessionTtl,
     tableName: "sessions",

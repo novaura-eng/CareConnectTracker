@@ -5,9 +5,13 @@ import * as schema from "@shared/schema";
 
 neonConfig.webSocketConstructor = ws;
 
-// For now, use Replit PostgreSQL until Supabase connection is resolved
-// TODO: Connect to Supabase when hostname db.ripejazpgtjutmjqfiql.supabase.co is accessible
-const databaseUrl = process.env.DATABASE_URL;
+// Build Supabase connection string with correct pooler hostname
+const supabaseConnectionString = process.env.SUPABASE_PASSWORD 
+  ? `postgresql://postgres.ripejazpgtjutmjqfiql:${encodeURIComponent(process.env.SUPABASE_PASSWORD)}@aws-1-us-east-1.pooler.supabase.com:6543/postgres`
+  : null;
+
+// Use Supabase database if configured, fallback to Replit PostgreSQL
+const databaseUrl = supabaseConnectionString || process.env.DATABASE_URL;
 
 if (!databaseUrl) {
   throw new Error(
