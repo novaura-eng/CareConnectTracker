@@ -1,0 +1,138 @@
+-- =====================================================================
+-- Core tables (unchanged except survey_responses booleans)
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS sessions (
+  sid        VARCHAR PRIMARY KEY,
+  sess       JSONB NOT NULL,
+  expire     TIMESTAMP NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_session_expire ON sessions (expire);
+
+CREATE TABLE IF NOT EXISTS users (
+  id                 VARCHAR PRIMARY KEY,
+  email              VARCHAR UNIQUE,
+  first_name         VARCHAR,
+  last_name          VARCHAR,
+  profile_image_url  VARCHAR,
+  created_at         TIMESTAMP DEFAULT NOW(),
+  updated_at         TIMESTAMP DEFAULT NOW()
+);
+
+CREATE OR REPLACE FUNCTION trg_touch_updated_at()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.updated_at := NOW();
+  RETURN NEW;
+END; $$;
+
+DROP TRIGGER IF EXISTS users_touch_updated_at ON users;
+CREATE TRIGGER users_touch_updated_at
+BEFORE UPDATE ON users
+FOR EACH ROW
+EXECUTE FUNCTION trg_touch_updated_at();
+
+CREATE TABLE IF NOT EXISTS caregivers (
+  id                SERIAL PRIMARY KEY,
+  name              TEXT NOT NULL,
+  phone             TEXT NOT NULL,
+  email             TEXT,
+  address           TEXT,
+  emergency_contact TEXT,
+  is_active         BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at        TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS patients (
+  id                  SERIAL PRIMARY KEY,
+  name                TEXT NOT NULL,
+  medicaid_id         TEXT NOT NULL,
+  address             TEXT,
+  phone_number        TEXT,
+  emergency_contact   TEXT,
+  medical_conditions  TEXT,
+  caregiver_id        INTEGER REFERENCES caregivers(id) ON DELETE SET NULL,
+  is_active           BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at          TIMESTAMP NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_patients_medicaid_id UNIQUE (medicaid_id)
+);
+CREATE INDEX IF NOT EXISTS idx_patients_caregiver_id ON patients (caregiver_id);
+CREATE INDEX IF NOT EXISTS idx_patients_active ON patients (is_active);
+
+CREATE TABLE IF NOT EXISTS weekly_check_ins (
+  id               SERIAL PRIMARY KEY,
+  caregiver_id     INTEGER NOT NULL REFERENCES caregivers(id) ON DELETE CASCADE,
+  patient_id       INTEGER NOT NULL REFERENCES patients(id)   ON DELETE CASCADE,
+  week_start_date  TIMESTAMP NOT NULL,
+  week_end_date    TIMESTAMP NOT NULL,
+  is_completed     BOOLEAN NOT NULL DEFAULT FALSE,
+  completed_at     TIMESTAMP,
+  reminders_sent   INTEGER NOT NULL DEFAULT 0,
+  last_reminder_at TIMESTAMP,
+  created_at       TIMESTAMP NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_checkin_pair_week UNIQUE (caregiver_id, patient_id, week_start_date)
+);
+CREATE INDEX IF NOT EXISTS idx_checkins_patient ON weekly_check_ins (patient_id);
+CREATE INDEX IF NOT EXISTS idx_checkins_caregiver ON weekly_check_ins (caregiver_id);
+CREATE INDEX IF NOT EXISTS idx_checkins_week_start ON weekly_check_ins (week_start_date);
+CREATE INDEX IF NOT EXISTS idx_checkins_completed ON weekly_check_ins (is_completed);
+
+-- BOOLEAN-BASED SURVEY RESPONSES
+CREATE TABLE IF NOT EXISTS survey_responses (
+  id                       SERIAL PRIMARY KEY,
+  check_in_id              INTEGER NOT NULL REFERENCES weekly_check_ins(id) ON DELETE CASCADE,
+  hospital_visits          BOOLEAN NOT NULL DEFAULT FALSE,
+  hospital_details         TEXT,
+  accidents_falls          BOOLEAN NOT NULL DEFAULT FALSE,
+  accident_details         TEXT,
+  mental_health            BOOLEAN NOT NULL DEFAULT FALSE,   -- caregiver reported a mental-health change/event
+  mental_health_details    TEXT,
+  physical_health          BOOLEAN NOT NULL DEFAULT FALSE,   -- caregiver reported a physical-health change/event
+  physical_health_details  TEXT,
+  contact_changes          BOOLEAN NOT NULL DEFAULT FALSE,
+  contact_details          TEXT,
+  additional_comments      TEXT,
+  submitted_at             TIMESTAMP NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_survey_response_checkin UNIQUE (check_in_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_survey_checkin      ON survey_responses (check_in_id);
+CREATE INDEX IF NOT EXISTS idx_survey_submitted_at ON survey_responses (submitted_at);
+
+-- Partial indexes for common "flagged = true" queries
+CREATE INDEX IF NOT EXISTS idx_survey_hospital_true  ON survey_responses (check_in_id) WHERE hospital_visits   = TRUE;
+CREATE INDEX IF NOT EXISTS idx_survey_accident_true  ON survey_responses (check_in_id) WHERE accidents_falls   = TRUE;
+CREATE INDEX IF NOT EXISTS idx_survey_mhealth_true   ON survey_responses (check_in_id) WHERE mental_health     = TRUE;
+CREATE INDEX IF NOT EXISTS idx_survey_phealth_true   ON survey_responses (check_in_id) WHERE physical_health   = TRUE;
+CREATE INDEX IF NOT EXISTS idx_survey_contact_true   ON survey_responses (check_in_id) WHERE contact_changes   = TRUE;
+
+-- Helpful views (compatible with booleans)
+CREATE OR REPLACE VIEW v_recent_survey_responses AS
+SELECT
+  sr.id AS survey_response_id,
+  sr.submitted_at,
+  wc.id AS check_in_id,
+  c.id  AS caregiver_id,
+  c.name AS caregiver_name,
+  p.id  AS patient_id,
+  p.name AS patient_name,
+  sr.hospital_visits,
+  sr.accidents_falls,
+  sr.mental_health,
+  sr.physical_health,
+  sr.contact_changes
+FROM survey_responses sr
+JOIN weekly_check_ins wc ON wc.id = sr.check_in_id
+JOIN caregivers c        ON c.id = wc.caregiver_id
+JOIN patients p          ON p.id = wc.patient_id
+ORDER BY sr.submitted_at DESC;
+
+CREATE OR REPLACE VIEW v_weekly_checkin_stats AS
+SELECT
+  date_trunc('week', week_start_date) AS week_start,
+  COUNT(*) AS total_checkins,
+  COUNT(*) FILTER (WHERE is_completed) AS completed_checkins,
+  ROUND(100.0 * COUNT(*) FILTER (WHERE is_completed) / NULLIF(COUNT(*), 0), 2) AS completion_rate_pct
+FROM weekly_check_ins
+GROUP BY 1
+ORDER BY 1 DESC;
