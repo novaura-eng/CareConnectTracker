@@ -93,8 +93,9 @@ export default function Patients() {
       <Sidebar />
       
       <main className="flex-1 overflow-auto">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
+        <div className="p-4 lg:p-6">
+          {/* Header - Hidden on mobile to avoid duplication with mobile nav */}
+          <div className="hidden lg:flex items-center justify-between mb-6">
             <div>
               <h1 className="text-2xl font-bold text-slate-900">Patient Management</h1>
               <p className="text-slate-600">Manage patient records and caregiver assignments</p>
@@ -234,6 +235,21 @@ export default function Patients() {
                     </Button>
                   </form>
                 </Form>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {/* Mobile Add Patient Button - Only visible on mobile */}
+          <div className="lg:hidden mb-4">
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="w-full">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Patient
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                {/* Use same form content as desktop */}
               </DialogContent>
             </Dialog>
           </div>

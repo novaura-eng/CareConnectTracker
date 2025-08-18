@@ -147,8 +147,8 @@ export default function Caregivers() {
     <div className="flex flex-col lg:flex-row h-screen bg-slate-50">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="bg-white shadow-sm border-b border-slate-200">
+        {/* Header - Hidden on mobile to avoid duplication with mobile nav */}
+        <header className="hidden lg:block bg-white shadow-sm border-b border-slate-200">
           <div className="px-4 py-6 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between">
               <div>
@@ -263,6 +263,24 @@ export default function Caregivers() {
             </div>
           </div>
         </header>
+
+        {/* Mobile Add Caregiver Button - Only visible on mobile */}
+        <div className="lg:hidden px-4 pt-4 pb-2">
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) setSelectedCaregiver(null);
+          }}>
+            <DialogTrigger asChild>
+              <Button onClick={() => setSelectedCaregiver(null)} className="w-full">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Caregiver
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              {/* Use same form content as desktop */}
+            </DialogContent>
+          </Dialog>
+        </div>
 
         {/* Main Content */}
         <main className="flex-1 overflow-auto px-4 py-8 sm:px-6 lg:px-8">
