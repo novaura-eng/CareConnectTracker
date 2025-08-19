@@ -8,6 +8,7 @@ import { SidebarProvider, useSidebar } from "@/contexts/SidebarContext";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Landing from "@/pages/landing";
+import Login from "@/pages/login";
 import Survey from "@/pages/survey";
 import Admin from "@/pages/admin";
 import Caregivers from "@/pages/caregivers";
@@ -20,6 +21,7 @@ function UnauthenticatedRouter() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
+      <Route path="/login" component={Login} />
       <Route path="/survey/:checkInId" component={Survey} />
       <Route component={Landing} />
     </Switch>

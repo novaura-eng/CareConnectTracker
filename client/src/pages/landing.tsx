@@ -31,13 +31,13 @@ export default function Landing() {
           <Button 
             size="lg" 
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 sm:px-8 py-3 text-base sm:text-lg w-full sm:w-auto"
-            onClick={() => window.location.href = "/api/login"}
+            onClick={() => window.location.href = "/login"}
           >
             <Shield className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-            Team Login
+            Administrative Portal
           </Button>
           <p className="text-sm text-gray-600 mt-2">
-            Secure access for authorized team members
+            Secure access for care coordination staff
           </p>
         </div>
 
