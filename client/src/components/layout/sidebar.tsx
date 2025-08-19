@@ -89,9 +89,9 @@ export default function Sidebar() {
         )}>
           <div className="flex items-center h-16 px-3 border-b border-slate-200 relative">
             {!isCollapsed && (
-              <div className="flex items-center flex-1 mr-8">
+              <div className="flex items-center flex-1 pr-10">
                 <img src={logoPath} alt="Silver CareConnect Logo" className="h-8 w-8 mr-3" />
-                <span className="text-xl font-bold text-slate-900 truncate">Silver CareConnect</span>
+                <span className="text-lg font-bold text-slate-900">Silver CareConnect</span>
               </div>
             )}
             {isCollapsed && (
@@ -103,10 +103,7 @@ export default function Sidebar() {
               variant="ghost"
               size="sm"
               onClick={() => setIsCollapsed(!isCollapsed)}
-              className={cn(
-                "absolute top-1/2 -translate-y-1/2 h-6 w-6 p-0 hover:bg-slate-100",
-                isCollapsed ? "right-2" : "right-2"
-              )}
+              className="absolute top-1/2 -translate-y-1/2 right-2 h-7 w-7 p-0 hover:bg-slate-100 flex-shrink-0"
             >
               {isCollapsed ? (
                 <ChevronRight className="h-4 w-4" />
