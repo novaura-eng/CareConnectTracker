@@ -11,7 +11,6 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings as SettingsIcon, Bell, MessageSquare, Users, Database, Shield, Save, TestTube } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import Sidebar from "@/components/layout/sidebar";
 
 interface SMSSettings {
   twilioAccountSid: string;
@@ -105,11 +104,9 @@ export default function Settings() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden lg:ml-64">
-        {/* Header */}
-        <header className="bg-white shadow-sm border-b border-slate-200">
+    <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Header - Hidden on mobile to avoid duplication with mobile nav */}
+      <header className="hidden lg:block bg-white shadow-sm border-b border-slate-200">
           <div className="px-4 py-6 sm:px-6 lg:px-8">
             <div className="flex items-center space-x-3">
               <SettingsIcon className="h-8 w-8 text-slate-600" />
@@ -629,7 +626,6 @@ export default function Settings() {
             </Tabs>
           </div>
         </main>
-      </div>
     </div>
   );
 }

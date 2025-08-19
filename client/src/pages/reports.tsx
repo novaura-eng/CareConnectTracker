@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart3, Download, FileText, TrendingUp, Calendar, Filter } from "lucide-react";
-import Sidebar from "@/components/layout/sidebar";
 
 export default function Reports() {
   const [dateRange, setDateRange] = useState("this-week");
@@ -43,11 +42,9 @@ export default function Reports() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden lg:ml-64">
-        {/* Header */}
-        <header className="bg-white shadow-sm border-b border-slate-200">
+    <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Header - Hidden on mobile to avoid duplication with mobile nav */}
+      <header className="hidden lg:block bg-white shadow-sm border-b border-slate-200">
           <div className="px-4 py-6 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between">
               <div>
@@ -366,7 +363,6 @@ export default function Reports() {
             </Card>
           </div>
         </main>
-      </div>
     </div>
   );
 }
