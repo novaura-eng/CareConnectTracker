@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Users, MessageSquare, BarChart3, Clock } from "lucide-react";
+import { Shield, Users, MessageSquare, BarChart3, Clock, HeartHandshake } from "lucide-react";
 import logoPath from "@assets/image_1751386830041.png";
 
 export default function Landing() {
@@ -26,19 +26,36 @@ export default function Landing() {
           </p>
         </div>
 
-        {/* Login Button */}
+        {/* Login Buttons */}
         <div className="text-center mb-12 sm:mb-16 px-4">
-          <Button 
-            size="lg" 
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 sm:px-8 py-3 text-base sm:text-lg w-full sm:w-auto"
-            onClick={() => window.location.href = "/login"}
-          >
-            <Shield className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-            Administrative Portal
-          </Button>
-          <p className="text-sm text-gray-600 mt-2">
-            Secure access for care coordination staff
-          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <div className="text-center">
+              <Button 
+                size="lg" 
+                className="bg-green-600 hover:bg-green-700 text-white px-6 sm:px-8 py-3 text-base sm:text-lg w-full sm:w-auto"
+                onClick={() => window.location.href = "/caregiver"}
+              >
+                <HeartHandshake className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                Caregiver Portal
+              </Button>
+              <p className="text-sm text-gray-600 mt-2">
+                For family caregivers
+              </p>
+            </div>
+            <div className="text-center">
+              <Button 
+                size="lg" 
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 sm:px-8 py-3 text-base sm:text-lg w-full sm:w-auto"
+                onClick={() => window.location.href = "/login"}
+              >
+                <Shield className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                Administrative Portal
+              </Button>
+              <p className="text-sm text-gray-600 mt-2">
+                For care coordination staff
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Features Grid */}
