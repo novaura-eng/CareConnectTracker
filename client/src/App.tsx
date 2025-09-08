@@ -15,6 +15,10 @@ import Caregivers from "@/pages/caregivers";
 import Patients from "@/pages/patients";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
+import CaregiverStateSelection from "@/pages/caregiver-state-selection";
+import CaregiverLogin from "@/pages/caregiver-login";
+import CaregiverDashboard from "@/pages/caregiver-dashboard";
+import CaregiverPatient from "@/pages/caregiver-patient";
 import Sidebar from "@/components/layout/sidebar";
 
 function UnauthenticatedRouter() {
@@ -23,6 +27,10 @@ function UnauthenticatedRouter() {
       <Route path="/" component={Landing} />
       <Route path="/login" component={Login} />
       <Route path="/survey/:checkInId" component={Survey} />
+      <Route path="/caregiver" component={CaregiverStateSelection} />
+      <Route path="/caregiver/login" component={CaregiverLogin} />
+      <Route path="/caregiver/dashboard" component={CaregiverDashboard} />
+      <Route path="/caregiver/patient/:patientId" component={CaregiverPatient} />
       <Route component={Landing} />
     </Switch>
   );
