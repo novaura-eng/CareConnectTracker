@@ -118,7 +118,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllCaregivers(): Promise<Caregiver[]> {
-    return await db.select().from(caregivers).where(eq(caregivers.isActive, true));
+    return await db.select({
+      id: caregivers.id,
+      name: caregivers.name,
+      phone: caregivers.phone,
+      email: caregivers.email,
+      address: caregivers.address,
+      emergencyContact: caregivers.emergencyContact,
+      state: caregivers.state,
+      password: caregivers.password,
+      isActive: caregivers.isActive,
+      createdAt: caregivers.createdAt,
+    }).from(caregivers).where(eq(caregivers.isActive, true));
   }
 
   async deleteCaregiver(id: number): Promise<void> {
