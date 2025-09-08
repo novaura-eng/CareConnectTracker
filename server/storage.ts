@@ -50,6 +50,7 @@ export interface IStorage {
   // Survey response methods
   createSurveyResponse(response: InsertSurveyResponse): Promise<SurveyResponse>;
   getSurveyResponsesByCheckIn(checkInId: number): Promise<SurveyResponse[]>;
+  getCaregiverPreviousResponses(caregiverId: number, patientId: number): Promise<SurveyResponse | undefined>;
   
   // Dashboard stats
   getDashboardStats(): Promise<any>;
@@ -243,6 +244,24 @@ export class DatabaseStorage implements IStorage {
 
   async getSurveyResponsesByCheckIn(checkInId: number): Promise<SurveyResponse[]> {
     return await db.select().from(surveyResponses).where(eq(surveyResponses.checkInId, checkInId));
+  }
+
+  async getCaregiverPreviousResponses(caregiverId: number, patientId: number): Promise<SurveyResponse | undefined> {
+    const result = await db
+      .select({ response: surveyResponses })
+      .from(surveyResponses)
+      .innerJoin(weeklyCheckIns, eq(surveyResponses.checkInId, weeklyCheckIns.id))
+      .where(
+        and(
+          eq(weeklyCheckIns.caregiverId, caregiverId),
+          eq(weeklyCheckIns.patientId, patientId),
+          eq(weeklyCheckIns.isCompleted, true)
+        )
+      )
+      .orderBy(desc(surveyResponses.submittedAt))
+      .limit(1);
+
+    return result[0]?.response;
   }
 
   async getDashboardStats(): Promise<any> {

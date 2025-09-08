@@ -5,10 +5,12 @@ import { insertSurveyResponseSchema, insertPatientSchema, insertWeeklyCheckInSch
 import { smsService } from "./services/sms";
 import { sendCaregiverWeeklyEmail } from "./services/email";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupCaregiverAuth, isCaregiver, hashPassword, verifyPassword } from "./caregiverAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
+  setupCaregiverAuth(app);
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
@@ -19,6 +21,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Caregiver Authentication Routes
+  app.post("/api/caregiver/login", async (req, res) => {
+    try {
+      const { phone, password, state } = req.body;
+      
+      if (!phone || !password || !state) {
+        return res.status(400).json({ message: "Phone, password, and state are required" });
+      }
+
+      const caregiver = await storage.getCaregiverByPhoneAndState(phone, state);
+      if (!caregiver || !caregiver.isActive) {
+        return res.status(401).json({ message: "Invalid credentials or inactive account" });
+      }
+
+      if (!caregiver.password) {
+        return res.status(401).json({ message: "Password not set. Please contact your administrator." });
+      }
+
+      const isValidPassword = await verifyPassword(password, caregiver.password);
+      if (!isValidPassword) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      // Set session
+      req.session.caregiverId = caregiver.id;
+      req.session.caregiverState = state;
+
+      res.json({ 
+        message: "Login successful", 
+        caregiver: { 
+          id: caregiver.id, 
+          name: caregiver.name, 
+          state: caregiver.state 
+        } 
+      });
+    } catch (error) {
+      console.error("Error during caregiver login:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/caregiver/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("Error destroying session:", err);
+        return res.status(500).json({ message: "Logout failed" });
+      }
+      res.json({ message: "Logout successful" });
+    });
+  });
+
+  app.get("/api/caregiver/session", isCaregiver, async (req, res) => {
+    try {
+      const caregiver = (req as any).caregiver;
+      res.json({ 
+        caregiver: { 
+          id: caregiver.id, 
+          name: caregiver.name, 
+          state: caregiver.state 
+        } 
+      });
+    } catch (error) {
+      console.error("Error fetching caregiver session:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/caregiver/patients", isCaregiver, async (req, res) => {
+    try {
+      const caregiver = (req as any).caregiver;
+      const patients = await storage.getPatientsByCaregiver(caregiver.id);
+      res.json(patients);
+    } catch (error) {
+      console.error("Error fetching caregiver patients:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/caregiver/previous-response/:patientId", isCaregiver, async (req, res) => {
+    try {
+      const caregiver = (req as any).caregiver;
+      const patientId = parseInt(req.params.patientId);
+      
+      const previousResponse = await storage.getCaregiverPreviousResponses(caregiver.id, patientId);
+      res.json(previousResponse || null);
+    } catch (error) {
+      console.error("Error fetching previous response:", error);
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 
