@@ -115,6 +115,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Caregiver Account Setup Routes
+  app.post("/api/caregiver/check-eligibility", async (req, res) => {
+    try {
+      const { phone, state } = req.body;
+      
+      if (!phone || !state) {
+        return res.status(400).json({ message: "Phone and state are required" });
+      }
+
+      const caregiver = await storage.getCaregiverByPhoneAndState(phone, state);
+      if (!caregiver || !caregiver.isActive) {
+        return res.status(404).json({ message: "No active caregiver found with this phone number and state" });
+      }
+
+      if (caregiver.password) {
+        return res.status(400).json({ message: "Account already set up. Please use the login page." });
+      }
+
+      res.json({ 
+        eligible: true, 
+        caregiverName: caregiver.name,
+        message: "Account found. You can set up your password." 
+      });
+    } catch (error) {
+      console.error("Error checking caregiver eligibility:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/caregiver/setup-password", async (req, res) => {
+    try {
+      const { phone, state, password } = req.body;
+      
+      if (!phone || !state || !password) {
+        return res.status(400).json({ message: "Phone, state, and password are required" });
+      }
+
+      if (password.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters long" });
+      }
+
+      const caregiver = await storage.getCaregiverByPhoneAndState(phone, state);
+      if (!caregiver || !caregiver.isActive) {
+        return res.status(404).json({ message: "No active caregiver found with this phone number and state" });
+      }
+
+      if (caregiver.password) {
+        return res.status(400).json({ message: "Password already set for this account" });
+      }
+
+      // Hash password and update caregiver
+      const hashedPassword = await hashPassword(password);
+      await storage.updateCaregiverPassword(caregiver.id, hashedPassword);
+
+      res.json({ 
+        message: "Password set successfully! You can now log in.",
+        success: true
+      });
+    } catch (error) {
+      console.error("Error setting up caregiver password:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get survey form by check-in ID (public route)
   app.get("/api/survey/:checkInId", async (req, res) => {
     try {
