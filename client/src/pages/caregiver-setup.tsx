@@ -57,10 +57,7 @@ export default function CaregiverSetup() {
         return;
       }
 
-      const response = await apiRequest("/api/caregiver/check-eligibility", {
-        method: "POST",
-        body: JSON.stringify({ phone, state }),
-      });
+      const response = await apiRequest("POST", "/api/caregiver/check-eligibility", { phone, state });
 
       if (response.eligible) {
         setEligible(true);
@@ -86,13 +83,10 @@ export default function CaregiverSetup() {
     setError("");
 
     try {
-      await apiRequest("/api/caregiver/setup-password", {
-        method: "POST",
-        body: JSON.stringify({
-          phone: data.phone,
-          state: data.state,
-          password: data.password,
-        }),
+      await apiRequest("POST", "/api/caregiver/setup-password", {
+        phone: data.phone,
+        state: data.state,
+        password: data.password,
       });
 
       // Success - redirect to login with success message

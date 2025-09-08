@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useLocation } from "wouter";
+import { useState, useEffect } from "react";
+import { useLocation, Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { HeartHandshake, Phone, Lock, ArrowLeft } from "lucide-react";
+import { HeartHandshake, Phone, Lock, ArrowLeft, CheckCircle, UserPlus } from "lucide-react";
 
 const loginSchema = z.object({
   phone: z.string().min(1, "Phone number is required"),
@@ -27,6 +27,17 @@ export default function CaregiverLogin() {
   // Get state from URL params
   const urlParams = new URLSearchParams(window.location.search);
   const state = urlParams.get('state') || '';
+  const setupSuccess = urlParams.get('setup') === 'success';
+
+  // Show success message if coming from setup
+  useEffect(() => {
+    if (setupSuccess) {
+      toast({
+        title: "Account Created Successfully!",
+        description: "Your password has been set. You can now log in with your credentials.",
+      });
+    }
+  }, [setupSuccess, toast]);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -144,6 +155,15 @@ export default function CaregiverLogin() {
                     </Alert>
                   )}
 
+                  {setupSuccess && (
+                    <Alert className="border-green-200 bg-green-50">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <AlertDescription className="text-green-800">
+                        Account created successfully! You can now log in.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   <div className="space-y-3 pt-2">
                     <Button
                       type="submit"
@@ -168,11 +188,24 @@ export default function CaregiverLogin() {
             </CardContent>
           </Card>
 
-          {/* Help Text */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-slate-500">
-              Don't have a password yet? Contact your care coordinator to set up your account.
-            </p>
+          {/* Setup Link */}
+          <div className="mt-6 text-center space-y-3">
+            <div className="border-t border-slate-200 pt-4">
+              <p className="text-sm text-slate-600 mb-3">First time here?</p>
+              <Link 
+                href={`/caregiver/setup${state ? `?state=${encodeURIComponent(state)}` : ''}`}
+                className="inline-flex items-center gap-2 text-green-600 hover:text-green-700 font-medium text-sm"
+              >
+                <UserPlus className="h-4 w-4" />
+                Set up your account
+              </Link>
+            </div>
+            
+            <div className="pt-2">
+              <p className="text-xs text-slate-500">
+                Need help? Contact your care coordinator for assistance.
+              </p>
+            </div>
           </div>
         </div>
       </div>
