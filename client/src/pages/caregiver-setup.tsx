@@ -57,7 +57,7 @@ export default function CaregiverSetup() {
         return;
       }
 
-      const response = await apiRequest("POST", "/api/caregiver/check-eligibility", { phone, state });
+      const response = await apiRequest("POST", "/api/caregiver/check-eligibility", { phone, state }) as any;
 
       if (response.eligible) {
         setEligible(true);

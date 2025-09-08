@@ -17,6 +17,7 @@ import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
 import CaregiverStateSelection from "@/pages/caregiver-state-selection";
 import CaregiverLogin from "@/pages/caregiver-login";
+import CaregiverSetup from "@/pages/caregiver-setup";
 import CaregiverDashboard from "@/pages/caregiver-dashboard";
 import CaregiverPatient from "@/pages/caregiver-patient";
 import CaregiverSurvey from "@/pages/caregiver-survey";
@@ -30,6 +31,7 @@ function UnauthenticatedRouter() {
       <Route path="/survey/:checkInId" component={Survey} />
       <Route path="/caregiver" component={CaregiverStateSelection} />
       <Route path="/caregiver/login" component={CaregiverLogin} />
+      <Route path="/caregiver/setup" component={CaregiverSetup} />
       <Route path="/caregiver/dashboard" component={CaregiverDashboard} />
       <Route path="/caregiver/patient/:patientId" component={CaregiverPatient} />
       <Route path="/caregiver/survey/:patientId" component={CaregiverSurvey} />
