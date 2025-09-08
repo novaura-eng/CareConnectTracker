@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -167,6 +167,9 @@ export default function Caregivers() {
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
                     <DialogTitle>{selectedCaregiver ? "Edit Caregiver" : "Add New Caregiver"}</DialogTitle>
+                    <DialogDescription>
+                      {selectedCaregiver ? "Update the caregiver's information below." : "Enter the caregiver's contact details and information."}
+                    </DialogDescription>
                   </DialogHeader>
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-4">
@@ -276,7 +279,101 @@ export default function Caregivers() {
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
-              {/* Use same form content as desktop */}
+              <DialogHeader>
+                <DialogTitle>{selectedCaregiver ? "Edit Caregiver" : "Add New Caregiver"}</DialogTitle>
+                <DialogDescription>
+                  {selectedCaregiver ? "Update the caregiver's information below." : "Enter the caregiver's contact details and information."}
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Full Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter caregiver's full name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone Number</FormLabel>
+                        <FormControl>
+                          <Input placeholder="(555) 123-4567" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email (Optional)</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="caregiver@example.com" {...field} value={field.value || ""} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Address (Optional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Street address" {...field} value={field.value || ""} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="emergencyContact"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Emergency Contact (Optional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Emergency contact information" {...field} value={field.value || ""} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="flex justify-end space-x-2 pt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={createMutation.isPending}>
+                      {createMutation.isPending 
+                        ? (selectedCaregiver ? "Updating..." : "Adding...") 
+                        : (selectedCaregiver ? "Update Caregiver" : "Add Caregiver")
+                      }
+                    </Button>
+                  </div>
+                </form>
+              </Form>
             </DialogContent>
           </Dialog>
         </div>
