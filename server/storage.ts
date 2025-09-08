@@ -26,7 +26,10 @@ export interface IStorage {
   // Caregiver methods
   getCaregiver(id: number): Promise<Caregiver | undefined>;
   getCaregiverByPhone(phone: string): Promise<Caregiver | undefined>;
+  getCaregiverByPhoneAndState(phone: string, state: string): Promise<Caregiver | undefined>;
+  getCaregiversByState(state: string): Promise<Caregiver[]>;
   createCaregiver(caregiver: InsertCaregiver): Promise<Caregiver>;
+  updateCaregiverPassword(id: number, password: string): Promise<void>;
   getAllCaregivers(): Promise<Caregiver[]>;
   deleteCaregiver(id: number): Promise<void>;
   
@@ -83,6 +86,26 @@ export class DatabaseStorage implements IStorage {
   async getCaregiverByPhone(phone: string): Promise<Caregiver | undefined> {
     const [caregiver] = await db.select().from(caregivers).where(eq(caregivers.phone, phone));
     return caregiver || undefined;
+  }
+
+  async getCaregiverByPhoneAndState(phone: string, state: string): Promise<Caregiver | undefined> {
+    const [caregiver] = await db.select().from(caregivers).where(
+      and(eq(caregivers.phone, phone), eq(caregivers.state, state))
+    );
+    return caregiver || undefined;
+  }
+
+  async getCaregiversByState(state: string): Promise<Caregiver[]> {
+    return await db.select().from(caregivers).where(
+      and(eq(caregivers.state, state), eq(caregivers.isActive, true))
+    );
+  }
+
+  async updateCaregiverPassword(id: number, password: string): Promise<void> {
+    await db
+      .update(caregivers)
+      .set({ password })
+      .where(eq(caregivers.id, id));
   }
 
   async createCaregiver(insertCaregiver: InsertCaregiver): Promise<Caregiver> {

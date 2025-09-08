@@ -34,6 +34,8 @@ export const caregivers = pgTable("caregivers", {
   email: text("email"),
   address: text("address"),
   emergencyContact: text("emergency_contact"),
+  state: text("state").notNull(),
+  password: text("password"),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
