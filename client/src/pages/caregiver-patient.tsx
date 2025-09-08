@@ -68,8 +68,6 @@ export default function CaregiverPatient() {
   };
 
   const handleStartSurvey = () => {
-    // For now, we'll create a simple survey interface
-    // In a real app, you'd fetch available check-ins and create new ones
     setLocation(`/caregiver/survey/${patient.id}`);
   };
 

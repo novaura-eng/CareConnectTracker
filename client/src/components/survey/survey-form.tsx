@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
+import { useCaregiverAuth } from "@/hooks/useCaregiverAuth";
 import { apiRequest } from "@/lib/queryClient";
-import { HeartHandshake, Send } from "lucide-react";
+import { HeartHandshake, Send, Copy, CheckCircle } from "lucide-react";
 
 const surveySchema = z.object({
   hospitalVisits: z.boolean({ required_error: "Please select an option" }),
@@ -30,11 +32,22 @@ type SurveyFormData = z.infer<typeof surveySchema>;
 
 interface SurveyFormProps {
   checkInDetails: any;
+  patientId?: number; // Optional for caregiver flow
 }
 
-export default function SurveyForm({ checkInDetails }: SurveyFormProps) {
+export default function SurveyForm({ checkInDetails, patientId }: SurveyFormProps) {
   const { toast } = useToast();
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [copiedFromPrevious, setCopiedFromPrevious] = useState(false);
+  
+  // Check if user is a caregiver (for showing copy functionality)
+  const { caregiver, isAuthenticated: isCaregiverAuth } = useCaregiverAuth();
+  
+  // Fetch previous response if caregiver is authenticated and patientId is provided
+  const { data: previousResponse } = useQuery({
+    queryKey: ["/api/caregiver/previous-response", patientId],
+    enabled: isCaregiverAuth && !!patientId,
+  });
 
   const form = useForm<SurveyFormData>({
     resolver: zodResolver(surveySchema),
@@ -84,6 +97,29 @@ export default function SurveyForm({ checkInDetails }: SurveyFormProps) {
     return `${startStr} - ${endStr}`;
   };
 
+  const handleCopyFromPrevious = () => {
+    if (previousResponse) {
+      form.reset({
+        hospitalVisits: previousResponse.hospitalVisits || false,
+        hospitalDetails: previousResponse.hospitalDetails || "",
+        accidentsFalls: previousResponse.accidentsFalls || false,
+        accidentDetails: previousResponse.accidentDetails || "",
+        mentalHealth: previousResponse.mentalHealth || false,
+        mentalHealthDetails: previousResponse.mentalHealthDetails || "",
+        physicalHealth: previousResponse.physicalHealth || false,
+        physicalHealthDetails: previousResponse.physicalHealthDetails || "",
+        contactChanges: previousResponse.contactChanges || false,
+        contactDetails: previousResponse.contactDetails || "",
+        additionalComments: previousResponse.additionalComments || "",
+      });
+      setCopiedFromPrevious(true);
+      toast({
+        title: "Previous Responses Copied",
+        description: "Your previous responses have been loaded. You can now review and modify them as needed.",
+      });
+    }
+  };
+
   if (isSubmitted) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -130,6 +166,42 @@ export default function SurveyForm({ checkInDetails }: SurveyFormProps) {
       {/* Survey Form */}
       <main className="px-4 py-6 sm:py-8 sm:px-6 lg:px-8">
         <div className="max-w-2xl mx-auto">
+          {/* Copy from Previous Response Card - Only show for caregivers */}
+          {isCaregiverAuth && previousResponse && !copiedFromPrevious && (
+            <Card className="mb-8 border-green-200 shadow-sm bg-green-50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-green-900">
+                  <Copy className="h-5 w-5" />
+                  Previous Response Available
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-green-700 mb-4">
+                  You can copy your responses from the last completed check-in to save time. 
+                  You'll be able to review and modify them before submitting.
+                </p>
+                <Button 
+                  onClick={handleCopyFromPrevious}
+                  variant="outline" 
+                  className="border-green-300 text-green-800 hover:bg-green-100"
+                >
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copy from Previous Response
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Copied Confirmation Alert */}
+          {copiedFromPrevious && (
+            <Alert className="mb-8 border-blue-200 bg-blue-50">
+              <CheckCircle className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-800">
+                Previous responses have been copied. Please review and update them as needed before submitting.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Welcome Card */}
           <Card className="mb-8">
             <CardContent className="p-6">
