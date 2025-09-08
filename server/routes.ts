@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertSurveyResponseSchema, insertPatientSchema, insertWeeklyCheckInSchema } from "@shared/schema";
+import { insertCaregiverSchema, insertSurveyResponseSchema, insertPatientSchema, insertWeeklyCheckInSchema } from "@shared/schema";
 import { smsService } from "./services/sms";
 import { sendCaregiverWeeklyEmail } from "./services/email";
 import { setupAuth, isAuthenticated } from "./replitAuth";
@@ -314,14 +314,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create new caregiver
-  app.post("/api/caregivers", async (req, res) => {
+  // Create new caregiver (protected)
+  app.post("/api/caregivers", isAuthenticated, async (req, res) => {
     try {
-      const caregiver = await storage.createCaregiver(req.body);
+      console.log("Creating caregiver with data:", req.body);
+      
+      // Validate request data
+      const validatedData = insertCaregiverSchema.parse(req.body);
+      console.log("Validated caregiver data:", validatedData);
+      
+      const caregiver = await storage.createCaregiver(validatedData);
+      console.log("Caregiver created successfully:", caregiver);
       res.json(caregiver);
     } catch (error) {
       console.error("Error creating caregiver:", error);
-      res.status(500).json({ message: "Internal server error" });
+      res.status(500).json({ message: "Internal server error", error: error.message });
     }
   });
 

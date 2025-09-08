@@ -42,6 +42,7 @@ export default function Caregivers() {
       email: undefined,
       address: undefined,
       emergencyContact: undefined,
+      state: "default", // Default state value for admin-created caregivers
       isActive: true,
     },
   });
