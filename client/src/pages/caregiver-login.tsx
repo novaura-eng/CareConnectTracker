@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { HeartHandshake, Phone, Lock, ArrowLeft, CheckCircle, UserPlus } from "lucide-react";
+import { HeartHandshake, Phone, Lock, ArrowLeft, CheckCircle, UserPlus, Home } from "lucide-react";
 
 const loginSchema = z.object({
   phone: z.string().min(1, "Phone number is required"),
@@ -76,6 +76,10 @@ export default function CaregiverLogin() {
 
   const handleBackToStateSelection = () => {
     setLocation("/caregiver");
+  };
+
+  const handleBackToHome = () => {
+    setLocation("/");
   };
 
   return (
@@ -173,15 +177,27 @@ export default function CaregiverLogin() {
                       {loginMutation.isPending ? "Signing In..." : "Sign In"}
                     </Button>
 
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleBackToStateSelection}
-                      className="w-full h-12 text-base"
-                    >
-                      <ArrowLeft className="mr-2 h-4 w-4" />
-                      Back to State Selection
-                    </Button>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleBackToStateSelection}
+                        className="h-12 text-sm"
+                      >
+                        <ArrowLeft className="mr-1 h-4 w-4" />
+                        Back to State
+                      </Button>
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleBackToHome}
+                        className="h-12 text-sm"
+                      >
+                        <Home className="mr-1 h-4 w-4" />
+                        Back to Home
+                      </Button>
+                    </div>
                   </div>
                 </form>
               </Form>

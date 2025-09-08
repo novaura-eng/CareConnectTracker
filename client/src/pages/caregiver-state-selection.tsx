@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, ArrowRight, HeartHandshake } from "lucide-react";
+import { MapPin, ArrowRight, HeartHandshake, Home } from "lucide-react";
 
 const US_STATES = [
   "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut", "Delaware", "Florida", "Georgia",
@@ -21,6 +21,10 @@ export default function CaregiverStateSelection() {
     if (selectedState) {
       setLocation(`/caregiver/login?state=${encodeURIComponent(selectedState)}`);
     }
+  };
+
+  const handleBackToHome = () => {
+    setLocation("/");
   };
 
   return (
@@ -68,14 +72,25 @@ export default function CaregiverStateSelection() {
                 </Select>
               </div>
 
-              <Button 
-                onClick={handleContinue}
-                disabled={!selectedState}
-                className="w-full h-12 text-base font-medium"
-              >
-                Continue to Login
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+              <div className="space-y-3">
+                <Button 
+                  onClick={handleContinue}
+                  disabled={!selectedState}
+                  className="w-full h-12 text-base font-medium"
+                >
+                  Continue to Login
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+
+                <Button 
+                  onClick={handleBackToHome}
+                  variant="outline"
+                  className="w-full h-12 text-base"
+                >
+                  <Home className="mr-2 h-4 w-4" />
+                  Back to Home
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
