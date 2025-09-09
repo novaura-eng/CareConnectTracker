@@ -70,6 +70,7 @@ export default function Caregivers() {
       });
     },
     onError: (error) => {
+      console.error("Mutation error:", error);
       toast({
         title: "Error",
         description: selectedCaregiver 
@@ -173,7 +174,11 @@ export default function Caregivers() {
                     </DialogDescription>
                   </DialogHeader>
                   <Form {...form}>
-                    <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-4">
+                    <form onSubmit={form.handleSubmit((data) => {
+                      console.log("Form submitted with data:", data);
+                      console.log("Form errors:", form.formState.errors);
+                      createMutation.mutate(data);
+                    })} className="space-y-4">
                       <FormField
                         control={form.control}
                         name="name"
@@ -287,7 +292,11 @@ export default function Caregivers() {
                 </DialogDescription>
               </DialogHeader>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-4">
+                <form onSubmit={form.handleSubmit((data) => {
+                  console.log("Mobile form submitted with data:", data);
+                  console.log("Mobile form errors:", form.formState.errors);
+                  createMutation.mutate(data);
+                })} className="space-y-4">
                   <FormField
                     control={form.control}
                     name="name"
