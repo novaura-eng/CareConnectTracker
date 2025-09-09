@@ -1,11 +1,9 @@
 import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { insertCaregiverSchema, type InsertCaregiver, type Caregiver } from "@shared/schema";
+import { type InsertCaregiver, type Caregiver } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -34,18 +32,62 @@ export default function Caregivers() {
     enabled: !!selectedCaregiver && showPatients,
   });
 
-  const form = useForm<InsertCaregiver>({
-    resolver: zodResolver(insertCaregiverSchema),
-    defaultValues: {
+  // Form state
+  const [formData, setFormData] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    address: "",
+    emergencyContact: "",
+    state: "default",
+    isActive: true,
+  });
+
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  // Helper functions
+  const resetForm = () => {
+    setFormData({
       name: "",
       phone: "",
-      email: undefined,
-      address: undefined,
-      emergencyContact: undefined,
-      state: "default", // Default state value for admin-created caregivers
+      email: "",
+      address: "",
+      emergencyContact: "",
+      state: "default",
       isActive: true,
-    },
-  });
+    });
+    setFormErrors({});
+  };
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    if (!formData.name.trim()) errors.name = "Name is required";
+    if (!formData.phone.trim()) errors.phone = "Phone is required";
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log("Form submitted with data:", formData);
+    
+    if (!validateForm()) {
+      console.log("Form validation failed:", formErrors);
+      return;
+    }
+
+    const submitData: InsertCaregiver = {
+      name: formData.name,
+      phone: formData.phone,
+      email: formData.email || undefined,
+      address: formData.address || undefined,
+      emergencyContact: formData.emergencyContact || undefined,
+      state: formData.state,
+      isActive: formData.isActive,
+    };
+
+    createMutation.mutate(submitData);
+  };
 
   const createMutation = useMutation({
     mutationFn: async (data: InsertCaregiver) => {
@@ -61,7 +103,7 @@ export default function Caregivers() {
       queryClient.invalidateQueries({ queryKey: ["/api/caregivers"] });
       setIsDialogOpen(false);
       setSelectedCaregiver(null);
-      form.reset();
+      resetForm();
       toast({
         title: selectedCaregiver ? "Caregiver Updated" : "Caregiver Added",
         description: selectedCaregiver 
@@ -107,25 +149,19 @@ export default function Caregivers() {
   // Reset form when dialog state changes
   React.useEffect(() => {
     if (selectedCaregiver && isDialogOpen) {
-      form.reset({
+      setFormData({
         name: selectedCaregiver.name,
         phone: selectedCaregiver.phone,
         email: selectedCaregiver.email || "",
         address: selectedCaregiver.address || "",
         emergencyContact: selectedCaregiver.emergencyContact || "",
+        state: selectedCaregiver.state || "default",
         isActive: selectedCaregiver.isActive,
       });
     } else if (!selectedCaregiver && isDialogOpen) {
-      form.reset({
-        name: "",
-        phone: "",
-        email: "",
-        address: "",
-        emergencyContact: "",
-        isActive: true,
-      });
+      resetForm();
     }
-  }, [selectedCaregiver, isDialogOpen, form]);
+  }, [selectedCaregiver, isDialogOpen]);
 
   const getInitials = (name: string) => {
     return name
@@ -173,99 +209,78 @@ export default function Caregivers() {
                       {selectedCaregiver ? "Update the caregiver's information below." : "Enter the caregiver's contact details and information."}
                     </DialogDescription>
                   </DialogHeader>
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit((data) => {
-                      console.log("Form submitted with data:", data);
-                      console.log("Form errors:", form.formState.errors);
-                      createMutation.mutate(data);
-                    })} className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Full Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter caregiver's full name" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Full Name</Label>
+                      <Input
+                        id="name"
+                        placeholder="Enter caregiver's full name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        className={formErrors.name ? "border-red-500" : ""}
                       />
-                      
-                      <FormField
-                        control={form.control}
-                        name="phone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Phone Number</FormLabel>
-                            <FormControl>
-                              <Input placeholder="(555) 123-4567" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
+                      {formErrors.name && <p className="text-sm text-red-500">{formErrors.name}</p>}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <Input
+                        id="phone"
+                        placeholder="(555) 123-4567"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        className={formErrors.phone ? "border-red-500" : ""}
                       />
-                      
-                      <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email (Optional)</FormLabel>
-                            <FormControl>
-                              <Input type="email" placeholder="caregiver@example.com" {...field} value={field.value || ""} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
+                      {formErrors.phone && <p className="text-sm text-red-500">{formErrors.phone}</p>}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email (Optional)</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="caregiver@example.com"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       />
-                      
-                      <FormField
-                        control={form.control}
-                        name="address"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Address (Optional)</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Street address" {...field} value={field.value || ""} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Address (Optional)</Label>
+                      <Input
+                        id="address"
+                        placeholder="Street address"
+                        value={formData.address}
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                       />
-                      
-                      <FormField
-                        control={form.control}
-                        name="emergencyContact"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Emergency Contact (Optional)</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Emergency contact information" {...field} value={field.value || ""} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="emergencyContact">Emergency Contact (Optional)</Label>
+                      <Input
+                        id="emergencyContact"
+                        placeholder="Emergency contact information"
+                        value={formData.emergencyContact}
+                        onChange={(e) => setFormData({ ...formData, emergencyContact: e.target.value })}
                       />
+                    </div>
 
-                      <div className="flex justify-end space-x-2 pt-4">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => setIsDialogOpen(false)}
-                        >
-                          Cancel
-                        </Button>
-                        <Button type="submit" disabled={createMutation.isPending}>
-                          {createMutation.isPending 
-                            ? (selectedCaregiver ? "Updating..." : "Adding...") 
-                            : (selectedCaregiver ? "Update Caregiver" : "Add Caregiver")
-                          }
-                        </Button>
-                      </div>
-                    </form>
-                  </Form>
+                    <div className="flex justify-end space-x-2 pt-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsDialogOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={createMutation.isPending}>
+                        {createMutation.isPending 
+                          ? (selectedCaregiver ? "Updating..." : "Adding...") 
+                          : (selectedCaregiver ? "Update Caregiver" : "Add Caregiver")
+                        }
+                      </Button>
+                    </div>
+                  </form>
                 </DialogContent>
               </Dialog>
             </div>
@@ -291,99 +306,78 @@ export default function Caregivers() {
                   {selectedCaregiver ? "Update the caregiver's information below." : "Enter the caregiver's contact details and information."}
                 </DialogDescription>
               </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit((data) => {
-                  console.log("Mobile form submitted with data:", data);
-                  console.log("Mobile form errors:", form.formState.errors);
-                  createMutation.mutate(data);
-                })} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Full Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter caregiver's full name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="mobile-name">Full Name</Label>
+                  <Input
+                    id="mobile-name"
+                    placeholder="Enter caregiver's full name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className={formErrors.name ? "border-red-500" : ""}
                   />
-                  
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone Number</FormLabel>
-                        <FormControl>
-                          <Input placeholder="(555) 123-4567" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                  {formErrors.name && <p className="text-sm text-red-500">{formErrors.name}</p>}
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="mobile-phone">Phone Number</Label>
+                  <Input
+                    id="mobile-phone"
+                    placeholder="(555) 123-4567"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className={formErrors.phone ? "border-red-500" : ""}
                   />
-                  
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email (Optional)</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="caregiver@example.com" {...field} value={field.value || ""} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                  {formErrors.phone && <p className="text-sm text-red-500">{formErrors.phone}</p>}
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="mobile-email">Email (Optional)</Label>
+                  <Input
+                    id="mobile-email"
+                    type="email"
+                    placeholder="caregiver@example.com"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   />
-                  
-                  <FormField
-                    control={form.control}
-                    name="address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Address (Optional)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Street address" {...field} value={field.value || ""} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="mobile-address">Address (Optional)</Label>
+                  <Input
+                    id="mobile-address"
+                    placeholder="Street address"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   />
-                  
-                  <FormField
-                    control={form.control}
-                    name="emergencyContact"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Emergency Contact (Optional)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Emergency contact information" {...field} value={field.value || ""} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="mobile-emergencyContact">Emergency Contact (Optional)</Label>
+                  <Input
+                    id="mobile-emergencyContact"
+                    placeholder="Emergency contact information"
+                    value={formData.emergencyContact}
+                    onChange={(e) => setFormData({ ...formData, emergencyContact: e.target.value })}
                   />
+                </div>
 
-                  <div className="flex justify-end space-x-2 pt-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsDialogOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={createMutation.isPending}>
-                      {createMutation.isPending 
-                        ? (selectedCaregiver ? "Updating..." : "Adding...") 
-                        : (selectedCaregiver ? "Update Caregiver" : "Add Caregiver")
-                      }
-                    </Button>
-                  </div>
-                </form>
-              </Form>
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={createMutation.isPending}>
+                    {createMutation.isPending 
+                      ? (selectedCaregiver ? "Updating..." : "Adding...") 
+                      : (selectedCaregiver ? "Update Caregiver" : "Add Caregiver")
+                    }
+                  </Button>
+                </div>
+              </form>
             </DialogContent>
           </Dialog>
         </div>
