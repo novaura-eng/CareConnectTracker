@@ -1,11 +1,210 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertCaregiverSchema, insertSurveyResponseSchema, insertPatientSchema, insertWeeklyCheckInSchema } from "@shared/schema";
+import { 
+  insertCaregiverSchema, 
+  insertSurveyResponseSchema, 
+  insertPatientSchema, 
+  insertWeeklyCheckInSchema,
+  insertSurveySchema,
+  insertSurveyQuestionSchema,
+  insertSurveyOptionSchema,
+  insertSurveyAssignmentSchema,
+  insertSurveyResponseV2Schema,
+  insertSurveyResponseItemSchema
+} from "@shared/schema";
 import { smsService } from "./services/sms";
 import { sendCaregiverWeeklyEmail } from "./services/email";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { setupCaregiverAuth, isCaregiver, hashPassword, verifyPassword } from "./caregiverAuth";
+import { db } from "./db";
+import { 
+  weeklyCheckIns, 
+  surveyAssignments, 
+  surveyResponsesV2, 
+  surveyResponseItems 
+} from "@shared/schema";
+import { eq } from "drizzle-orm";
+
+// Helper function to validate survey answers against question schemas
+function validateSurveyAnswers(answers: Record<string, any>, questions: Array<{ id: number; label: string; type: string; required: boolean; validation?: any; options?: Array<{ value: string }> }>): { isValid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  
+  // Create a map of questions for efficient lookup
+  const questionMap = new Map();
+  questions.forEach((q: { id: number; label: string; type: string; required: boolean; validation?: any; options?: Array<{ value: string }> }) => questionMap.set(q.id, q));
+  
+  // Check required questions are answered
+  for (const question of questions) {
+    if (question.required) {
+      const answer = answers[question.id.toString()];
+      if (answer === undefined || answer === null || answer === '') {
+        errors.push(`Question "${question.label}" is required`);
+      }
+    }
+  }
+  
+  // Validate answer types and constraints
+  for (const [questionId, answer] of Object.entries(answers as Record<string, any>)) {
+    const qId = parseInt(questionId);
+    const question = questionMap.get(qId);
+    
+    if (!question) {
+      errors.push(`Invalid question ID: ${questionId}`);
+      continue;
+    }
+    
+    // Skip empty optional answers
+    if (!question.required && (answer === undefined || answer === null || answer === '')) {
+      continue;
+    }
+    
+    // Type-specific validation
+    switch (question.type) {
+      case 'single_choice':
+        if (typeof answer !== 'string') {
+          errors.push(`Question "${question.label}" must be a string`);
+        } else {
+          // Validate against options if available
+          const options = questions.filter(q => q.id === qId).map(q => q.options).flat().filter(Boolean);
+          if (options.length > 0 && !options.some(opt => opt && opt.value === answer)) {
+            errors.push(`Invalid option for question "${question.label}": ${answer}`);
+          }
+        }
+        break;
+      
+      case 'multi_choice':
+        if (!Array.isArray(answer)) {
+          errors.push(`Question "${question.label}" must be an array`);
+        } else {
+          // Validate each option
+          const options = questions.filter(q => q.id === qId).map(q => q.options).flat().filter(Boolean);
+          if (options.length > 0) {
+            for (const selectedOption of (answer as string[])) {
+              if (!options.some(opt => opt?.value === selectedOption)) {
+                errors.push(`Invalid option for question "${question.label}": ${selectedOption}`);
+              }
+            }
+          }
+        }
+        break;
+      
+      case 'number':
+      case 'rating':
+        if (typeof answer !== 'number' || isNaN(answer as number)) {
+          errors.push(`Question "${question.label}" must be a valid number`);
+        }
+        // Check validation rules if present
+        if (question.validation) {
+          const validation = typeof question.validation === 'string' ? JSON.parse(question.validation) : question.validation;
+          if (validation.min !== undefined && (answer as number) < validation.min) {
+            errors.push(`Question "${question.label}" must be at least ${validation.min}`);
+          }
+          if (validation.max !== undefined && (answer as number) > validation.max) {
+            errors.push(`Question "${question.label}" must be at most ${validation.max}`);
+          }
+        }
+        break;
+      
+      case 'boolean':
+        if (typeof answer !== 'boolean') {
+          errors.push(`Question "${question.label}" must be true or false`);
+        }
+        break;
+      
+      case 'text':
+      case 'textarea':
+        if (typeof answer !== 'string') {
+          errors.push(`Question "${question.label}" must be a string`);
+        } else {
+          // Check validation rules if present
+          if (question.validation) {
+            const validation = typeof question.validation === 'string' ? JSON.parse(question.validation) : question.validation;
+            if (validation.minLength !== undefined && (answer as string).length < validation.minLength) {
+              errors.push(`Question "${question.label}" must be at least ${validation.minLength} characters`);
+            }
+            if (validation.maxLength !== undefined && (answer as string).length > validation.maxLength) {
+              errors.push(`Question "${question.label}" must be at most ${validation.maxLength} characters`);
+            }
+          }
+        }
+        break;
+      
+      case 'date':
+        // Accept both Date objects and ISO date strings
+        if (typeof answer === 'string') {
+          const parsedDate = new Date(answer as string);
+          if (isNaN(parsedDate.getTime())) {
+            errors.push(`Question "${question.label}" must be a valid date`);
+          }
+        } else if (!(answer instanceof Date)) {
+          errors.push(`Question "${question.label}" must be a valid date`);
+        }
+        break;
+    }
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
+
+// Helper function to process answers for storage with proper typing
+function processAnswerForStorage(answer: any, questionType: string): {
+  answer: any;
+  answerText: string | null;
+  answerNumber: number | null;
+  answerBoolean: boolean | null;
+  answerDate: Date | null;
+} {
+  let answerText: string | null = null;
+  let answerNumber: number | null = null;
+  let answerBoolean: boolean | null = null;
+  let answerDate: Date | null = null;
+  
+  // Process based on question type
+  switch (questionType) {
+    case 'text':
+    case 'textarea':
+    case 'single_choice':
+      answerText = String(answer);
+      break;
+    
+    case 'multi_choice':
+      if (Array.isArray(answer)) {
+        answerText = JSON.stringify(answer);
+      } else {
+        answerText = String(answer);
+      }
+      break;
+    
+    case 'number':
+    case 'rating':
+      answerNumber = Number(answer);
+      break;
+    
+    case 'boolean':
+      answerBoolean = Boolean(answer);
+      break;
+    
+    case 'date':
+      if (typeof answer === 'string') {
+        answerDate = new Date(answer);
+      } else if (answer instanceof Date) {
+        answerDate = answer;
+      }
+      break;
+  }
+  
+  return {
+    answer,
+    answerText,
+    answerNumber,
+    answerBoolean,
+    answerDate
+  };
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -218,6 +417,173 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== CAREGIVER SURVEY ACCESS ROUTES =====
+  
+  // Get pending surveys for a caregiver
+  app.get("/api/caregiver/surveys/pending", isCaregiver, async (req, res) => {
+    try {
+      const caregiver = (req as any).caregiver;
+      const pendingSurveys = await storage.getPendingSurveysByCaregiver(caregiver.id);
+      res.json(pendingSurveys);
+    } catch (error) {
+      console.error("Error fetching pending surveys:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get survey details for assignment
+  app.get("/api/caregiver/surveys/:assignmentId", isCaregiver, async (req, res) => {
+    try {
+      const caregiver = (req as any).caregiver;
+      const assignmentId = parseInt(req.params.assignmentId);
+      
+      // Verify assignment belongs to this caregiver
+      const assignment = await storage.getSurveyAssignment(assignmentId);
+      if (!assignment || assignment.caregiverId !== caregiver.id) {
+        return res.status(403).json({ message: "Survey assignment not found or access denied" });
+      }
+      
+      // Get survey with questions and options
+      const surveyDetails = await storage.getSurveyWithQuestions(assignment.surveyId);
+      if (!surveyDetails) {
+        return res.status(404).json({ message: "Survey not found" });
+      }
+      
+      res.json({
+        assignment,
+        survey: surveyDetails
+      });
+    } catch (error) {
+      console.error("Error fetching survey details:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Submit survey response
+  app.post("/api/caregiver/surveys/:assignmentId/submit", isCaregiver, async (req, res) => {
+    try {
+      const caregiver = (req as any).caregiver;
+      const assignmentId = parseInt(req.params.assignmentId);
+      const { answers, meta } = req.body;
+      
+      if (!answers || typeof answers !== 'object') {
+        return res.status(400).json({ message: "Answers are required and must be an object" });
+      }
+
+      // Verify assignment belongs to this caregiver
+      const assignment = await storage.getSurveyAssignment(assignmentId);
+      if (!assignment || assignment.caregiverId !== caregiver.id) {
+        return res.status(403).json({ message: "Survey assignment not found or access denied" });
+      }
+      
+      if (assignment.status === 'completed') {
+        return res.status(400).json({ message: "Survey has already been submitted" });
+      }
+
+      // Check assignment expiry
+      if (assignment.dueAt && new Date() > assignment.dueAt) {
+        return res.status(400).json({ message: "Survey assignment has expired" });
+      }
+      
+      // Get survey with questions for validation
+      const surveyDetails = await storage.getSurveyWithQuestions(assignment.surveyId);
+      if (!surveyDetails) {
+        return res.status(404).json({ message: "Survey not found" });
+      }
+
+      // Validate survey is published
+      if (surveyDetails.survey.status !== 'published') {
+        return res.status(400).json({ message: "Survey is not available for submission" });
+      }
+      
+      // Validate answers against survey questions
+      const validationResult = validateSurveyAnswers(answers, surveyDetails.questions);
+      if (!validationResult.isValid) {
+        return res.status(400).json({ 
+          message: "Invalid survey answers",
+          errors: validationResult.errors 
+        });
+      }
+      
+      // Use database transaction for atomic operations
+      const result = await db.transaction(async (tx) => {
+        // Create survey response
+        const responseData = insertSurveyResponseV2Schema.parse({
+          surveyId: assignment.surveyId,
+          assignmentId: assignmentId,
+          checkInId: assignment.checkInId,
+          caregiverId: caregiver.id,
+          patientId: assignment.patientId,
+          meta: meta || {}
+        });
+        
+        const [surveyResponse] = await tx
+          .insert(surveyResponsesV2)
+          .values(responseData)
+          .returning();
+        
+        // Process and validate response items
+        const responseItems = [];
+        for (const [questionId, answer] of Object.entries(answers)) {
+          const qId = parseInt(questionId);
+          
+          // Validate question exists
+          const question = surveyDetails.questions.find((q: any) => q.id === qId);
+          if (!question) {
+            throw new Error(`Question ID ${qId} not found in survey`);
+          }
+
+          const processedItem = processAnswerForStorage(answer, question.type);
+          const item = {
+            responseId: surveyResponse.id,
+            questionId: qId,
+            answer: processedItem.answer,
+            answerText: processedItem.answerText,
+            answerNumber: processedItem.answerNumber,
+            answerBoolean: processedItem.answerBoolean,
+            answerDate: processedItem.answerDate
+          };
+          responseItems.push(item);
+        }
+        
+        // Insert response items
+        if (responseItems.length > 0) {
+          await tx
+            .insert(surveyResponseItems)
+            .values(responseItems);
+        }
+        
+        // Mark assignment as completed
+        await tx
+          .update(surveyAssignments)
+          .set({ status: 'completed', completedAt: new Date() })
+          .where(eq(surveyAssignments.id, assignmentId));
+        
+        // If linked to a check-in, mark check-in as completed
+        if (assignment.checkInId) {
+          await tx
+            .update(weeklyCheckIns)
+            .set({ isCompleted: true, completedAt: new Date() })
+            .where(eq(weeklyCheckIns.id, assignment.checkInId));
+        }
+        
+        return surveyResponse;
+      });
+      
+      res.json({ 
+        message: "Survey submitted successfully", 
+        response: result 
+      });
+    } catch (error: unknown) {
+      console.error("Error submitting survey:", error);
+      if (error instanceof Error) {
+        res.status(500).json({ message: error.message });
+      } else {
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  });
+
   // Caregiver Account Setup Routes
   app.post("/api/caregiver/check-eligibility", async (req, res) => {
     try {
@@ -368,6 +734,256 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== ADMIN SURVEY MANAGEMENT ROUTES =====
+  
+  // Survey CRUD Operations
+  app.get("/api/admin/surveys", isAuthenticated, async (req, res) => {
+    try {
+      const surveys = await storage.getAllSurveys();
+      res.json(surveys);
+    } catch (error) {
+      console.error("Error fetching surveys:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/admin/surveys/:id", isAuthenticated, async (req, res) => {
+    try {
+      const surveyId = parseInt(req.params.id);
+      const survey = await storage.getSurveyWithQuestions(surveyId);
+      
+      if (!survey) {
+        return res.status(404).json({ message: "Survey not found" });
+      }
+      
+      res.json(survey);
+    } catch (error) {
+      console.error("Error fetching survey:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/admin/surveys", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).user.claims.sub;
+      const validatedData = insertSurveySchema.parse({
+        ...req.body,
+        createdBy: userId
+      });
+      
+      const survey = await storage.createSurvey(validatedData);
+      res.json(survey);
+    } catch (error) {
+      console.error("Error creating survey:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/admin/surveys/:id", isAuthenticated, async (req, res) => {
+    try {
+      const surveyId = parseInt(req.params.id);
+      const updates = req.body;
+      
+      // Remove fields that shouldn't be updated via this endpoint
+      delete updates.id;
+      delete updates.createdBy;
+      delete updates.createdAt;
+      
+      const survey = await storage.updateSurvey(surveyId, updates);
+      res.json(survey);
+    } catch (error) {
+      console.error("Error updating survey:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/admin/surveys/:id", isAuthenticated, async (req, res) => {
+    try {
+      const surveyId = parseInt(req.params.id);
+      await storage.deleteSurvey(surveyId);
+      res.json({ message: "Survey deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting survey:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Survey Status Management
+  app.post("/api/admin/surveys/:id/publish", isAuthenticated, async (req, res) => {
+    try {
+      const surveyId = parseInt(req.params.id);
+      await storage.publishSurvey(surveyId);
+      res.json({ message: "Survey published successfully" });
+    } catch (error) {
+      console.error("Error publishing survey:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/admin/surveys/:id/archive", isAuthenticated, async (req, res) => {
+    try {
+      const surveyId = parseInt(req.params.id);
+      await storage.archiveSurvey(surveyId);
+      res.json({ message: "Survey archived successfully" });
+    } catch (error) {
+      console.error("Error archiving survey:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Survey Question CRUD Operations
+  app.get("/api/admin/surveys/:id/questions", isAuthenticated, async (req, res) => {
+    try {
+      const surveyId = parseInt(req.params.id);
+      const questions = await storage.getSurveyQuestions(surveyId);
+      res.json(questions);
+    } catch (error) {
+      console.error("Error fetching survey questions:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/admin/surveys/:id/questions", isAuthenticated, async (req, res) => {
+    try {
+      const surveyId = parseInt(req.params.id);
+      const validatedData = insertSurveyQuestionSchema.parse({
+        ...req.body,
+        surveyId
+      });
+      
+      const question = await storage.createSurveyQuestion(validatedData);
+      res.json(question);
+    } catch (error) {
+      console.error("Error creating survey question:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/admin/questions/:id", isAuthenticated, async (req, res) => {
+    try {
+      const questionId = parseInt(req.params.id);
+      const updates = req.body;
+      
+      // Remove fields that shouldn't be updated
+      delete updates.id;
+      delete updates.createdAt;
+      
+      const question = await storage.updateSurveyQuestion(questionId, updates);
+      res.json(question);
+    } catch (error) {
+      console.error("Error updating survey question:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/admin/questions/:id", isAuthenticated, async (req, res) => {
+    try {
+      const questionId = parseInt(req.params.id);
+      await storage.deleteSurveyQuestion(questionId);
+      res.json({ message: "Question deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting survey question:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Question Reordering
+  app.post("/api/admin/questions/reorder", isAuthenticated, async (req, res) => {
+    try {
+      const { questionIds } = req.body;
+      
+      if (!Array.isArray(questionIds)) {
+        return res.status(400).json({ message: "questionIds must be an array" });
+      }
+      
+      await storage.reorderSurveyQuestions(questionIds);
+      res.json({ message: "Questions reordered successfully" });
+    } catch (error) {
+      console.error("Error reordering questions:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Survey Option CRUD Operations
+  app.get("/api/admin/questions/:id/options", isAuthenticated, async (req, res) => {
+    try {
+      const questionId = parseInt(req.params.id);
+      const options = await storage.getSurveyOptions(questionId);
+      res.json(options);
+    } catch (error) {
+      console.error("Error fetching question options:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/admin/questions/:id/options", isAuthenticated, async (req, res) => {
+    try {
+      const questionId = parseInt(req.params.id);
+      const validatedData = insertSurveyOptionSchema.parse({
+        ...req.body,
+        questionId
+      });
+      
+      const option = await storage.createSurveyOption(validatedData);
+      res.json(option);
+    } catch (error) {
+      console.error("Error creating question option:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/admin/options/:id", isAuthenticated, async (req, res) => {
+    try {
+      const optionId = parseInt(req.params.id);
+      const updates = req.body;
+      
+      // Remove fields that shouldn't be updated
+      delete updates.id;
+      delete updates.createdAt;
+      
+      const option = await storage.updateSurveyOption(optionId, updates);
+      res.json(option);
+    } catch (error) {
+      console.error("Error updating question option:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/admin/options/:id", isAuthenticated, async (req, res) => {
+    try {
+      const optionId = parseInt(req.params.id);
+      await storage.deleteSurveyOption(optionId);
+      res.json({ message: "Option deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting question option:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Survey Assignment Operations
+  app.post("/api/admin/surveys/:id/assign", isAuthenticated, async (req, res) => {
+    try {
+      const surveyId = parseInt(req.params.id);
+      const { caregiverId, patientId, dueAt } = req.body;
+      
+      if (!caregiverId) {
+        return res.status(400).json({ message: "caregiverId is required" });
+      }
+      
+      const assignment = await storage.assignSurveyToCaregiver(
+        surveyId, 
+        caregiverId, 
+        patientId, 
+        dueAt ? new Date(dueAt) : undefined
+      );
+      
+      res.json(assignment);
+    } catch (error) {
+      console.error("Error assigning survey:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Delete caregiver (protected)
   app.delete("/api/caregivers/:id", isAuthenticated, async (req, res) => {
     try {
@@ -429,9 +1045,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const caregiver = await storage.createCaregiver(validatedData);
       console.log("Caregiver created successfully:", caregiver);
       res.json(caregiver);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error creating caregiver:", error);
-      res.status(500).json({ message: "Internal server error", error: error.message });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Internal server error", error: errorMessage });
     }
   });
 
@@ -448,9 +1065,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const patient = await storage.createPatient(req.body);
       console.log("Patient created successfully:", patient);
       res.json(patient);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error creating patient:", error);
-      res.status(500).json({ message: "Internal server error", error: error.message });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "Internal server error", error: errorMessage });
     }
   });
 

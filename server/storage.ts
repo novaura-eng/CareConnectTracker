@@ -466,7 +466,18 @@ export class DatabaseStorage implements IStorage {
   async getRecentResponses(limit: number = 10): Promise<any[]> {
     return await db
       .select({
-        checkIn: weeklyCheckIns,
+        checkIn: {
+          id: weeklyCheckIns.id,
+          caregiverId: weeklyCheckIns.caregiverId,
+          patientId: weeklyCheckIns.patientId,
+          weekStartDate: weeklyCheckIns.weekStartDate,
+          weekEndDate: weeklyCheckIns.weekEndDate,
+          isCompleted: weeklyCheckIns.isCompleted,
+          completedAt: weeklyCheckIns.completedAt,
+          remindersSent: weeklyCheckIns.remindersSent,
+          lastReminderAt: weeklyCheckIns.lastReminderAt,
+          createdAt: weeklyCheckIns.createdAt,
+        },
         caregiver: caregivers,
         patient: patients,
         response: surveyResponses,
