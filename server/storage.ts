@@ -4,6 +4,12 @@ import {
   patients, 
   weeklyCheckIns, 
   surveyResponses,
+  surveys,
+  surveyQuestions,
+  surveyOptions,
+  surveyAssignments,
+  surveyResponsesV2,
+  surveyResponseItems,
   type User,
   type UpsertUser,
   type Caregiver, 
@@ -13,7 +19,19 @@ import {
   type WeeklyCheckIn,
   type InsertWeeklyCheckIn,
   type SurveyResponse,
-  type InsertSurveyResponse
+  type InsertSurveyResponse,
+  type Survey,
+  type InsertSurvey,
+  type SurveyQuestion,
+  type InsertSurveyQuestion,
+  type SurveyOption,
+  type InsertSurveyOption,
+  type SurveyAssignment,
+  type InsertSurveyAssignment,
+  type SurveyResponseV2,
+  type InsertSurveyResponseV2,
+  type SurveyResponseItem,
+  type InsertSurveyResponseItem
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
@@ -55,6 +73,48 @@ export interface IStorage {
   // Dashboard stats
   getDashboardStats(): Promise<any>;
   getRecentResponses(limit?: number): Promise<any[]>;
+  
+  // Dynamic Survey methods
+  // Survey CRUD
+  createSurvey(survey: InsertSurvey): Promise<Survey>;
+  getSurvey(id: number): Promise<Survey | undefined>;
+  getSurveyWithQuestions(id: number): Promise<any>;
+  getAllSurveys(): Promise<Survey[]>;
+  updateSurvey(id: number, updates: Partial<InsertSurvey>): Promise<Survey>;
+  deleteSurvey(id: number): Promise<void>;
+  publishSurvey(id: number): Promise<void>;
+  archiveSurvey(id: number): Promise<void>;
+  
+  // Survey Question CRUD
+  createSurveyQuestion(question: InsertSurveyQuestion): Promise<SurveyQuestion>;
+  getSurveyQuestion(id: number): Promise<SurveyQuestion | undefined>;
+  getSurveyQuestions(surveyId: number): Promise<SurveyQuestion[]>;
+  updateSurveyQuestion(id: number, updates: Partial<InsertSurveyQuestion>): Promise<SurveyQuestion>;
+  deleteSurveyQuestion(id: number): Promise<void>;
+  reorderSurveyQuestions(questionIds: number[]): Promise<void>;
+  
+  // Survey Option CRUD
+  createSurveyOption(option: InsertSurveyOption): Promise<SurveyOption>;
+  getSurveyOptions(questionId: number): Promise<SurveyOption[]>;
+  updateSurveyOption(id: number, updates: Partial<InsertSurveyOption>): Promise<SurveyOption>;
+  deleteSurveyOption(id: number): Promise<void>;
+  
+  // Survey Assignment methods
+  createSurveyAssignment(assignment: InsertSurveyAssignment): Promise<SurveyAssignment>;
+  getSurveyAssignment(id: number): Promise<SurveyAssignment | undefined>;
+  getPendingSurveysByCaregiver(caregiverId: number): Promise<any[]>;
+  assignSurveyToCaregiver(surveyId: number, caregiverId: number, patientId?: number, dueAt?: Date): Promise<SurveyAssignment>;
+  completeSurveyAssignment(id: number): Promise<void>;
+  
+  // Survey Response V2 methods
+  createSurveyResponseV2(response: InsertSurveyResponseV2): Promise<SurveyResponseV2>;
+  getSurveyResponseV2(id: number): Promise<SurveyResponseV2 | undefined>;
+  getSurveyResponsesByAssignment(assignmentId: number): Promise<SurveyResponseV2[]>;
+  
+  // Survey Response Item methods
+  createSurveyResponseItem(item: InsertSurveyResponseItem): Promise<SurveyResponseItem>;
+  getSurveyResponseItems(responseId: number): Promise<SurveyResponseItem[]>;
+  bulkCreateSurveyResponseItems(items: InsertSurveyResponseItem[]): Promise<SurveyResponseItem[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -417,6 +477,264 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(surveyResponses, eq(weeklyCheckIns.id, surveyResponses.checkInId))
       .orderBy(desc(weeklyCheckIns.createdAt))
       .limit(limit);
+  }
+
+  // Dynamic Survey Storage Methods
+  
+  // Survey CRUD
+  async createSurvey(insertSurvey: InsertSurvey): Promise<Survey> {
+    const [survey] = await db
+      .insert(surveys)
+      .values(insertSurvey)
+      .returning();
+    return survey;
+  }
+
+  async getSurvey(id: number): Promise<Survey | undefined> {
+    const [survey] = await db.select().from(surveys).where(eq(surveys.id, id));
+    return survey || undefined;
+  }
+
+  async getSurveyWithQuestions(id: number): Promise<any> {
+    const result = await db
+      .select({
+        survey: surveys,
+        question: surveyQuestions,
+        option: surveyOptions,
+      })
+      .from(surveys)
+      .leftJoin(surveyQuestions, eq(surveys.id, surveyQuestions.surveyId))
+      .leftJoin(surveyOptions, eq(surveyQuestions.id, surveyOptions.questionId))
+      .where(eq(surveys.id, id))
+      .orderBy(surveyQuestions.order, surveyOptions.order);
+
+    if (!result[0]) return undefined;
+
+    const survey = result[0].survey;
+    const questionsMap = new Map();
+
+    result.forEach(row => {
+      if (row.question) {
+        if (!questionsMap.has(row.question.id)) {
+          questionsMap.set(row.question.id, {
+            ...row.question,
+            options: []
+          });
+        }
+        if (row.option) {
+          questionsMap.get(row.question.id).options.push(row.option);
+        }
+      }
+    });
+
+    return {
+      ...survey,
+      questions: Array.from(questionsMap.values())
+    };
+  }
+
+  async getAllSurveys(): Promise<Survey[]> {
+    return await db.select().from(surveys).orderBy(desc(surveys.createdAt));
+  }
+
+  async updateSurvey(id: number, updates: Partial<InsertSurvey>): Promise<Survey> {
+    const [survey] = await db
+      .update(surveys)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(surveys.id, id))
+      .returning();
+    return survey;
+  }
+
+  async deleteSurvey(id: number): Promise<void> {
+    await db.delete(surveys).where(eq(surveys.id, id));
+  }
+
+  async publishSurvey(id: number): Promise<void> {
+    await db
+      .update(surveys)
+      .set({ status: 'published', updatedAt: new Date() })
+      .where(eq(surveys.id, id));
+  }
+
+  async archiveSurvey(id: number): Promise<void> {
+    await db
+      .update(surveys)
+      .set({ status: 'archived', updatedAt: new Date() })
+      .where(eq(surveys.id, id));
+  }
+
+  // Survey Question CRUD
+  async createSurveyQuestion(insertQuestion: InsertSurveyQuestion): Promise<SurveyQuestion> {
+    const [question] = await db
+      .insert(surveyQuestions)
+      .values(insertQuestion)
+      .returning();
+    return question;
+  }
+
+  async getSurveyQuestion(id: number): Promise<SurveyQuestion | undefined> {
+    const [question] = await db.select().from(surveyQuestions).where(eq(surveyQuestions.id, id));
+    return question || undefined;
+  }
+
+  async getSurveyQuestions(surveyId: number): Promise<SurveyQuestion[]> {
+    return await db
+      .select()
+      .from(surveyQuestions)
+      .where(eq(surveyQuestions.surveyId, surveyId))
+      .orderBy(surveyQuestions.order);
+  }
+
+  async updateSurveyQuestion(id: number, updates: Partial<InsertSurveyQuestion>): Promise<SurveyQuestion> {
+    const [question] = await db
+      .update(surveyQuestions)
+      .set(updates)
+      .where(eq(surveyQuestions.id, id))
+      .returning();
+    return question;
+  }
+
+  async deleteSurveyQuestion(id: number): Promise<void> {
+    await db.delete(surveyQuestions).where(eq(surveyQuestions.id, id));
+  }
+
+  async reorderSurveyQuestions(questionIds: number[]): Promise<void> {
+    for (let i = 0; i < questionIds.length; i++) {
+      await db
+        .update(surveyQuestions)
+        .set({ order: i + 1 })
+        .where(eq(surveyQuestions.id, questionIds[i]));
+    }
+  }
+
+  // Survey Option CRUD
+  async createSurveyOption(insertOption: InsertSurveyOption): Promise<SurveyOption> {
+    const [option] = await db
+      .insert(surveyOptions)
+      .values(insertOption)
+      .returning();
+    return option;
+  }
+
+  async getSurveyOptions(questionId: number): Promise<SurveyOption[]> {
+    return await db
+      .select()
+      .from(surveyOptions)
+      .where(eq(surveyOptions.questionId, questionId))
+      .orderBy(surveyOptions.order);
+  }
+
+  async updateSurveyOption(id: number, updates: Partial<InsertSurveyOption>): Promise<SurveyOption> {
+    const [option] = await db
+      .update(surveyOptions)
+      .set(updates)
+      .where(eq(surveyOptions.id, id))
+      .returning();
+    return option;
+  }
+
+  async deleteSurveyOption(id: number): Promise<void> {
+    await db.delete(surveyOptions).where(eq(surveyOptions.id, id));
+  }
+
+  // Survey Assignment methods
+  async createSurveyAssignment(insertAssignment: InsertSurveyAssignment): Promise<SurveyAssignment> {
+    const [assignment] = await db
+      .insert(surveyAssignments)
+      .values(insertAssignment)
+      .returning();
+    return assignment;
+  }
+
+  async getSurveyAssignment(id: number): Promise<SurveyAssignment | undefined> {
+    const [assignment] = await db.select().from(surveyAssignments).where(eq(surveyAssignments.id, id));
+    return assignment || undefined;
+  }
+
+  async getPendingSurveysByCaregiver(caregiverId: number): Promise<any[]> {
+    return await db
+      .select({
+        assignment: surveyAssignments,
+        survey: surveys,
+        patient: patients,
+      })
+      .from(surveyAssignments)
+      .leftJoin(surveys, eq(surveyAssignments.surveyId, surveys.id))
+      .leftJoin(patients, eq(surveyAssignments.patientId, patients.id))
+      .where(
+        and(
+          eq(surveyAssignments.caregiverId, caregiverId),
+          eq(surveyAssignments.status, 'pending')
+        )
+      )
+      .orderBy(surveyAssignments.dueAt);
+  }
+
+  async assignSurveyToCaregiver(surveyId: number, caregiverId: number, patientId?: number, dueAt?: Date): Promise<SurveyAssignment> {
+    const [assignment] = await db
+      .insert(surveyAssignments)
+      .values({
+        surveyId,
+        caregiverId,
+        patientId,
+        dueAt,
+        status: 'pending'
+      })
+      .returning();
+    return assignment;
+  }
+
+  async completeSurveyAssignment(id: number): Promise<void> {
+    await db
+      .update(surveyAssignments)
+      .set({ status: 'completed', completedAt: new Date() })
+      .where(eq(surveyAssignments.id, id));
+  }
+
+  // Survey Response V2 methods
+  async createSurveyResponseV2(insertResponse: InsertSurveyResponseV2): Promise<SurveyResponseV2> {
+    const [response] = await db
+      .insert(surveyResponsesV2)
+      .values(insertResponse)
+      .returning();
+    return response;
+  }
+
+  async getSurveyResponseV2(id: number): Promise<SurveyResponseV2 | undefined> {
+    const [response] = await db.select().from(surveyResponsesV2).where(eq(surveyResponsesV2.id, id));
+    return response || undefined;
+  }
+
+  async getSurveyResponsesByAssignment(assignmentId: number): Promise<SurveyResponseV2[]> {
+    return await db
+      .select()
+      .from(surveyResponsesV2)
+      .where(eq(surveyResponsesV2.assignmentId, assignmentId));
+  }
+
+  // Survey Response Item methods
+  async createSurveyResponseItem(insertItem: InsertSurveyResponseItem): Promise<SurveyResponseItem> {
+    const [item] = await db
+      .insert(surveyResponseItems)
+      .values(insertItem)
+      .returning();
+    return item;
+  }
+
+  async getSurveyResponseItems(responseId: number): Promise<SurveyResponseItem[]> {
+    return await db
+      .select()
+      .from(surveyResponseItems)
+      .where(eq(surveyResponseItems.responseId, responseId));
+  }
+
+  async bulkCreateSurveyResponseItems(insertItems: InsertSurveyResponseItem[]): Promise<SurveyResponseItem[]> {
+    const items = await db
+      .insert(surveyResponseItems)
+      .values(insertItems)
+      .returning();
+    return items;
   }
 }
 
