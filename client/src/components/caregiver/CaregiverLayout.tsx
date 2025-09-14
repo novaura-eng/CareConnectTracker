@@ -105,7 +105,7 @@ export default function CaregiverLayout({ children }: CaregiverLayoutProps) {
         {sidebarOpen && (
           <div className="fixed inset-0 z-40 lg:hidden">
             <div className="fixed inset-0 bg-slate-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
-            <div className="relative flex w-full max-w-xs flex-1 flex-col bg-white">
+            <div className="relative flex w-full max-w-xs flex-1 flex-col bg-white h-full">
               <div className="absolute top-0 right-0 -mr-12 pt-2">
                 <button
                   type="button"
@@ -122,7 +122,7 @@ export default function CaregiverLayout({ children }: CaregiverLayoutProps) {
 
         {/* Desktop sidebar */}
         <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
-          <div className="bg-white border-r border-slate-200">
+          <div className="bg-white border-r border-slate-200 h-full">
             <SidebarContent navigation={navigation} caregiver={caregiver} onLogout={handleLogout} />
           </div>
         </div>
@@ -175,7 +175,7 @@ interface SidebarContentProps {
 
 function SidebarContent({ navigation, caregiver, onLogout }: SidebarContentProps) {
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col min-h-screen">
       {/* Logo */}
       <div className="flex flex-shrink-0 items-center px-4 py-4 border-b border-slate-200">
         <HeartHandshake className="h-8 w-8 text-primary mr-3" />
