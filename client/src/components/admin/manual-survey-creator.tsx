@@ -125,7 +125,7 @@ Please complete by Sunday. Contact us immediately with any urgent concerns.
               {caregiversLoading ? (
                 <SelectItem value="loading">Loading...</SelectItem>
               ) : (
-                caregivers?.map((caregiver: any) => (
+                (caregivers as any[])?.map((caregiver: any) => (
                   <SelectItem key={caregiver.id} value={caregiver.id.toString()}>
                     {caregiver.name}
                   </SelectItem>
