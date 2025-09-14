@@ -29,6 +29,15 @@ export default function CaregiverSetup() {
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
+  // Phone number formatting helper
+  const formatPhoneNumber = (phone: string): string => {
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length === 10) {
+      return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+    }
+    return phone;
+  };
+
   // Form validation
   const validateForm = () => {
     const errors: Record<string, string> = {};
@@ -68,10 +77,10 @@ export default function CaregiverSetup() {
     setMessage("");
     
     try {
-      // Normalize phone number (remove non-digits)
-      const normalizedPhone = formData.phone.replace(/\D/g, "");
+      // Format phone number as XXX-XXX-XXXX
+      const digits = formData.phone.replace(/\D/g, "");
       
-      if (!normalizedPhone || normalizedPhone.length !== 10) {
+      if (!digits || digits.length !== 10) {
         setError("Please enter a valid 10-digit phone number");
         setIsChecking(false);
         return;
@@ -83,8 +92,10 @@ export default function CaregiverSetup() {
         return;
       }
 
+      const formattedPhone = formatPhoneNumber(digits);
+
       const response = await apiRequest("POST", "/api/caregiver/check-eligibility", { 
-        phone: normalizedPhone, 
+        phone: formattedPhone, 
         state: formData.state 
       }) as any;
 
@@ -123,11 +134,12 @@ export default function CaregiverSetup() {
     setError("");
 
     try {
-      // Normalize phone number for consistency
-      const normalizedPhone = formData.phone.replace(/\D/g, "");
+      // Format phone number as XXX-XXX-XXXX
+      const digits = formData.phone.replace(/\D/g, "");
+      const formattedPhone = formatPhoneNumber(digits);
       
       await apiRequest("POST", "/api/caregiver/setup-password", {
-        phone: normalizedPhone,
+        phone: formattedPhone,
         state: formData.state,
         password: formData.password,
       });

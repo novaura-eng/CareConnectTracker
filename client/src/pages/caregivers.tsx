@@ -45,6 +45,15 @@ export default function Caregivers() {
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
+  // Phone number formatting helper
+  const formatPhoneNumber = (phone: string): string => {
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length === 10) {
+      return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+    }
+    return phone;
+  };
+
   // Helper functions
   const resetForm = () => {
     setFormData({
@@ -62,23 +71,32 @@ export default function Caregivers() {
   const validateForm = () => {
     const errors: Record<string, string> = {};
     if (!formData.name.trim()) errors.name = "Name is required";
-    if (!formData.phone.trim()) errors.phone = "Phone is required";
+    
+    const digits = formData.phone.replace(/\D/g, "");
+    if (!formData.phone.trim()) {
+      errors.phone = "Phone is required";
+    } else if (digits.length !== 10) {
+      errors.phone = "Please enter a valid 10-digit phone number";
+    }
+    
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form submitted with data:", formData);
     
     if (!validateForm()) {
-      console.log("Form validation failed:", formErrors);
       return;
     }
 
+    // Format phone number before submitting
+    const digits = formData.phone.replace(/\D/g, "");
+    const formattedPhone = formatPhoneNumber(digits);
+
     const submitData: InsertCaregiver = {
       name: formData.name,
-      phone: formData.phone,
+      phone: formattedPhone,
       email: formData.email || undefined,
       address: formData.address || undefined,
       emergencyContact: formData.emergencyContact || undefined,
