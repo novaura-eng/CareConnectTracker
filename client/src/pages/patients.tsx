@@ -174,7 +174,7 @@ export default function Patients() {
                         <FormItem>
                           <FormLabel>Address</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter address" {...field} />
+                            <Input placeholder="Enter address" {...field} value={field.value || ""} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -188,7 +188,7 @@ export default function Patients() {
                         <FormItem>
                           <FormLabel>Phone Number</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter phone number" {...field} />
+                            <Input placeholder="Enter phone number" {...field} value={field.value || ""} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -202,7 +202,7 @@ export default function Patients() {
                         <FormItem>
                           <FormLabel>Emergency Contact</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter emergency contact" {...field} />
+                            <Input placeholder="Enter emergency contact" {...field} value={field.value || ""} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -216,7 +216,7 @@ export default function Patients() {
                         <FormItem>
                           <FormLabel>Medical Conditions</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter medical conditions" {...field} />
+                            <Input placeholder="Enter medical conditions" {...field} value={field.value || ""} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -246,7 +246,132 @@ export default function Patients() {
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-md">
-                {/* Use same form content as desktop */}
+                <DialogHeader>
+                  <DialogTitle>Add New Patient</DialogTitle>
+                </DialogHeader>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Patient Name *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter patient name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="medicaidId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Medicaid ID *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter Medicaid ID" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="caregiverId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Assign Caregiver</FormLabel>
+                          <Select 
+                            onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} 
+                            value={field.value?.toString()}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select caregiver" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {caregivers?.filter(c => c.isActive).map((caregiver) => (
+                                <SelectItem key={caregiver.id} value={caregiver.id.toString()}>
+                                  {caregiver.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="address"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Address</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter address" {...field} value={field.value || ""} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="phoneNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone Number</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter phone number" {...field} value={field.value || ""} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="emergencyContact"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Emergency Contact</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter emergency contact" {...field} value={field.value || ""} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="medicalConditions"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Medical Conditions</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter medical conditions" {...field} value={field.value || ""} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <Button 
+                      type="submit" 
+                      disabled={createMutation.isPending}
+                      className="w-full"
+                    >
+                      {createMutation.isPending ? "Creating..." : "Create Patient"}
+                    </Button>
+                  </form>
+                </Form>
               </DialogContent>
             </Dialog>
           </div>
