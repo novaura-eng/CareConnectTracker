@@ -19,10 +19,14 @@ export default function CaregiverSetup() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   
+  // Get state from URL params if available
+  const urlParams = new URLSearchParams(window.location.search);
+  const stateFromUrl = urlParams.get('state') || '';
+  
   // Form state
   const [formData, setFormData] = useState({
     phone: "",
-    state: "",
+    state: stateFromUrl, // Pre-fill state from URL
     password: "",
     confirmPassword: "",
   });
@@ -191,7 +195,9 @@ export default function CaregiverSetup() {
             <CardDescription className="text-center">
               {eligible && eligibilityChecked 
                 ? `Welcome ${caregiverName}! Please create your password.`
-                : "Enter your information to verify your account"
+                : stateFromUrl 
+                  ? `Enter your phone number to verify your account in ${stateFromUrl}`
+                  : "Enter your information to verify your account"
               }
             </CardDescription>
           </CardHeader>
@@ -221,7 +227,7 @@ export default function CaregiverSetup() {
                 <select
                   id="state"
                   className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${formErrors.state ? "border-red-500" : ""}`}
-                  disabled={eligible && eligibilityChecked}
+                  disabled={(eligible && eligibilityChecked) || stateFromUrl} // Also disable if state came from URL
                   value={formData.state}
                   onChange={(e) => setFormData({ ...formData, state: e.target.value })}
                 >
