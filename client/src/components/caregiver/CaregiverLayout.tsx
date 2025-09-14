@@ -186,7 +186,7 @@ function SidebarContent({ navigation, caregiver, onLogout }: SidebarContentProps
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 px-2 py-4">
+      <nav className="space-y-1 px-2 py-4">
         {navigation.map((item) => (
           <Link key={item.name} href={item.href}>
             <a
@@ -207,8 +207,11 @@ function SidebarContent({ navigation, caregiver, onLogout }: SidebarContentProps
         ))}
       </nav>
 
+      {/* Spacer to push logout to bottom */}
+      <div className="flex-1"></div>
+
       {/* User info and logout */}
-      <div className="flex-shrink-0 border-t border-slate-200 p-4">
+      <div className="flex-shrink-0 border-t border-slate-200 p-4 mt-6">
         <Card className="p-3 bg-slate-50">
           <div className="flex items-center">
             <div className="flex-shrink-0">
