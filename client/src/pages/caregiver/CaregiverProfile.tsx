@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,7 +44,7 @@ export default function CaregiverProfile() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Update form data when caregiver data loads
-  React.useEffect(() => {
+  useEffect(() => {
     if (caregiver) {
       setFormData({
         name: caregiver.name || "",

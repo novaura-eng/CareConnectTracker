@@ -293,7 +293,7 @@ export class DatabaseStorage implements IStorage {
     try {
       const result = await db
         .select({
-          id: surveyResponses.id,
+          id: weeklyCheckIns.id, // Return check-in ID for navigation
           patientId: weeklyCheckIns.patientId,
           patientName: patients.name,
           completedAt: surveyResponses.submittedAt,

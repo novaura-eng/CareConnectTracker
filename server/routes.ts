@@ -95,7 +95,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/caregiver/me", isCaregiver, async (req, res) => {
     try {
       const caregiver = (req as any).caregiver;
-      res.json(caregiver);
+      // Return sanitized caregiver data (exclude password and sensitive fields)
+      res.json({
+        id: caregiver.id,
+        name: caregiver.name,
+        phone: caregiver.phone,
+        email: caregiver.email,
+        emergencyContact: caregiver.emergencyContact,
+        state: caregiver.state,
+        isActive: caregiver.isActive
+      });
     } catch (error) {
       console.error("Error fetching caregiver profile:", error);
       res.status(500).json({ message: "Internal server error" });

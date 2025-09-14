@@ -57,7 +57,7 @@ export default function CaregiverCheckIns() {
   };
 
   const handleViewSurvey = (surveyId: number) => {
-    setLocation(`/caregiver/survey/view/${surveyId}`);
+    setLocation(`/survey/${surveyId}`);
   };
 
   const getStatusColor = (status: string) => {
