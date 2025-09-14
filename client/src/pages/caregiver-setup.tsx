@@ -6,23 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Key, CheckCircle, AlertCircle } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
 import logoPath from "@assets/image_1751386830041.png";
-
-const setupSchema = z.object({
-  phone: z.string().min(10, "Please enter a valid phone number"),
-  state: z.string().min(2, "Please select your state"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  confirmPassword: z.string().min(6, "Please confirm your password"),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
-
-type SetupFormData = z.infer<typeof setupSchema>;
 
 export default function CaregiverSetup() {
   const [, navigate] = useLocation();
@@ -34,15 +19,48 @@ export default function CaregiverSetup() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   
-  const form = useForm<SetupFormData>({
-    resolver: zodResolver(setupSchema),
-    defaultValues: {
-      phone: "",
-      state: "",
-      password: "",
-      confirmPassword: "",
-    },
+  // Form state
+  const [formData, setFormData] = useState({
+    phone: "",
+    state: "",
+    password: "",
+    confirmPassword: "",
   });
+
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  // Form validation
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    
+    const normalizedPhone = formData.phone.replace(/\D/g, "");
+    if (!formData.phone.trim()) {
+      errors.phone = "Please enter your phone number";
+    } else if (normalizedPhone.length !== 10) {
+      errors.phone = "Please enter a valid 10-digit phone number";
+    }
+    
+    if (!formData.state) {
+      errors.state = "Please select your state";
+    }
+    
+    if (eligible && eligibilityChecked) {
+      if (!formData.password) {
+        errors.password = "Password is required";
+      } else if (formData.password.length < 6) {
+        errors.password = "Password must be at least 6 characters";
+      }
+      
+      if (!formData.confirmPassword) {
+        errors.confirmPassword = "Please confirm your password";
+      } else if (formData.password !== formData.confirmPassword) {
+        errors.confirmPassword = "Passwords don't match";
+      }
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const checkEligibility = async () => {
     setIsChecking(true);
@@ -50,20 +68,36 @@ export default function CaregiverSetup() {
     setMessage("");
     
     try {
-      const { phone, state } = form.getValues();
-      if (!phone || !state) {
-        setError("Please enter your phone number and select your state");
+      // Normalize phone number (remove non-digits)
+      const normalizedPhone = formData.phone.replace(/\D/g, "");
+      
+      if (!normalizedPhone || normalizedPhone.length !== 10) {
+        setError("Please enter a valid 10-digit phone number");
         setIsChecking(false);
         return;
       }
 
-      const response = await apiRequest("POST", "/api/caregiver/check-eligibility", { phone, state }) as any;
+      if (!formData.state) {
+        setError("Please select your state");
+        setIsChecking(false);
+        return;
+      }
+
+      const response = await apiRequest("POST", "/api/caregiver/check-eligibility", { 
+        phone: normalizedPhone, 
+        state: formData.state 
+      }) as any;
 
       if (response.eligible) {
         setEligible(true);
         setCaregiverName(response.caregiverName);
         setMessage(response.message);
         setEligibilityChecked(true);
+      } else {
+        // Handle ineligible responses explicitly
+        setEligible(false);
+        setEligibilityChecked(true);
+        setError(response.message || "We couldn't verify your information. Please contact your care coordinator.");
       }
     } catch (err: any) {
       setError(err.message || "Unable to verify your information. Please check your phone number and state.");
@@ -73,7 +107,13 @@ export default function CaregiverSetup() {
     }
   };
 
-  const onSubmit = async (data: SetupFormData) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+
     if (!eligible) {
       await checkEligibility();
       return;
@@ -83,14 +123,17 @@ export default function CaregiverSetup() {
     setError("");
 
     try {
+      // Normalize phone number for consistency
+      const normalizedPhone = formData.phone.replace(/\D/g, "");
+      
       await apiRequest("POST", "/api/caregiver/setup-password", {
-        phone: data.phone,
-        state: data.state,
-        password: data.password,
+        phone: normalizedPhone,
+        state: formData.state,
+        password: formData.password,
       });
 
       // Success - redirect to login with success message
-      navigate(`/caregiver/login?state=${encodeURIComponent(data.state)}&setup=success`);
+      navigate(`/caregiver/login?state=${encodeURIComponent(formData.state)}&setup=success`);
     } catch (err: any) {
       setError(err.message || "Failed to set up your account. Please try again.");
     } finally {
@@ -138,7 +181,7 @@ export default function CaregiverSetup() {
           </CardHeader>
 
           <CardContent>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {/* Phone Number */}
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
@@ -147,10 +190,12 @@ export default function CaregiverSetup() {
                   type="tel"
                   placeholder="(555) 123-4567"
                   disabled={eligible && eligibilityChecked}
-                  {...form.register("phone")}
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className={formErrors.phone ? "border-red-500" : ""}
                 />
-                {form.formState.errors.phone && (
-                  <p className="text-sm text-red-600">{form.formState.errors.phone.message}</p>
+                {formErrors.phone && (
+                  <p className="text-sm text-red-600">{formErrors.phone}</p>
                 )}
               </div>
 
@@ -159,17 +204,18 @@ export default function CaregiverSetup() {
                 <Label htmlFor="state">State</Label>
                 <select
                   id="state"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${formErrors.state ? "border-red-500" : ""}`}
                   disabled={eligible && eligibilityChecked}
-                  {...form.register("state")}
+                  value={formData.state}
+                  onChange={(e) => setFormData({ ...formData, state: e.target.value })}
                 >
                   <option value="">Select your state</option>
                   {states.map((state) => (
                     <option key={state} value={state}>{state}</option>
                   ))}
                 </select>
-                {form.formState.errors.state && (
-                  <p className="text-sm text-red-600">{form.formState.errors.state.message}</p>
+                {formErrors.state && (
+                  <p className="text-sm text-red-600">{formErrors.state}</p>
                 )}
               </div>
 
@@ -182,10 +228,12 @@ export default function CaregiverSetup() {
                       id="password"
                       type="password"
                       placeholder="Enter your password"
-                      {...form.register("password")}
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      className={formErrors.password ? "border-red-500" : ""}
                     />
-                    {form.formState.errors.password && (
-                      <p className="text-sm text-red-600">{form.formState.errors.password.message}</p>
+                    {formErrors.password && (
+                      <p className="text-sm text-red-600">{formErrors.password}</p>
                     )}
                   </div>
 
@@ -195,10 +243,12 @@ export default function CaregiverSetup() {
                       id="confirmPassword"
                       type="password"
                       placeholder="Confirm your password"
-                      {...form.register("confirmPassword")}
+                      value={formData.confirmPassword}
+                      onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                      className={formErrors.confirmPassword ? "border-red-500" : ""}
                     />
-                    {form.formState.errors.confirmPassword && (
-                      <p className="text-sm text-red-600">{form.formState.errors.confirmPassword.message}</p>
+                    {formErrors.confirmPassword && (
+                      <p className="text-sm text-red-600">{formErrors.confirmPassword}</p>
                     )}
                   </div>
                 </>
