@@ -94,10 +94,12 @@ export default function CaregiverSetup() {
 
       const formattedPhone = formatPhoneNumber(digits);
 
-      const response = await apiRequest("POST", "/api/caregiver/check-eligibility", { 
+      const responseObj = await apiRequest("POST", "/api/caregiver/check-eligibility", { 
         phone: formattedPhone, 
         state: formData.state 
-      }) as any;
+      });
+      
+      const response = await responseObj.json();
 
       if (response.eligible) {
         setEligible(true);
@@ -138,11 +140,13 @@ export default function CaregiverSetup() {
       const digits = formData.phone.replace(/\D/g, "");
       const formattedPhone = formatPhoneNumber(digits);
       
-      await apiRequest("POST", "/api/caregiver/setup-password", {
+      const setupResponse = await apiRequest("POST", "/api/caregiver/setup-password", {
         phone: formattedPhone,
         state: formData.state,
         password: formData.password,
       });
+      
+      await setupResponse.json(); // Parse the response
 
       // Success - redirect to login with success message
       navigate(`/caregiver/login?state=${encodeURIComponent(formData.state)}&setup=success`);
