@@ -109,6 +109,17 @@ export class DatabaseStorage implements IStorage {
       .where(eq(caregivers.id, id));
   }
 
+  async updateCaregiverProfile(id: number, data: { name: string; email?: string | null; emergencyContact?: string | null }): Promise<void> {
+    await db
+      .update(caregivers)
+      .set({
+        name: data.name,
+        email: data.email,
+        emergencyContact: data.emergencyContact,
+      })
+      .where(eq(caregivers.id, id));
+  }
+
   async createCaregiver(insertCaregiver: InsertCaregiver): Promise<Caregiver> {
     const [caregiver] = await db
       .insert(caregivers)
@@ -243,6 +254,66 @@ export class DatabaseStorage implements IStorage {
       .update(weeklyCheckIns)
       .set({ isCompleted: true, completedAt: new Date() })
       .where(eq(weeklyCheckIns.id, id));
+  }
+
+  async getPendingCheckInsByCaregiver(caregiverId: number) {
+    try {
+      const result = await db
+        .select({
+          id: weeklyCheckIns.id,
+          patientId: weeklyCheckIns.patientId,
+          patientName: patients.name,
+          weekStartDate: weeklyCheckIns.weekStartDate,
+          weekEndDate: weeklyCheckIns.weekEndDate,
+          status: sql<string>`CASE 
+            WHEN ${weeklyCheckIns.isCompleted} = true THEN 'completed'
+            WHEN ${weeklyCheckIns.weekEndDate} < CURRENT_DATE THEN 'overdue'
+            ELSE 'pending'
+          END`,
+          dueDate: weeklyCheckIns.weekEndDate,
+        })
+        .from(weeklyCheckIns)
+        .innerJoin(patients, eq(weeklyCheckIns.patientId, patients.id))
+        .where(
+          and(
+            eq(weeklyCheckIns.caregiverId, caregiverId),
+            eq(weeklyCheckIns.isCompleted, false)
+          )
+        )
+        .orderBy(weeklyCheckIns.weekStartDate);
+
+      return result;
+    } catch (error) {
+      console.error("Error in getPendingCheckInsByCaregiver:", error);
+      throw error;
+    }
+  }
+
+  async getCompletedCheckInsByCaregiver(caregiverId: number, limit: number = 20) {
+    try {
+      const result = await db
+        .select({
+          id: surveyResponses.id,
+          patientId: weeklyCheckIns.patientId,
+          patientName: patients.name,
+          completedAt: surveyResponses.submittedAt,
+          weekStartDate: weeklyCheckIns.weekStartDate,
+          weekEndDate: weeklyCheckIns.weekEndDate,
+          hasHealthConcerns: sql<boolean>`${surveyResponses.mentalHealth} = true OR ${surveyResponses.physicalHealth} = true`,
+          hasSafetyConcerns: sql<boolean>`${surveyResponses.hospitalVisits} = true OR ${surveyResponses.accidentsFalls} = true`,
+        })
+        .from(surveyResponses)
+        .innerJoin(weeklyCheckIns, eq(surveyResponses.checkInId, weeklyCheckIns.id))
+        .innerJoin(patients, eq(weeklyCheckIns.patientId, patients.id))
+        .where(eq(weeklyCheckIns.caregiverId, caregiverId))
+        .orderBy(desc(surveyResponses.submittedAt))
+        .limit(limit);
+
+      return result;
+    } catch (error) {
+      console.error("Error in getCompletedCheckInsByCaregiver:", error);
+      throw error;
+    }
   }
 
   async createSurveyResponse(insertResponse: InsertSurveyResponse): Promise<SurveyResponse> {

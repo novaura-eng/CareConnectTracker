@@ -53,6 +53,12 @@ export default function CaregiverDashboard() {
     return null;
   }
 
+  // Redirect to new portal
+  if (!authLoading && isAuthenticated) {
+    setLocation("/caregiver/patients");
+    return null;
+  }
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">

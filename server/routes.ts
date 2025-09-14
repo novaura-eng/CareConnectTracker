@@ -91,6 +91,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get full caregiver profile (for portal)
+  app.get("/api/caregiver/me", isCaregiver, async (req, res) => {
+    try {
+      const caregiver = (req as any).caregiver;
+      res.json(caregiver);
+    } catch (error) {
+      console.error("Error fetching caregiver profile:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update caregiver profile
+  app.put("/api/caregiver/profile", isCaregiver, async (req, res) => {
+    try {
+      const caregiver = (req as any).caregiver;
+      const { name, email, emergencyContact } = req.body;
+      
+      if (!name?.trim()) {
+        return res.status(400).json({ message: "Name is required" });
+      }
+
+      if (email && !/\S+@\S+\.\S+/.test(email)) {
+        return res.status(400).json({ message: "Please enter a valid email address" });
+      }
+
+      await storage.updateCaregiverProfile(caregiver.id, {
+        name: name.trim(),
+        email: email?.trim() || null,
+        emergencyContact: emergencyContact?.trim() || null
+      });
+
+      res.json({ message: "Profile updated successfully" });
+    } catch (error) {
+      console.error("Error updating caregiver profile:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Change caregiver password
+  app.put("/api/caregiver/password", isCaregiver, async (req, res) => {
+    try {
+      const caregiver = (req as any).caregiver;
+      const { currentPassword, newPassword } = req.body;
+      
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Current password and new password are required" });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters long" });
+      }
+
+      // Verify current password
+      const isValidPassword = await verifyPassword(currentPassword, caregiver.password);
+      if (!isValidPassword) {
+        return res.status(401).json({ message: "Current password is incorrect" });
+      }
+
+      // Hash new password and update
+      const hashedPassword = await hashPassword(newPassword);
+      await storage.updateCaregiverPassword(caregiver.id, hashedPassword);
+
+      res.json({ message: "Password changed successfully" });
+    } catch (error) {
+      console.error("Error changing caregiver password:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get pending check-ins for caregiver
+  app.get("/api/caregiver/checkins/pending", isCaregiver, async (req, res) => {
+    try {
+      const caregiver = (req as any).caregiver;
+      const checkIns = await storage.getPendingCheckInsByCaregiver(caregiver.id);
+      res.json(checkIns);
+    } catch (error) {
+      console.error("Error fetching pending check-ins:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get completed check-ins for caregiver
+  app.get("/api/caregiver/checkins/completed", isCaregiver, async (req, res) => {
+    try {
+      const caregiver = (req as any).caregiver;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const checkIns = await storage.getCompletedCheckInsByCaregiver(caregiver.id, limit);
+      res.json(checkIns);
+    } catch (error) {
+      console.error("Error fetching completed check-ins:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.get("/api/caregiver/patients", isCaregiver, async (req, res) => {
     try {
       const caregiver = (req as any).caregiver;
