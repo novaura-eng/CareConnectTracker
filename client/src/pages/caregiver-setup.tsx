@@ -227,7 +227,7 @@ export default function CaregiverSetup() {
                 <select
                   id="state"
                   className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${formErrors.state ? "border-red-500" : ""}`}
-                  disabled={(eligible && eligibilityChecked) || stateFromUrl} // Also disable if state came from URL
+                  disabled={(eligible && eligibilityChecked) || !!stateFromUrl} // Also disable if state came from URL
                   value={formData.state}
                   onChange={(e) => setFormData({ ...formData, state: e.target.value })}
                 >
@@ -311,7 +311,10 @@ export default function CaregiverSetup() {
 
             {/* Back to Login */}
             <div className="mt-6 text-center">
-              <Link href="/caregiver/login" className="text-sm text-green-600 hover:text-green-800 flex items-center justify-center gap-1">
+              <Link 
+                href={`/caregiver/login${stateFromUrl ? `?state=${encodeURIComponent(stateFromUrl)}` : ''}`} 
+                className="text-sm text-green-600 hover:text-green-800 flex items-center justify-center gap-1"
+              >
                 <ArrowLeft className="w-4 h-4" />
                 Back to Login
               </Link>
