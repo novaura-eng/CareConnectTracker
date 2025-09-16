@@ -784,32 +784,42 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllSurveysWithStates(): Promise<Array<Survey & { states: StateCode[] }>> {
-    const result = await db
-      .select({
-        survey: surveys,
-        stateCode: surveyStateTags.stateCode,
-      })
-      .from(surveys)
-      .leftJoin(surveyStateTags, eq(surveys.id, surveyStateTags.surveyId))
-      .orderBy(desc(surveys.createdAt));
+    try {
+      const result = await db
+        .select({
+          survey: surveys,
+          stateCode: surveyStateTags.stateCode,
+        })
+        .from(surveys)
+        .leftJoin(surveyStateTags, eq(surveys.id, surveyStateTags.surveyId))
+        .orderBy(desc(surveys.createdAt));
 
-    // Group by survey ID and collect states
-    const surveysMap = new Map<number, Survey & { states: StateCode[] }>();
-    
-    result.forEach(row => {
-      const surveyId = row.survey.id;
-      if (!surveysMap.has(surveyId)) {
-        surveysMap.set(surveyId, {
-          ...row.survey,
-          states: []
-        });
-      }
-      if (row.stateCode) {
-        surveysMap.get(surveyId)!.states.push(row.stateCode as StateCode);
-      }
-    });
+      // Group by survey ID and collect states
+      const surveysMap = new Map<number, Survey & { states: StateCode[] }>();
+      
+      result.forEach(row => {
+        const surveyId = row.survey.id;
+        if (!surveysMap.has(surveyId)) {
+          surveysMap.set(surveyId, {
+            ...row.survey,
+            states: []
+          });
+        }
+        if (row.stateCode) {
+          surveysMap.get(surveyId)!.states.push(row.stateCode as StateCode);
+        }
+      });
 
-    return Array.from(surveysMap.values());
+      return Array.from(surveysMap.values());
+    } catch (error: any) {
+      // Fallback if survey_state_tags table doesn't exist yet
+      if (error?.code === '42P01') {
+        console.log('survey_state_tags table not found, returning surveys without states');
+        const result = await db.select().from(surveys).orderBy(desc(surveys.createdAt));
+        return result.map(survey => ({ ...survey, states: [] }));
+      }
+      throw error;
+    }
   }
 }
 
