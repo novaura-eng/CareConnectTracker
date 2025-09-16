@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   ArrowLeft, 
   Plus, 
@@ -589,357 +590,371 @@ export default function AdminSurveyBuilder() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left Column - Survey Builder */}
+          {/* Left Column - Tabbed Survey Builder */}
           <div className="space-y-6">
-            {/* Survey Details */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  Survey Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Form {...surveyForm}>
-                  <form onSubmit={surveyForm.handleSubmit(handleSaveSurvey)} className="space-y-4">
-                    <FormField
-                      control={surveyForm.control}
-                      name="title"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Survey Title</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter survey title" {...field} data-testid="input-survey-title" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={surveyForm.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Description (Optional)</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Describe the purpose of this survey"
-                              {...field}
-                              rows={3}
-                              data-testid="input-survey-description"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    {/* State Selection */}
-                    <div className="space-y-2">
-                      <FormLabel className="text-sm font-medium">
-                        <MapPin className="inline-block h-4 w-4 mr-1" />
-                        Target States (Optional)
-                      </FormLabel>
-                      <FormDescription className="text-xs text-gray-500">
-                        Select states where this survey will be used. Leave empty for all states.
-                      </FormDescription>
-                      <Popover open={isStatesOpen} onOpenChange={setIsStatesOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={isStatesOpen}
-                            className="w-full justify-between text-left font-normal"
-                            data-testid="button-select-states"
-                          >
-                            {selectedStates.length === 0 
-                              ? "Select states..." 
-                              : selectedStates.length === 1 
-                                ? `${selectedStates[0]}` 
-                                : `${selectedStates.length} states selected`
-                            }
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-full p-0" align="start">
-                          <Command>
-                            <CommandInput placeholder="Search states..." />
-                            <CommandEmpty>No states found.</CommandEmpty>
-                            <CommandList>
-                              <CommandGroup>
-                                {/* Select All / Clear All Options */}
-                                <CommandItem
-                                  onSelect={() => {
-                                    if (selectedStates.length === US_STATE_CODES.length) {
-                                      // Clear all if all are selected
-                                      setSelectedStates([]);
-                                      surveyForm.setValue('states', []);
-                                    } else {
-                                      // Select all states
-                                      setSelectedStates([...US_STATE_CODES]);
-                                      surveyForm.setValue('states', [...US_STATE_CODES]);
-                                    }
-                                  }}
-                                  className="font-medium border-b"
-                                  data-testid="option-toggle-all-states"
+            <Tabs defaultValue="overview" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
+                <TabsTrigger value="questions" data-testid="tab-questions">Questions ({questions.length})</TabsTrigger>
+                <TabsTrigger value="schedule" data-testid="tab-schedule">Schedule ({schedules.length})</TabsTrigger>
+              </TabsList>
+
+              {/* Tab 1: Overview */}
+              <TabsContent value="overview" className="space-y-6 mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Settings className="h-5 w-5" />
+                      Survey Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Form {...surveyForm}>
+                      <form onSubmit={surveyForm.handleSubmit(handleSaveSurvey)} className="space-y-4">
+                        <FormField
+                          control={surveyForm.control}
+                          name="title"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Survey Title</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Enter survey title" {...field} data-testid="input-survey-title" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={surveyForm.control}
+                          name="description"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Description (Optional)</FormLabel>
+                              <FormControl>
+                                <Textarea 
+                                  placeholder="Describe the purpose of this survey"
+                                  {...field}
+                                  rows={3}
+                                  data-testid="input-survey-description"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        {/* State Selection */}
+                        <div className="space-y-2">
+                          <FormLabel className="text-sm font-medium">
+                            <MapPin className="inline-block h-4 w-4 mr-1" />
+                            Target States (Optional)
+                          </FormLabel>
+                          <FormDescription className="text-xs text-gray-500">
+                            Select states where this survey will be used. Leave empty for all states.
+                          </FormDescription>
+                          <Popover open={isStatesOpen} onOpenChange={setIsStatesOpen}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={isStatesOpen}
+                                className="w-full justify-between text-left font-normal"
+                                data-testid="button-select-states"
+                              >
+                                {selectedStates.length === 0 
+                                  ? "Select states..." 
+                                  : selectedStates.length === 1 
+                                    ? `${selectedStates[0]}` 
+                                    : `${selectedStates.length} states selected`
+                                }
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0" align="start">
+                              <Command>
+                                <CommandInput placeholder="Search states..." />
+                                <CommandEmpty>No states found.</CommandEmpty>
+                                <CommandList>
+                                  <CommandGroup>
+                                    {/* Select All / Clear All Options */}
+                                    <CommandItem
+                                      onSelect={() => {
+                                        if (selectedStates.length === US_STATE_CODES.length) {
+                                          // Clear all if all are selected
+                                          setSelectedStates([]);
+                                          surveyForm.setValue('states', []);
+                                        } else {
+                                          // Select all states
+                                          setSelectedStates([...US_STATE_CODES]);
+                                          surveyForm.setValue('states', [...US_STATE_CODES]);
+                                        }
+                                      }}
+                                      className="font-medium border-b"
+                                      data-testid="option-toggle-all-states"
+                                    >
+                                      <Check
+                                        className={`mr-2 h-4 w-4 ${
+                                          selectedStates.length === US_STATE_CODES.length ? "opacity-100" : "opacity-0"
+                                        }`}
+                                      />
+                                      {selectedStates.length === US_STATE_CODES.length ? "Clear All States" : "Select All States"}
+                                    </CommandItem>
+                                    {US_STATE_CODES.map((stateCode) => (
+                                      <CommandItem
+                                        key={stateCode}
+                                        value={stateCode}
+                                        onSelect={() => {
+                                          const newStates = selectedStates.includes(stateCode)
+                                            ? selectedStates.filter(s => s !== stateCode)
+                                            : [...selectedStates, stateCode];
+                                          setSelectedStates(newStates);
+                                          surveyForm.setValue('states', newStates);
+                                        }}
+                                        data-testid={`option-state-${stateCode}`}
+                                      >
+                                        <Check
+                                          className={`mr-2 h-4 w-4 ${
+                                            selectedStates.includes(stateCode) ? "opacity-100" : "opacity-0"
+                                          }`}
+                                        />
+                                        {stateCode}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                          
+                          {/* Selected States Display */}
+                          {selectedStates.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {selectedStates.map((state) => (
+                                <Badge 
+                                  key={state} 
+                                  variant="secondary" 
+                                  className="text-xs"
+                                  data-testid={`badge-state-${state}`}
                                 >
-                                  <Check
-                                    className={`mr-2 h-4 w-4 ${
-                                      selectedStates.length === US_STATE_CODES.length ? "opacity-100" : "opacity-0"
-                                    }`}
-                                  />
-                                  {selectedStates.length === US_STATE_CODES.length ? "Clear All States" : "Select All States"}
-                                </CommandItem>
-                                {US_STATE_CODES.map((stateCode) => (
-                                  <CommandItem
-                                    key={stateCode}
-                                    value={stateCode}
-                                    onSelect={() => {
-                                      const newStates = selectedStates.includes(stateCode)
-                                        ? selectedStates.filter(s => s !== stateCode)
-                                        : [...selectedStates, stateCode];
+                                  {state}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newStates = selectedStates.filter(s => s !== state);
                                       setSelectedStates(newStates);
                                       surveyForm.setValue('states', newStates);
                                     }}
-                                    data-testid={`option-state-${stateCode}`}
+                                    className="ml-1 hover:bg-gray-300 rounded-full w-3 h-3 flex items-center justify-center"
+                                    data-testid={`button-remove-state-${state}`}
                                   >
-                                    <Check
-                                      className={`mr-2 h-4 w-4 ${
-                                        selectedStates.includes(stateCode) ? "opacity-100" : "opacity-0"
-                                      }`}
-                                    />
-                                    {stateCode}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                      
-                      {/* Selected States Display */}
-                      {selectedStates.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {selectedStates.map((state) => (
-                            <Badge 
-                              key={state} 
-                              variant="secondary" 
-                              className="text-xs"
-                              data-testid={`badge-state-${state}`}
-                            >
-                              {state}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const newStates = selectedStates.filter(s => s !== state);
-                                  setSelectedStates(newStates);
-                                  surveyForm.setValue('states', newStates);
-                                }}
-                                className="ml-1 hover:bg-gray-300 rounded-full w-3 h-3 flex items-center justify-center"
-                                data-testid={`button-remove-state-${state}`}
-                              >
-                                <X className="h-2 w-2" />
-                              </button>
-                            </Badge>
-                          ))}
+                                    <X className="h-2 w-2" />
+                                  </button>
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  </form>
-                </Form>
-              </CardContent>
-            </Card>
+                      </form>
+                    </Form>
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-            {/* Schedule Management Section */}
-            {surveyData && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Calendar className="h-5 w-5" />
-                      Survey Schedules ({schedules.length})
-                    </CardTitle>
-                    <Button 
-                      onClick={handleCreateSchedule} 
-                      size="sm" 
-                      data-testid="button-create-schedule"
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create Schedule
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {schedules.length > 0 ? (
-                    <div className="space-y-3">
-                      {schedules.map((schedule) => (
-                        <div key={schedule.id} className="border rounded-lg p-4 bg-gray-50">
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                <Badge variant={schedule.isActive ? 'default' : 'secondary'}>
-                                  {schedule.isActive ? 'Active' : 'Inactive'}
-                                </Badge>
-                                <Badge variant="outline" className="text-xs">
-                                  {schedule.scheduleType === 'one_time' ? 'One-time' : 'Recurring'}
-                                </Badge>
+              {/* Tab 2: Questions */}
+              <TabsContent value="questions" className="space-y-6 mt-6">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">Questions ({questions.length})</CardTitle>
+                      <Button onClick={handleAddQuestion} size="sm" data-testid="button-add-question">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Question
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {questions.length > 0 ? (
+                      <div className="space-y-3">
+                        {questions.map((question, index) => (
+                          <div key={question.id || index} className="border rounded-lg p-4 bg-gray-50">
+                            <div className="flex items-start gap-3">
+                              <div className="flex flex-col gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => moveQuestionUp(index)}
+                                  disabled={index === 0}
+                                  className="h-6 w-6 p-0"
+                                  data-testid={`button-move-up-${index}`}
+                                >
+                                  <ChevronUp className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => moveQuestionDown(index)}
+                                  disabled={index === questions.length - 1}
+                                  className="h-6 w-6 p-0"
+                                  data-testid={`button-move-down-${index}`}
+                                >
+                                  <ChevronDown className="h-3 w-3" />
+                                </Button>
                               </div>
-                              <p className="text-sm font-medium text-gray-900 mb-1">
-                                {formatScheduleDescription(schedule)}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                Timezone: {schedule.timezone}
-                                {schedule.nextRun && (
-                                  <span className="ml-2">
-                                    Next: {new Date(schedule.nextRun).toLocaleString()}
-                                  </span>
-                                )}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleToggleSchedule(schedule)}
-                                disabled={toggleScheduleMutation.isPending}
-                                data-testid={`button-toggle-schedule-${schedule.id}`}
-                              >
-                                {schedule.isActive ? (
-                                  <ToggleRight className="h-4 w-4 text-green-600" />
-                                ) : (
-                                  <ToggleLeft className="h-4 w-4 text-gray-400" />
-                                )}
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEditSchedule(schedule)}
-                                data-testid={`button-edit-schedule-${schedule.id}`}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p className="font-medium mb-2">No schedules created yet</p>
-                      <p className="text-sm">Create a schedule to automate survey assignments</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Questions Section */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Questions ({questions.length})</CardTitle>
-                  <Button onClick={handleAddQuestion} size="sm" data-testid="button-add-question">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Question
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {questions.length > 0 ? (
-                  <div className="space-y-3">
-                    {questions.map((question, index) => (
-                      <div key={question.id || index} className="border rounded-lg p-4 bg-gray-50">
-                        <div className="flex items-start gap-3">
-                          <div className="flex flex-col gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => moveQuestionUp(index)}
-                              disabled={index === 0}
-                              className="h-6 w-6 p-0"
-                              data-testid={`button-move-up-${index}`}
-                            >
-                              <ChevronUp className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => moveQuestionDown(index)}
-                              disabled={index === questions.length - 1}
-                              className="h-6 w-6 p-0"
-                              data-testid={`button-move-down-${index}`}
-                            >
-                              <ChevronDown className="h-3 w-3" />
-                            </Button>
-                          </div>
-                          <div className="flex-1 space-y-2">
-                            <div className="flex items-start justify-between">
-                              <div className="space-y-1">
-                                <p className="font-medium" data-testid={`text-question-${index}`}>
-                                  {index + 1}. {question.text}
-                                </p>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs bg-white px-2 py-1 rounded border">
-                                    {getQuestionTypeLabel(question.type)}
-                                  </span>
-                                  {question.required && (
-                                    <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">
-                                      Required
-                                    </span>
-                                  )}
-                                  {(question.type === 'single_choice' || question.type === 'multi_choice') && question.options && (
-                                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                      {question.options.length} options
-                                    </span>
-                                  )}
+                              <div className="flex-1 space-y-2">
+                                <div className="flex items-start justify-between">
+                                  <div className="space-y-1">
+                                    <p className="font-medium" data-testid={`text-question-${index}`}>
+                                      {index + 1}. {question.text}
+                                    </p>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs bg-white px-2 py-1 rounded border">
+                                        {getQuestionTypeLabel(question.type)}
+                                      </span>
+                                      {question.required && (
+                                        <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">
+                                          Required
+                                        </span>
+                                      )}
+                                      {(question.type === 'single_choice' || question.type === 'multi_choice') && question.options && (
+                                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                          {question.options.length} options
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleEditQuestion(question, index)}
+                                      data-testid={`button-edit-question-${index}`}
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteQuestion(index)}
+                                      className="text-red-600 hover:text-red-700"
+                                      data-testid={`button-delete-question-${index}`}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleEditQuestion(question, index)}
-                                  data-testid={`button-edit-question-${index}`}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDeleteQuestion(index)}
-                                  className="text-red-600 hover:text-red-700"
-                                  data-testid={`button-delete-question-${index}`}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
                             </div>
                           </div>
-                        </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500 mb-4">No questions added yet</p>
-                    <Button onClick={handleAddQuestion} variant="outline" data-testid="button-add-first-question">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Your First Question
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                    ) : (
+                      <div className="text-center py-8">
+                        <p className="text-gray-500 mb-4">No questions added yet</p>
+                        <Button onClick={handleAddQuestion} variant="outline" data-testid="button-add-first-question">
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Your First Question
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
-            {/* Question Editor */}
-            {isEditorOpen && (
-              <QuestionEditor
-                question={editingQuestion}
-                onSave={handleSaveQuestion}
-                onCancel={handleCancelEdit}
-              />
-            )}
+                {/* Question Editor */}
+                {isEditorOpen && (
+                  <QuestionEditor
+                    question={editingQuestion}
+                    onSave={handleSaveQuestion}
+                    onCancel={handleCancelEdit}
+                  />
+                )}
+              </TabsContent>
+
+              {/* Tab 3: Schedule */}
+              <TabsContent value="schedule" className="space-y-6 mt-6">
+                {surveyData && (
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <Calendar className="h-5 w-5" />
+                          Survey Schedules ({schedules.length})
+                        </CardTitle>
+                        <Button 
+                          onClick={handleCreateSchedule} 
+                          size="sm" 
+                          data-testid="button-create-schedule"
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Create Schedule
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {schedules.length > 0 ? (
+                        <div className="space-y-3">
+                          {schedules.map((schedule) => (
+                            <div key={schedule.id} className="border rounded-lg p-4 bg-gray-50">
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3 mb-2">
+                                    <Badge variant={schedule.isActive ? 'default' : 'secondary'}>
+                                      {schedule.isActive ? 'Active' : 'Inactive'}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-xs">
+                                      {schedule.scheduleType === 'one_time' ? 'One-time' : 'Recurring'}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-sm font-medium text-gray-900 mb-1">
+                                    {formatScheduleDescription(schedule)}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    Timezone: {schedule.timezone}
+                                    {schedule.nextRun && (
+                                      <span className="ml-2">
+                                        Next: {new Date(schedule.nextRun).toLocaleString()}
+                                      </span>
+                                    )}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleToggleSchedule(schedule)}
+                                    disabled={toggleScheduleMutation.isPending}
+                                    data-testid={`button-toggle-schedule-${schedule.id}`}
+                                  >
+                                    {schedule.isActive ? (
+                                      <ToggleRight className="h-4 w-4 text-green-600" />
+                                    ) : (
+                                      <ToggleLeft className="h-4 w-4 text-gray-400" />
+                                    )}
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEditSchedule(schedule)}
+                                    data-testid={`button-edit-schedule-${schedule.id}`}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">
+                          <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                          <p className="font-medium mb-2">No schedules created yet</p>
+                          <p className="text-sm">Create a schedule to automate survey assignments</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+            </Tabs>
           </div>
 
           {/* Right Column - Live Preview */}
