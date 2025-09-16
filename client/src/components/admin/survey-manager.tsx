@@ -128,6 +128,10 @@ export default function SurveyManager() {
     setIsAssignmentsOpen(true);
   };
 
+  const handleManageSchedule = (survey: Survey) => {
+    setLocation(`/admin/surveys/builder/${survey.id}`);
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'published':
@@ -313,10 +317,16 @@ export default function SurveyManager() {
                           Edit
                         </DropdownMenuItem>
                         {survey.status === 'published' && (
-                          <DropdownMenuItem onClick={() => handleAssignSurvey(survey)} data-testid={`button-assign-survey-${survey.id}`}>
-                            <Send className="mr-2 h-4 w-4" />
-                            Assign to Caregivers
-                          </DropdownMenuItem>
+                          <>
+                            <DropdownMenuItem onClick={() => handleAssignSurvey(survey)} data-testid={`button-assign-survey-${survey.id}`}>
+                              <Send className="mr-2 h-4 w-4" />
+                              Assign to Caregivers
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleManageSchedule(survey)} data-testid={`button-manage-schedule-${survey.id}`}>
+                              <Calendar className="mr-2 h-4 w-4" />
+                              Manage Schedule
+                            </DropdownMenuItem>
+                          </>
                         )}
                         {survey.status === 'draft' && (
                           <DropdownMenuItem onClick={() => publishSurveyMutation.mutate(survey.id)} data-testid={`button-publish-survey-${survey.id}`}>
