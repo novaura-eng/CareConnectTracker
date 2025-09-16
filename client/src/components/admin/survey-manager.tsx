@@ -81,15 +81,7 @@ export default function SurveyManager() {
 
   const bulkDeleteSurveysMutation = useMutation({
     mutationFn: async (surveyIds: number[]) => {
-      console.log('Starting bulk delete mutation with IDs:', surveyIds);
-      try {
-        const result = await apiRequest("POST", "/api/admin/surveys/bulk-delete", { surveyIds });
-        console.log('Bulk delete mutation successful:', result);
-        return result;
-      } catch (error) {
-        console.error('Bulk delete mutation failed:', error);
-        throw error;
-      }
+      return await apiRequest("POST", "/api/admin/surveys/bulk-delete", { surveyIds });
     },
     onSuccess: (_, surveyIds) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/surveys"] });
@@ -196,13 +188,9 @@ export default function SurveyManager() {
   };
 
   const handleBulkDelete = () => {
-    console.log('Bulk delete clicked');
     const surveyIds = Array.from(selectedSurveyIds);
-    console.log('Survey IDs to delete:', surveyIds);
-    console.log('Selected count:', selectedCount);
     
     if (surveyIds.length === 0) {
-      console.error('No surveys selected for bulk delete');
       toast({
         title: "No Selection",
         description: "Please select surveys to delete.",
@@ -415,10 +403,11 @@ export default function SurveyManager() {
               <TableRow>
                 <TableHead className="w-[50px]">
                   <Checkbox
-                    checked={allFilteredSelected}
+                    checked={allFilteredSelected ? true : someFilteredSelected ? "indeterminate" : false}
                     onCheckedChange={handleSelectAll}
                     aria-label="Select all surveys"
                     data-testid="checkbox-select-all-surveys"
+                    className="h-4 w-4 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                   />
                 </TableHead>
                 <TableHead>Title</TableHead>
@@ -438,6 +427,7 @@ export default function SurveyManager() {
                       onCheckedChange={(checked) => handleSelectSurvey(survey.id, checked as boolean)}
                       aria-label={`Select survey ${survey.title}`}
                       data-testid={`checkbox-select-survey-${survey.id}`}
+                      className="h-4 w-4 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                     />
                   </TableCell>
                   <TableCell className="font-medium">
