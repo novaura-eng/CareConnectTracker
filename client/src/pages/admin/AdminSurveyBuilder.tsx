@@ -305,7 +305,6 @@ export default function AdminSurveyBuilder() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/admin/surveys/${surveyData?.id}/schedules`] });
-      refetchSchedules();
       setIsScheduleDialogOpen(false);
       scheduleForm.reset();
       toast({
