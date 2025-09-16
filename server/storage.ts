@@ -132,6 +132,7 @@ export interface IStorage {
   createSurveySchedule(schedule: InsertSurveySchedule): Promise<SurveySchedule>;
   getSurveySchedule(id: number): Promise<SurveySchedule | undefined>;
   getSurveySchedules(surveyId: number): Promise<SurveySchedule[]>;
+  getAllSchedules(): Promise<SurveySchedule[]>;
   getAllActiveSchedules(): Promise<SurveySchedule[]>;
   getSchedulesDueToRun(currentTime: Date): Promise<SurveySchedule[]>;
   updateSurveySchedule(id: number, updates: Partial<InsertSurveySchedule>): Promise<SurveySchedule>;
@@ -850,6 +851,11 @@ export class DatabaseStorage implements IStorage {
   async getSurveySchedules(surveyId: number): Promise<SurveySchedule[]> {
     return await db.select().from(surveySchedules)
       .where(eq(surveySchedules.surveyId, surveyId))
+      .orderBy(desc(surveySchedules.createdAt));
+  }
+
+  async getAllSchedules(): Promise<SurveySchedule[]> {
+    return await db.select().from(surveySchedules)
       .orderBy(desc(surveySchedules.createdAt));
   }
 

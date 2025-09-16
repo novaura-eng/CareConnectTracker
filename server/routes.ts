@@ -12,7 +12,9 @@ import {
   insertSurveyAssignmentSchema,
   insertSurveyResponseV2Schema,
   insertSurveyResponseItemSchema,
+  insertSurveyScheduleSchema,
   StateCodeSchema,
+  scheduleTypeSchema,
   type StateCode
 } from "@shared/schema";
 import { smsService } from "./services/sms";
@@ -858,6 +860,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Survey states updated successfully", states: validatedStates });
     } catch (error) {
       console.error("Error updating survey states:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // ===== SURVEY SCHEDULE MANAGEMENT ROUTES =====
+  
+  // Create schedule for a survey
+  app.post("/api/admin/surveys/:surveyId/schedules", isAuthenticated, async (req, res) => {
+    try {
+      const surveyId = parseInt(req.params.surveyId);
+      const scheduleData = req.body;
+      
+      // Check if survey exists
+      const survey = await storage.getSurvey(surveyId);
+      if (!survey) {
+        return res.status(404).json({ message: "Survey not found" });
+      }
+      
+      // Validate schedule data
+      const validatedData = insertSurveyScheduleSchema.parse({
+        ...scheduleData,
+        surveyId
+      });
+      
+      const schedule = await storage.createSurveySchedule(validatedData);
+      res.json(schedule);
+    } catch (error: any) {
+      console.error("Error creating schedule:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid schedule data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get schedules for a specific survey
+  app.get("/api/admin/surveys/:surveyId/schedules", isAuthenticated, async (req, res) => {
+    try {
+      const surveyId = parseInt(req.params.surveyId);
+      const schedules = await storage.getSurveySchedules(surveyId);
+      res.json(schedules);
+    } catch (error) {
+      console.error("Error fetching survey schedules:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get all schedules (admin overview)
+  app.get("/api/admin/schedules", isAuthenticated, async (req, res) => {
+    try {
+      const activeOnly = req.query.active === 'true';
+      const schedules = activeOnly 
+        ? await storage.getAllActiveSchedules()
+        : await storage.getAllSchedules();
+      res.json(schedules);
+    } catch (error) {
+      console.error("Error fetching all schedules:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get specific schedule
+  app.get("/api/admin/schedules/:id", isAuthenticated, async (req, res) => {
+    try {
+      const scheduleId = parseInt(req.params.id);
+      const schedule = await storage.getSurveySchedule(scheduleId);
+      
+      if (!schedule) {
+        return res.status(404).json({ message: "Schedule not found" });
+      }
+      
+      res.json(schedule);
+    } catch (error) {
+      console.error("Error fetching schedule:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update schedule
+  app.patch("/api/admin/schedules/:id", isAuthenticated, async (req, res) => {
+    try {
+      const scheduleId = parseInt(req.params.id);
+      const updates = req.body;
+      
+      // Check if schedule exists
+      const existingSchedule = await storage.getSurveySchedule(scheduleId);
+      if (!existingSchedule) {
+        return res.status(404).json({ message: "Schedule not found" });
+      }
+      
+      // Remove fields that shouldn't be updated
+      delete updates.id;
+      delete updates.surveyId;
+      delete updates.createdAt;
+      delete updates.lastRun;
+      delete updates.nextRun;
+      
+      // Validate updates with partial schema
+      const updateSchema = insertSurveyScheduleSchema.partial().omit({
+        surveyId: true
+      });
+      const validatedUpdates = updateSchema.parse(updates);
+      
+      const updatedSchedule = await storage.updateSurveySchedule(scheduleId, validatedUpdates);
+      res.json(updatedSchedule);
+    } catch (error: any) {
+      console.error("Error updating schedule:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid schedule data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete schedule
+  app.delete("/api/admin/schedules/:id", isAuthenticated, async (req, res) => {
+    try {
+      const scheduleId = parseInt(req.params.id);
+      await storage.deleteSurveySchedule(scheduleId);
+      res.json({ message: "Schedule deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting schedule:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Toggle schedule active status
+  app.post("/api/admin/schedules/:id/toggle", isAuthenticated, async (req, res) => {
+    try {
+      const scheduleId = parseInt(req.params.id);
+      const { isActive } = req.body;
+      
+      if (typeof isActive !== 'boolean') {
+        return res.status(400).json({ message: "isActive must be a boolean" });
+      }
+      
+      // Check if schedule exists
+      const existingSchedule = await storage.getSurveySchedule(scheduleId);
+      if (!existingSchedule) {
+        return res.status(404).json({ message: "Schedule not found" });
+      }
+      
+      await storage.toggleScheduleActive(scheduleId, isActive);
+      
+      // Return updated schedule
+      const updatedSchedule = await storage.getSurveySchedule(scheduleId);
+      res.json({ 
+        message: `Schedule ${isActive ? 'activated' : 'deactivated'} successfully`,
+        schedule: updatedSchedule
+      });
+    } catch (error) {
+      console.error("Error toggling schedule:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
