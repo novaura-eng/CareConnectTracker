@@ -10,6 +10,7 @@ import {
   surveyAssignments,
   surveyResponsesV2,
   surveyResponseItems,
+  surveyStateTags,
   type User,
   type UpsertUser,
   type Caregiver, 
@@ -31,7 +32,10 @@ import {
   type SurveyResponseV2,
   type InsertSurveyResponseV2,
   type SurveyResponseItem,
-  type InsertSurveyResponseItem
+  type InsertSurveyResponseItem,
+  type SurveyStateTag,
+  type InsertSurveyStateTag,
+  type StateCode
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
@@ -115,6 +119,11 @@ export interface IStorage {
   createSurveyResponseItem(item: InsertSurveyResponseItem): Promise<SurveyResponseItem>;
   getSurveyResponseItems(responseId: number): Promise<SurveyResponseItem[]>;
   bulkCreateSurveyResponseItems(items: InsertSurveyResponseItem[]): Promise<SurveyResponseItem[]>;
+
+  // Survey State Tag methods
+  getSurveyStates(surveyId: number): Promise<StateCode[]>;
+  setSurveyStates(surveyId: number, states: StateCode[]): Promise<void>;
+  getAllSurveysWithStates(): Promise<Array<Survey & { states: StateCode[] }>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -746,6 +755,61 @@ export class DatabaseStorage implements IStorage {
       .values(insertItems)
       .returning();
     return items;
+  }
+
+  // Survey State Tag methods
+  async getSurveyStates(surveyId: number): Promise<StateCode[]> {
+    const stateTags = await db
+      .select({ stateCode: surveyStateTags.stateCode })
+      .from(surveyStateTags)
+      .where(eq(surveyStateTags.surveyId, surveyId));
+    
+    return stateTags.map(tag => tag.stateCode as StateCode);
+  }
+
+  async setSurveyStates(surveyId: number, states: StateCode[]): Promise<void> {
+    await db.transaction(async (tx) => {
+      // Delete existing state tags for this survey
+      await tx.delete(surveyStateTags).where(eq(surveyStateTags.surveyId, surveyId));
+      
+      // Insert new state tags if any
+      if (states.length > 0) {
+        const insertData = states.map(stateCode => ({
+          surveyId,
+          stateCode
+        }));
+        await tx.insert(surveyStateTags).values(insertData);
+      }
+    });
+  }
+
+  async getAllSurveysWithStates(): Promise<Array<Survey & { states: StateCode[] }>> {
+    const result = await db
+      .select({
+        survey: surveys,
+        stateCode: surveyStateTags.stateCode,
+      })
+      .from(surveys)
+      .leftJoin(surveyStateTags, eq(surveys.id, surveyStateTags.surveyId))
+      .orderBy(desc(surveys.createdAt));
+
+    // Group by survey ID and collect states
+    const surveysMap = new Map<number, Survey & { states: StateCode[] }>();
+    
+    result.forEach(row => {
+      const surveyId = row.survey.id;
+      if (!surveysMap.has(surveyId)) {
+        surveysMap.set(surveyId, {
+          ...row.survey,
+          states: []
+        });
+      }
+      if (row.stateCode) {
+        surveysMap.get(surveyId)!.states.push(row.stateCode as StateCode);
+      }
+    });
+
+    return Array.from(surveysMap.values());
   }
 }
 
