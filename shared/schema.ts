@@ -1,7 +1,19 @@
-import { pgTable, text, varchar, serial, integer, boolean, timestamp, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, serial, integer, boolean, timestamp, jsonb, index, unique } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// US State Codes for survey tagging
+export const US_STATE_CODES = [
+  "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
+  "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
+  "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
+  "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
+  "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"
+] as const;
+
+export const StateCodeSchema = z.enum(US_STATE_CODES);
+export type StateCode = z.infer<typeof StateCodeSchema>;
 
 // Session storage table.
 // (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
@@ -153,6 +165,16 @@ export const surveyResponseItems = pgTable("survey_response_items", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Survey State Tags for organizing surveys by state
+export const surveyStateTags = pgTable("survey_state_tags", {
+  id: serial("id").primaryKey(),
+  surveyId: integer("survey_id").references(() => surveys.id).notNull(),
+  stateCode: varchar("state_code", { length: 2 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  unique("unique_survey_state").on(table.surveyId, table.stateCode),
+]);
+
 // Relations
 export const caregiversRelations = relations(caregivers, ({ many }) => ({
   patients: many(patients),
@@ -205,6 +227,7 @@ export const surveysRelations = relations(surveys, ({ one, many }) => ({
   assignments: many(surveyAssignments),
   responses: many(surveyResponsesV2),
   weeklyCheckIns: many(weeklyCheckIns),
+  stateTags: many(surveyStateTags),
 }));
 
 export const surveyQuestionsRelations = relations(surveyQuestions, ({ one, many }) => ({
@@ -278,6 +301,13 @@ export const surveyResponseItemsRelations = relations(surveyResponseItems, ({ on
   }),
 }));
 
+export const surveyStateTagsRelations = relations(surveyStateTags, ({ one }) => ({
+  survey: one(surveys, {
+    fields: [surveyStateTags.surveyId],
+    references: [surveys.id],
+  }),
+}));
+
 // Insert schemas
 export const insertCaregiverSchema = createInsertSchema(caregivers).omit({
   id: true,
@@ -332,6 +362,11 @@ export const insertSurveyResponseItemSchema = createInsertSchema(surveyResponseI
   createdAt: true,
 });
 
+export const insertSurveyStateTagSchema = createInsertSchema(surveyStateTags).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -366,3 +401,6 @@ export type InsertSurveyResponseV2 = z.infer<typeof insertSurveyResponseV2Schema
 
 export type SurveyResponseItem = typeof surveyResponseItems.$inferSelect;
 export type InsertSurveyResponseItem = z.infer<typeof insertSurveyResponseItemSchema>;
+
+export type SurveyStateTag = typeof surveyStateTags.$inferSelect;
+export type InsertSurveyStateTag = z.infer<typeof insertSurveyStateTagSchema>;
