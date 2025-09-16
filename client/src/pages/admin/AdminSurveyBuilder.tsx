@@ -458,6 +458,29 @@ export default function AdminSurveyBuilder() {
                             <CommandEmpty>No states found.</CommandEmpty>
                             <CommandList>
                               <CommandGroup>
+                                {/* Select All / Clear All Options */}
+                                <CommandItem
+                                  onSelect={() => {
+                                    if (selectedStates.length === US_STATE_CODES.length) {
+                                      // Clear all if all are selected
+                                      setSelectedStates([]);
+                                      surveyForm.setValue('states', []);
+                                    } else {
+                                      // Select all states
+                                      setSelectedStates([...US_STATE_CODES]);
+                                      surveyForm.setValue('states', [...US_STATE_CODES]);
+                                    }
+                                  }}
+                                  className="font-medium border-b"
+                                  data-testid="option-toggle-all-states"
+                                >
+                                  <Check
+                                    className={`mr-2 h-4 w-4 ${
+                                      selectedStates.length === US_STATE_CODES.length ? "opacity-100" : "opacity-0"
+                                    }`}
+                                  />
+                                  {selectedStates.length === US_STATE_CODES.length ? "Clear All States" : "Select All States"}
+                                </CommandItem>
                                 {US_STATE_CODES.map((stateCode) => (
                                   <CommandItem
                                     key={stateCode}
@@ -646,15 +669,12 @@ export default function AdminSurveyBuilder() {
                         caregiverId: 1,
                         patientId: 1,
                         dueAt: new Date().toISOString(),
-                        status: 'pending',
-                        assignedAt: new Date().toISOString(),
-                        patientName: "Preview Patient"
+                        status: 'pending'
                       }}
                       survey={{
                         id: surveyData?.id || 1,
                         title: surveyForm.getValues("title") || "New Survey",
                         description: surveyForm.getValues("description") || "",
-                        status: "draft" as const,
                         questions: questions.map(q => ({
                           ...q,
                           id: q.id || Math.random(),
