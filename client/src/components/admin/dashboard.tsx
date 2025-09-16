@@ -11,12 +11,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Download, Send, Mail, Plus, Copy, BarChart3, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import ManualSurveyCreator from "./manual-survey-creator";
 
 export default function Dashboard() {
   const [testEmail, setTestEmail] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isManualSurveyOpen, setIsManualSurveyOpen] = useState(false);
   const { toast } = useToast();
 
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -138,23 +136,6 @@ export default function Dashboard() {
                   <Download className="mr-2 h-4 w-4" />
                   Export Report
                 </Button>
-                <Dialog open={isManualSurveyOpen} onOpenChange={setIsManualSurveyOpen}>
-                  <DialogTrigger asChild>
-                    <Button size="sm" className="w-full sm:w-auto" data-testid="button-create-survey">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create Survey
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[600px] mx-4">
-                    <DialogHeader>
-                      <DialogTitle>Manual Survey Creation</DialogTitle>
-                      <DialogDescription>
-                        Create survey links for your caregivers to send via email, text, or messaging apps.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <ManualSurveyCreator />
-                  </DialogContent>
-                </Dialog>
               </div>
             </div>
             <StatsCards stats={stats} isLoading={statsLoading} />
