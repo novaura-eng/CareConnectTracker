@@ -582,63 +582,41 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteSurvey(id: number): Promise<void> {
-    console.log(`[DEBUG] Starting deletion of survey ${id}`);
+    // Delete in correct order to handle all foreign key constraints
     
-    try {
-      // Delete in correct order to handle all foreign key constraints
-      
-      // 1. Delete survey response items (through questions)
-      console.log(`[DEBUG] Step 1: Getting survey questions for survey ${id}`);
-      const surveyQuestionIds = await db
-        .select({ id: surveyQuestions.id })
-        .from(surveyQuestions)
-        .where(eq(surveyQuestions.surveyId, id));
-      
-      console.log(`[DEBUG] Found ${surveyQuestionIds.length} questions for survey ${id}`);
-      
-      console.log(`[DEBUG] Step 1a: Deleting survey response items`);
-      for (const question of surveyQuestionIds) {
-        await db.delete(surveyResponseItems).where(eq(surveyResponseItems.questionId, question.id));
-      }
-      
-      // 2. Delete survey responses v2
-      console.log(`[DEBUG] Step 2: Deleting survey responses v2`);
-      await db.delete(surveyResponsesV2).where(eq(surveyResponsesV2.surveyId, id));
-      
-      // 3. Delete survey assignments
-      console.log(`[DEBUG] Step 3: Deleting survey assignments`);
-      await db.delete(surveyAssignments).where(eq(surveyAssignments.surveyId, id));
-      
-      // 4. Delete survey schedules
-      console.log(`[DEBUG] Step 4: Deleting survey schedules`);
-      await db.delete(surveySchedules).where(eq(surveySchedules.surveyId, id));
-      
-      // 5. Delete survey state tags
-      console.log(`[DEBUG] Step 5: Deleting survey state tags`);
-      await db.delete(surveyStateTags).where(eq(surveyStateTags.surveyId, id));
-      
-      // 6. Skip weekly check-ins update - survey_id column doesn't exist in database
-      console.log(`[DEBUG] Step 6: Skipping weekly check-ins (column doesn't exist)`);
-      
-      // 7. Delete survey options (through questions)
-      console.log(`[DEBUG] Step 7: Deleting survey options`);
-      for (const question of surveyQuestionIds) {
-        await db.delete(surveyOptions).where(eq(surveyOptions.questionId, question.id));
-      }
-      
-      // 8. Delete survey questions
-      console.log(`[DEBUG] Step 8: Deleting survey questions`);
-      await db.delete(surveyQuestions).where(eq(surveyQuestions.surveyId, id));
-      
-      // 9. Finally delete the survey itself
-      console.log(`[DEBUG] Step 9: Deleting survey itself`);
-      await db.delete(surveys).where(eq(surveys.id, id));
-      
-      console.log(`[DEBUG] Successfully deleted survey ${id}`);
-    } catch (error) {
-      console.error(`[ERROR] Failed to delete survey ${id}:`, error);
-      throw error;
+    // 1. Get all question IDs for this survey
+    const surveyQuestionIds = await db
+      .select({ id: surveyQuestions.id })
+      .from(surveyQuestions)
+      .where(eq(surveyQuestions.surveyId, id));
+    
+    // 2. Delete survey response items (through questions)
+    for (const question of surveyQuestionIds) {
+      await db.delete(surveyResponseItems).where(eq(surveyResponseItems.questionId, question.id));
     }
+    
+    // 3. Delete survey responses v2
+    await db.delete(surveyResponsesV2).where(eq(surveyResponsesV2.surveyId, id));
+    
+    // 4. Delete survey assignments
+    await db.delete(surveyAssignments).where(eq(surveyAssignments.surveyId, id));
+    
+    // 5. Delete survey schedules
+    await db.delete(surveySchedules).where(eq(surveySchedules.surveyId, id));
+    
+    // 6. Delete survey state tags
+    await db.delete(surveyStateTags).where(eq(surveyStateTags.surveyId, id));
+    
+    // 7. Delete survey options (through questions)
+    for (const question of surveyQuestionIds) {
+      await db.delete(surveyOptions).where(eq(surveyOptions.questionId, question.id));
+    }
+    
+    // 8. Delete survey questions
+    await db.delete(surveyQuestions).where(eq(surveyQuestions.surveyId, id));
+    
+    // 9. Finally delete the survey itself
+    await db.delete(surveys).where(eq(surveys.id, id));
   }
 
   async publishSurvey(id: number): Promise<void> {
