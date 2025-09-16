@@ -2,7 +2,7 @@ import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
 
-// Use DATABASE_URL for now (SUPABASE_DATABASE_URL needs to be properly configured)
+// Temporarily use DATABASE_URL until SUPABASE_DATABASE_URL is properly configured
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
   throw new Error(
