@@ -880,14 +880,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "All surveyIds must be valid numbers" });
       }
 
-      // Delete each survey using the existing deleteSurvey function
-      const deletePromises = validIds.map(id => storage.deleteSurvey(id));
-      await Promise.all(deletePromises);
+      // Delete each survey sequentially to avoid foreign key conflicts
+      let deletedCount = 0;
+      const deletedIds: number[] = [];
+      const errors: string[] = [];
+      
+      for (const id of validIds) {
+        try {
+          await storage.deleteSurvey(id);
+          deletedCount++;
+          deletedIds.push(id);
+        } catch (error) {
+          console.error(`Error deleting survey ${id}:`, error);
+          errors.push(`Failed to delete survey ${id}`);
+        }
+      }
+
+      if (errors.length > 0 && deletedCount === 0) {
+        // All deletions failed
+        return res.status(500).json({ 
+          message: "Failed to delete any surveys",
+          errors 
+        });
+      } else if (errors.length > 0) {
+        // Partial success
+        return res.status(207).json({ 
+          message: `Successfully deleted ${deletedCount} of ${validIds.length} survey(s)`,
+          deletedCount,
+          deletedIds,
+          errors
+        });
+      }
 
       res.json({ 
-        message: `Successfully deleted ${validIds.length} survey(s)`,
-        deletedCount: validIds.length,
-        deletedIds: validIds
+        message: `Successfully deleted ${deletedCount} survey(s)`,
+        deletedCount,
+        deletedIds
       });
     } catch (error) {
       console.error("Error bulk deleting surveys:", error);
