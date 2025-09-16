@@ -582,10 +582,45 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteSurvey(id: number): Promise<void> {
-    // First delete all related schedules to avoid foreign key constraint
+    // Delete in correct order to handle all foreign key constraints
+    
+    // 1. Delete survey response items (through questions)
+    const surveyQuestionIds = await db
+      .select({ id: surveyQuestions.id })
+      .from(surveyQuestions)
+      .where(eq(surveyQuestions.surveyId, id));
+    
+    for (const question of surveyQuestionIds) {
+      await db.delete(surveyResponseItems).where(eq(surveyResponseItems.questionId, question.id));
+    }
+    
+    // 2. Delete survey responses v2
+    await db.delete(surveyResponsesV2).where(eq(surveyResponsesV2.surveyId, id));
+    
+    // 3. Delete survey assignments
+    await db.delete(surveyAssignments).where(eq(surveyAssignments.surveyId, id));
+    
+    // 4. Delete survey schedules
     await db.delete(surveySchedules).where(eq(surveySchedules.surveyId, id));
     
-    // Then delete the survey itself
+    // 5. Delete survey state tags
+    await db.delete(surveyStateTags).where(eq(surveyStateTags.surveyId, id));
+    
+    // 6. Update weekly check-ins to remove survey reference (nullable)
+    await db
+      .update(weeklyCheckIns)
+      .set({ surveyId: null })
+      .where(eq(weeklyCheckIns.surveyId, id));
+    
+    // 7. Delete survey options (through questions)
+    for (const question of surveyQuestionIds) {
+      await db.delete(surveyOptions).where(eq(surveyOptions.questionId, question.id));
+    }
+    
+    // 8. Delete survey questions
+    await db.delete(surveyQuestions).where(eq(surveyQuestions.surveyId, id));
+    
+    // 9. Finally delete the survey itself
     await db.delete(surveys).where(eq(surveys.id, id));
   }
 
