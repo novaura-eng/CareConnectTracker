@@ -743,8 +743,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Survey CRUD Operations
   app.get("/api/admin/surveys", isAuthenticated, async (req, res) => {
     try {
-      const surveys = await storage.getAllSurveysWithStates();
-      res.json(surveys);
+      // Check if pagination parameters are provided
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const usePagination = req.query.page || req.query.limit;
+
+      if (usePagination) {
+        // Return paginated results
+        const result = await storage.getAllSurveysPaginated(page, limit);
+        // Add states to each survey
+        const surveysWithStates = await Promise.all(
+          result.surveys.map(async (survey) => {
+            const states = await storage.getSurveyStates(survey.id);
+            return { ...survey, states };
+          })
+        );
+        res.json({
+          ...result,
+          surveys: surveysWithStates
+        });
+      } else {
+        // Return all surveys (existing behavior)
+        const surveys = await storage.getAllSurveysWithStates();
+        res.json(surveys);
+      }
     } catch (error) {
       console.error("Error fetching surveys:", error);
       res.status(500).json({ message: "Internal server error" });
@@ -839,6 +861,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Survey deleted successfully" });
     } catch (error) {
       console.error("Error deleting survey:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Bulk delete surveys
+  app.post("/api/admin/surveys/bulk-delete", isAuthenticated, async (req, res) => {
+    try {
+      const { surveyIds } = req.body;
+      
+      if (!Array.isArray(surveyIds) || surveyIds.length === 0) {
+        return res.status(400).json({ message: "surveyIds must be a non-empty array" });
+      }
+
+      // Validate all IDs are numbers
+      const validIds = surveyIds.filter(id => typeof id === 'number' && !isNaN(id));
+      if (validIds.length !== surveyIds.length) {
+        return res.status(400).json({ message: "All surveyIds must be valid numbers" });
+      }
+
+      // Delete each survey using the existing deleteSurvey function
+      const deletePromises = validIds.map(id => storage.deleteSurvey(id));
+      await Promise.all(deletePromises);
+
+      res.json({ 
+        message: `Successfully deleted ${validIds.length} survey(s)`,
+        deletedCount: validIds.length,
+        deletedIds: validIds
+      });
+    } catch (error) {
+      console.error("Error bulk deleting surveys:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

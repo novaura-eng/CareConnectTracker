@@ -87,6 +87,17 @@ export interface IStorage {
   getSurvey(id: number): Promise<Survey | undefined>;
   getSurveyWithQuestions(id: number): Promise<any>;
   getAllSurveys(): Promise<Survey[]>;
+  getAllSurveysPaginated(page: number, limit: number): Promise<{
+    surveys: Survey[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+    };
+  }>;
   updateSurvey(id: number, updates: Partial<InsertSurvey>): Promise<Survey>;
   deleteSurvey(id: number): Promise<void>;
   publishSurvey(id: number): Promise<void>;
@@ -570,6 +581,47 @@ export class DatabaseStorage implements IStorage {
 
   async getAllSurveys(): Promise<Survey[]> {
     return await db.select().from(surveys).orderBy(desc(surveys.createdAt));
+  }
+
+  async getAllSurveysPaginated(page: number = 1, limit: number = 10): Promise<{
+    surveys: Survey[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+    };
+  }> {
+    const offset = (page - 1) * limit;
+    
+    // Get total count for pagination metadata
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(surveys);
+    
+    // Get paginated surveys
+    const paginatedSurveys = await db
+      .select()
+      .from(surveys)
+      .orderBy(desc(surveys.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const totalPages = Math.ceil(count / limit);
+    
+    return {
+      surveys: paginatedSurveys,
+      pagination: {
+        page,
+        limit,
+        total: count,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 
   async updateSurvey(id: number, updates: Partial<InsertSurvey>): Promise<Survey> {
