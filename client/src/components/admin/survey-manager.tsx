@@ -81,11 +81,19 @@ export default function SurveyManager() {
 
   const bulkDeleteSurveysMutation = useMutation({
     mutationFn: async (surveyIds: number[]) => {
-      return apiRequest("/api/admin/surveys/bulk-delete", {
-        method: "POST",
-        body: JSON.stringify({ surveyIds }),
-        headers: { "Content-Type": "application/json" },
-      });
+      console.log('Starting bulk delete mutation with IDs:', surveyIds);
+      try {
+        const result = await apiRequest("/api/admin/surveys/bulk-delete", {
+          method: "POST",
+          body: JSON.stringify({ surveyIds }),
+          headers: { "Content-Type": "application/json" },
+        });
+        console.log('Bulk delete mutation successful:', result);
+        return result;
+      } catch (error) {
+        console.error('Bulk delete mutation failed:', error);
+        throw error;
+      }
     },
     onSuccess: (_, surveyIds) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/surveys"] });
@@ -192,7 +200,21 @@ export default function SurveyManager() {
   };
 
   const handleBulkDelete = () => {
+    console.log('Bulk delete clicked');
     const surveyIds = Array.from(selectedSurveyIds);
+    console.log('Survey IDs to delete:', surveyIds);
+    console.log('Selected count:', selectedCount);
+    
+    if (surveyIds.length === 0) {
+      console.error('No surveys selected for bulk delete');
+      toast({
+        title: "No Selection",
+        description: "Please select surveys to delete.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     bulkDeleteSurveysMutation.mutate(surveyIds);
   };
 
