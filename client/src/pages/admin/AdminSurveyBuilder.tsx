@@ -168,8 +168,8 @@ export default function AdminSurveyBuilder() {
 
   // Load schedules for the survey
   const { data: surveySchedules, refetch: refetchSchedules } = useQuery({
-    queryKey: [`/api/admin/surveys/${surveyId}/schedules`],
-    enabled: !!surveyId,
+    queryKey: [`/api/admin/surveys/${surveyData?.id}/schedules`],
+    enabled: !!surveyData?.id,
   });
 
   useEffect(() => {
