@@ -871,14 +871,14 @@ export default function AdminSurveyBuilder() {
 
               {/* Tab 3: Schedule */}
               <TabsContent value="schedule" className="space-y-6 mt-6">
-                {surveyData && (
-                  <Card>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <Calendar className="h-5 w-5" />
-                          Survey Schedules ({schedules.length})
-                        </CardTitle>
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Calendar className="h-5 w-5" />
+                        Survey Schedules ({schedules.length})
+                      </CardTitle>
+                      {surveyData && (
                         <Button 
                           onClick={handleCreateSchedule} 
                           size="sm" 
@@ -887,73 +887,87 @@ export default function AdminSurveyBuilder() {
                           <Plus className="mr-2 h-4 w-4" />
                           Create Schedule
                         </Button>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {surveyLoading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-pulse">
+                          <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                          <p className="text-gray-500">Loading survey data...</p>
+                        </div>
                       </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {schedules.length > 0 ? (
-                        <div className="space-y-3">
-                          {schedules.map((schedule) => (
-                            <div key={schedule.id} className="border rounded-lg p-4 bg-gray-50">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-3 mb-2">
-                                    <Badge variant={schedule.isActive ? 'default' : 'secondary'}>
-                                      {schedule.isActive ? 'Active' : 'Inactive'}
-                                    </Badge>
-                                    <Badge variant="outline" className="text-xs">
-                                      {schedule.scheduleType === 'one_time' ? 'One-time' : 'Recurring'}
-                                    </Badge>
-                                  </div>
-                                  <p className="text-sm font-medium text-gray-900 mb-1">
-                                    {formatScheduleDescription(schedule)}
-                                  </p>
-                                  <p className="text-xs text-gray-500">
-                                    Timezone: {schedule.timezone}
-                                    {schedule.nextRun && (
-                                      <span className="ml-2">
-                                        Next: {new Date(schedule.nextRun).toLocaleString()}
-                                      </span>
-                                    )}
-                                  </p>
+                    ) : !surveyData ? (
+                      <div className="text-center py-8 text-orange-600 bg-orange-50 rounded-lg border border-orange-200">
+                        <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p className="font-medium mb-2">Save survey first</p>
+                        <p className="text-sm">You need to save the survey before you can manage schedules</p>
+                      </div>
+                    ) : schedules.length > 0 ? (
+                      <div className="space-y-3">
+                        {schedules.map((schedule) => (
+                          <div key={schedule.id} className="border rounded-lg p-4 bg-gray-50">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <Badge variant={schedule.isActive ? 'default' : 'secondary'}>
+                                    {schedule.isActive ? 'Active' : 'Inactive'}
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs">
+                                    {schedule.scheduleType === 'one_time' ? 'One-time' : 'Recurring'}
+                                  </Badge>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleToggleSchedule(schedule)}
-                                    disabled={toggleScheduleMutation.isPending}
-                                    data-testid={`button-toggle-schedule-${schedule.id}`}
-                                  >
-                                    {schedule.isActive ? (
-                                      <ToggleRight className="h-4 w-4 text-green-600" />
-                                    ) : (
-                                      <ToggleLeft className="h-4 w-4 text-gray-400" />
-                                    )}
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleEditSchedule(schedule)}
-                                    data-testid={`button-edit-schedule-${schedule.id}`}
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                </div>
+                                <p className="text-sm font-medium text-gray-900 mb-1">
+                                  {formatScheduleDescription(schedule)}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  Timezone: {schedule.timezone}
+                                  {schedule.nextRun && (
+                                    <span className="ml-2">
+                                      Next: {new Date(schedule.nextRun).toLocaleString()}
+                                    </span>
+                                  )}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleToggleSchedule(schedule)}
+                                  disabled={toggleScheduleMutation.isPending}
+                                  data-testid={`button-toggle-schedule-${schedule.id}`}
+                                >
+                                  {schedule.isActive ? (
+                                    <ToggleRight className="h-4 w-4 text-green-600" />
+                                  ) : (
+                                    <ToggleLeft className="h-4 w-4 text-gray-400" />
+                                  )}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditSchedule(schedule)}
+                                  data-testid={`button-edit-schedule-${schedule.id}`}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
                               </div>
                             </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-8 text-gray-500">
-                          <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                          <p className="font-medium mb-2">No schedules created yet</p>
-                          <p className="text-sm">Create a schedule to automate survey assignments</p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p className="font-medium mb-2">No schedules created yet</p>
+                        <p className="text-sm">Create a schedule to automate survey assignments</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </TabsContent>
+
             </Tabs>
           </div>
 
