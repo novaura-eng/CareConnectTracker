@@ -129,7 +129,7 @@ export default function AdminSurveyBuilder() {
         : '/api/admin/surveys';
       
       const response = await fetch(url, {
-        method: surveyData?.id ? "PUT" : "POST",
+        method: surveyData?.id ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
