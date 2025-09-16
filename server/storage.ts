@@ -617,12 +617,8 @@ export class DatabaseStorage implements IStorage {
       console.log(`[DEBUG] Step 5: Deleting survey state tags`);
       await db.delete(surveyStateTags).where(eq(surveyStateTags.surveyId, id));
       
-      // 6. Update weekly check-ins to remove survey reference (nullable)
-      console.log(`[DEBUG] Step 6: Updating weekly check-ins`);
-      await db
-        .update(weeklyCheckIns)
-        .set({ surveyId: null })
-        .where(eq(weeklyCheckIns.surveyId, id));
+      // 6. Skip weekly check-ins update - survey_id column doesn't exist in database
+      console.log(`[DEBUG] Step 6: Skipping weekly check-ins (column doesn't exist)`);
       
       // 7. Delete survey options (through questions)
       console.log(`[DEBUG] Step 7: Deleting survey options`);
