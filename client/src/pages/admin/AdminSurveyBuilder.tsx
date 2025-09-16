@@ -531,25 +531,32 @@ export default function AdminSurveyBuilder() {
                 <p className="text-sm text-gray-600">See how your survey will appear to caregivers</p>
               </CardHeader>
               <CardContent>
-                {questions.length > 0 && surveyData ? (
+                {questions.length > 0 ? (
                   <div className="border rounded-lg overflow-hidden">
                     <DynamicSurveyRenderer 
                       assignment={{
                         id: 1,
-                        surveyId: surveyData.id,
+                        surveyId: surveyData?.id || 1,
                         caregiverId: 1,
                         patientId: 1,
-                        dueAt: new Date(),
+                        dueAt: new Date().toISOString(),
                         status: 'pending',
-                        assignedAt: new Date(),
+                        assignedAt: new Date().toISOString(),
                         patientName: "Preview Patient"
                       }}
                       survey={{
-                        ...surveyData,
+                        id: surveyData?.id || 1,
+                        title: surveyForm.getValues("title") || "New Survey",
+                        description: surveyForm.getValues("description") || "",
+                        status: "draft" as const,
                         questions: questions.map(q => ({
                           ...q,
-                          id: q.id || 0,
-                          surveyId: surveyData.id
+                          id: q.id || Math.random(),
+                          surveyId: surveyData?.id || 1,
+                          options: q.options?.map(opt => ({
+                            ...opt,
+                            id: opt.id || Math.random()
+                          }))
                         }))
                       }}
                       patientName="Preview Patient"
