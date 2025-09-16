@@ -1,23 +1,21 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
+import { Pool } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
 
-neonConfig.webSocketConstructor = ws;
-
-// Build Supabase connection string with correct pooler hostname
-const supabaseConnectionString = process.env.SUPABASE_PASSWORD 
-  ? `postgresql://postgres.ripejazpgtjutmjqfiql:${encodeURIComponent(process.env.SUPABASE_PASSWORD)}@aws-1-us-east-1.pooler.supabase.com:6543/postgres`
-  : null;
-
-// Use Supabase database if configured, fallback to Replit PostgreSQL
-const databaseUrl = supabaseConnectionString || process.env.DATABASE_URL;
-
-if (!databaseUrl) {
+// Use the same DATABASE_URL that drizzle-kit uses for consistency
+if (!process.env.DATABASE_URL) {
   throw new Error(
     "DATABASE_URL must be set. Did you forget to provision a database?",
   );
 }
 
-export const pool = new Pool({ connectionString: databaseUrl });
-export const db = drizzle({ client: pool, schema });
+// Create pool with explicit SSL configuration for compatibility
+export const pool = new Pool({ 
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false } 
+});
+
+// Set explicit search_path to ensure we're in the same schema as drizzle-kit
+pool.query("SET search_path TO public").catch(console.error);
+
+export const db = drizzle(pool, { schema });

@@ -22,7 +22,11 @@ import {
   Save, 
   Eye,
   FileText,
-  Settings
+  Settings,
+  Calendar,
+  Clock,
+  ToggleLeft,
+  ToggleRight
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -32,6 +36,8 @@ import { US_STATE_CODES, StateCodeSchema, type StateCode } from "@shared/schema"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Check, ChevronsUpDown, X, MapPin } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 
 interface Survey {
   id: number;
@@ -58,6 +64,23 @@ interface QuestionOption {
   orderIndex: number;
 }
 
+interface SurveySchedule {
+  id: number;
+  surveyId: number;
+  scheduleType: 'one_time' | 'daily' | 'weekly' | 'monthly' | 'custom';
+  frequencyValue?: number;
+  dayOfWeek?: number;
+  dayOfMonth?: number;
+  timeOfDay: string;
+  startDate: string;
+  endDate?: string;
+  timezone: string;
+  isActive: boolean;
+  createdAt: string;
+  lastRun?: string;
+  nextRun?: string;
+}
+
 const surveySchema = z.object({
   title: z.string().min(1, "Title is required").max(200, "Title must be under 200 characters"),
   description: z.string().max(1000, "Description must be under 1000 characters").optional(),
@@ -76,8 +99,30 @@ const questionSchema = z.object({
   }).optional(),
 });
 
+const scheduleSchema = z.object({
+  scheduleType: z.enum(['one_time', 'daily', 'weekly', 'monthly', 'custom']),
+  frequencyValue: z.number().optional(),
+  dayOfWeek: z.number().min(0).max(6).optional(),
+  dayOfMonth: z.number().min(1).max(31).optional(),
+  timeOfDay: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Time must be in HH:mm format").default("09:00"),
+  startDate: z.string().min(1, "Start date is required"),
+  endDate: z.string().optional(),
+  timezone: z.string().min(1, "Timezone is required"),
+}).refine((data) => {
+  if (data.scheduleType === 'weekly' && data.dayOfWeek === undefined) {
+    return false;
+  }
+  if (data.scheduleType === 'monthly' && data.dayOfMonth === undefined) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Invalid schedule configuration: weekly schedules need day of week, monthly schedules need day of month"
+});
+
 type SurveyForm = z.infer<typeof surveySchema>;
 type QuestionForm = z.infer<typeof questionSchema>;
+type ScheduleForm = z.infer<typeof scheduleSchema>;
 
 export default function AdminSurveyBuilder() {
   const { surveyId } = useParams<{ surveyId: string }>();
@@ -89,6 +134,9 @@ export default function AdminSurveyBuilder() {
   const [surveyData, setSurveyData] = useState<Survey | null>(null);
   const [selectedStates, setSelectedStates] = useState<StateCode[]>([]);
   const [isStatesOpen, setIsStatesOpen] = useState(false);
+  const [schedules, setSchedules] = useState<SurveySchedule[]>([]);
+  const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState<SurveySchedule | null>(null);
   const { toast } = useToast();
 
   const surveyForm = useForm<SurveyForm>({
@@ -100,12 +148,34 @@ export default function AdminSurveyBuilder() {
     },
   });
 
+  const scheduleForm = useForm<ScheduleForm>({
+    resolver: zodResolver(scheduleSchema),
+    defaultValues: {
+      scheduleType: 'one_time',
+      timeOfDay: '09:00',
+      startDate: new Date().toISOString().split('T')[0],
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    },
+  });
+
 
   // Load survey data if editing existing survey
   const { data: survey, isLoading: surveyLoading } = useQuery({
     queryKey: [`/api/admin/surveys/${surveyId}`],
     enabled: !!surveyId,
   });
+
+  // Load schedules for the survey
+  const { data: surveySchedules, refetch: refetchSchedules } = useQuery({
+    queryKey: [`/api/admin/surveys/${surveyId}/schedules`],
+    enabled: !!surveyId,
+  });
+
+  useEffect(() => {
+    if (surveySchedules && Array.isArray(surveySchedules)) {
+      setSchedules(surveySchedules);
+    }
+  }, [surveySchedules]);
 
   useEffect(() => {
     if (survey && typeof survey === 'object' && 'id' in survey) {
@@ -227,6 +297,74 @@ export default function AdminSurveyBuilder() {
     },
   });
 
+  // Schedule mutations
+  const createScheduleMutation = useMutation({
+    mutationFn: async (scheduleData: ScheduleForm) => {
+      return apiRequest("POST", `/api/admin/surveys/${surveyData?.id}/schedules`, scheduleData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/surveys/${surveyId}/schedules`] });
+      refetchSchedules();
+      setIsScheduleDialogOpen(false);
+      scheduleForm.reset();
+      toast({
+        title: "Schedule Created",
+        description: "Survey schedule has been created successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create schedule. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateScheduleMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<ScheduleForm> }) => {
+      return apiRequest("PATCH", `/api/admin/schedules/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/surveys/${surveyId}/schedules`] });
+      refetchSchedules();
+      setEditingSchedule(null);
+      setIsScheduleDialogOpen(false);
+      toast({
+        title: "Schedule Updated",
+        description: "Survey schedule has been updated successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update schedule. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const toggleScheduleMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: number; isActive: boolean }) => {
+      return apiRequest("POST", `/api/admin/schedules/${id}/toggle`, { isActive });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/surveys/${surveyId}/schedules`] });
+      refetchSchedules();
+      toast({
+        title: "Schedule Updated",
+        description: "Schedule status has been updated successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update schedule status. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSaveSurvey = (data: SurveyForm) => {
     saveSurveyMutation.mutate(data);
   };
@@ -309,6 +447,77 @@ export default function AdminSurveyBuilder() {
       case 'multi_choice': return 'Multiple Choice';
       default: return type;
     }
+  };
+
+  // Schedule helper functions
+  const handleCreateSchedule = () => {
+    setEditingSchedule(null);
+    scheduleForm.reset({
+      scheduleType: 'one_time',
+      timeOfDay: '09:00',
+      startDate: new Date().toISOString().split('T')[0],
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+    setIsScheduleDialogOpen(true);
+  };
+
+  const handleEditSchedule = (schedule: SurveySchedule) => {
+    setEditingSchedule(schedule);
+    scheduleForm.reset({
+      scheduleType: schedule.scheduleType,
+      frequencyValue: schedule.frequencyValue,
+      dayOfWeek: schedule.dayOfWeek,
+      dayOfMonth: schedule.dayOfMonth,
+      timeOfDay: schedule.timeOfDay || '09:00',
+      startDate: schedule.startDate.split('T')[0],
+      endDate: schedule.endDate ? schedule.endDate.split('T')[0] : undefined,
+      timezone: schedule.timezone,
+    });
+    setIsScheduleDialogOpen(true);
+  };
+
+  const handleSaveSchedule = (data: ScheduleForm) => {
+    if (editingSchedule) {
+      updateScheduleMutation.mutate({ id: editingSchedule.id, data });
+    } else {
+      createScheduleMutation.mutate(data);
+    }
+  };
+
+  const handleToggleSchedule = (schedule: SurveySchedule) => {
+    toggleScheduleMutation.mutate({ id: schedule.id, isActive: !schedule.isActive });
+  };
+
+  const formatScheduleDescription = (schedule: SurveySchedule) => {
+    if (schedule.scheduleType === 'one_time') {
+      return `One-time on ${new Date(schedule.startDate).toLocaleDateString()}`;
+    }
+    
+    let description = `${schedule.scheduleType.charAt(0).toUpperCase()}${schedule.scheduleType.slice(1)}`;
+    
+    if (schedule.scheduleType === 'weekly' && schedule.dayOfWeek !== undefined) {
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      description += ` on ${days[schedule.dayOfWeek]}`;
+    }
+    
+    if (schedule.scheduleType === 'monthly' && schedule.dayOfMonth !== undefined) {
+      description += ` on the ${schedule.dayOfMonth}${getOrdinalSuffix(schedule.dayOfMonth)}`;
+    }
+    
+    if (schedule.timeOfDay) {
+      description += ` at ${schedule.timeOfDay}`;
+    }
+    
+    return description;
+  };
+
+  const getOrdinalSuffix = (num: number) => {
+    const j = num % 10;
+    const k = num % 100;
+    if (j === 1 && k !== 11) return 'st';
+    if (j === 2 && k !== 12) return 'nd';
+    if (j === 3 && k !== 13) return 'rd';
+    return 'th';
   };
 
   if (surveyLoading) {
@@ -541,6 +750,90 @@ export default function AdminSurveyBuilder() {
               </CardContent>
             </Card>
 
+            {/* Schedule Management Section */}
+            {surveyData && (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Calendar className="h-5 w-5" />
+                      Survey Schedules ({schedules.length})
+                    </CardTitle>
+                    <Button 
+                      onClick={handleCreateSchedule} 
+                      size="sm" 
+                      data-testid="button-create-schedule"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create Schedule
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {schedules.length > 0 ? (
+                    <div className="space-y-3">
+                      {schedules.map((schedule) => (
+                        <div key={schedule.id} className="border rounded-lg p-4 bg-gray-50">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <Badge variant={schedule.isActive ? 'default' : 'secondary'}>
+                                  {schedule.isActive ? 'Active' : 'Inactive'}
+                                </Badge>
+                                <Badge variant="outline" className="text-xs">
+                                  {schedule.scheduleType === 'one_time' ? 'One-time' : 'Recurring'}
+                                </Badge>
+                              </div>
+                              <p className="text-sm font-medium text-gray-900 mb-1">
+                                {formatScheduleDescription(schedule)}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Timezone: {schedule.timezone}
+                                {schedule.nextRun && (
+                                  <span className="ml-2">
+                                    Next: {new Date(schedule.nextRun).toLocaleString()}
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleToggleSchedule(schedule)}
+                                disabled={toggleScheduleMutation.isPending}
+                                data-testid={`button-toggle-schedule-${schedule.id}`}
+                              >
+                                {schedule.isActive ? (
+                                  <ToggleRight className="h-4 w-4 text-green-600" />
+                                ) : (
+                                  <ToggleLeft className="h-4 w-4 text-gray-400" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditSchedule(schedule)}
+                                data-testid={`button-edit-schedule-${schedule.id}`}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p className="font-medium mb-2">No schedules created yet</p>
+                      <p className="text-sm">Create a schedule to automate survey assignments</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {/* Questions Section */}
             <Card>
               <CardHeader>
@@ -704,6 +997,200 @@ export default function AdminSurveyBuilder() {
           </div>
         </div>
       </div>
+
+      {/* Schedule Creation/Editing Dialog */}
+      <Dialog open={isScheduleDialogOpen} onOpenChange={setIsScheduleDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {editingSchedule ? "Edit Schedule" : "Create Schedule"}
+            </DialogTitle>
+            <DialogDescription>
+              Set up automated survey assignments with custom scheduling rules.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...scheduleForm}>
+            <form onSubmit={scheduleForm.handleSubmit(handleSaveSchedule)} className="space-y-4">
+              {/* Schedule Type */}
+              <FormField
+                control={scheduleForm.control}
+                name="scheduleType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Schedule Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-schedule-type">
+                          <SelectValue placeholder="Select schedule type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="one_time">One-time</SelectItem>
+                        <SelectItem value="daily">Daily</SelectItem>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Time of Day */}
+              <FormField
+                control={scheduleForm.control}
+                name="timeOfDay"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Time of Day</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="time"
+                        {...field}
+                        data-testid="input-time-of-day"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Day of Week (only for weekly) */}
+              {scheduleForm.watch("scheduleType") === "weekly" && (
+                <FormField
+                  control={scheduleForm.control}
+                  name="dayOfWeek"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Day of Week</FormLabel>
+                      <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-day-of-week">
+                            <SelectValue placeholder="Select day" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="0">Sunday</SelectItem>
+                          <SelectItem value="1">Monday</SelectItem>
+                          <SelectItem value="2">Tuesday</SelectItem>
+                          <SelectItem value="3">Wednesday</SelectItem>
+                          <SelectItem value="4">Thursday</SelectItem>
+                          <SelectItem value="5">Friday</SelectItem>
+                          <SelectItem value="6">Saturday</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {/* Day of Month (only for monthly) */}
+              {scheduleForm.watch("scheduleType") === "monthly" && (
+                <FormField
+                  control={scheduleForm.control}
+                  name="dayOfMonth"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Day of Month</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="31"
+                          placeholder="Day (1-31)"
+                          {...field}
+                          onChange={(e) => field.onChange(parseInt(e.target.value))}
+                          value={field.value || ""}
+                          data-testid="input-day-of-month"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {/* Start Date */}
+              <FormField
+                control={scheduleForm.control}
+                name="startDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Start Date</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        {...field}
+                        data-testid="input-start-date"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* End Date (optional) */}
+              <FormField
+                control={scheduleForm.control}
+                name="endDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>End Date (Optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        {...field}
+                        data-testid="input-end-date"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Timezone */}
+              <FormField
+                control={scheduleForm.control}
+                name="timezone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Timezone</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g., America/New_York"
+                        {...field}
+                        data-testid="input-timezone"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Dialog Actions */}
+              <div className="flex justify-end gap-2 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsScheduleDialogOpen(false)}
+                  data-testid="button-cancel-schedule"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={createScheduleMutation.isPending || updateScheduleMutation.isPending}
+                  data-testid="button-save-schedule"
+                >
+                  {createScheduleMutation.isPending || updateScheduleMutation.isPending ? "Saving..." : "Save Schedule"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
