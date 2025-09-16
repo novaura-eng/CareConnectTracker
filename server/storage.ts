@@ -11,6 +11,7 @@ import {
   surveyResponsesV2,
   surveyResponseItems,
   surveyStateTags,
+  surveySchedules,
   type User,
   type UpsertUser,
   type Caregiver, 
@@ -35,6 +36,8 @@ import {
   type InsertSurveyResponseItem,
   type SurveyStateTag,
   type InsertSurveyStateTag,
+  type SurveySchedule,
+  type InsertSurveySchedule,
   type StateCode
 } from "@shared/schema";
 import { db } from "./db";
@@ -124,6 +127,17 @@ export interface IStorage {
   getSurveyStates(surveyId: number): Promise<StateCode[]>;
   setSurveyStates(surveyId: number, states: StateCode[]): Promise<void>;
   getAllSurveysWithStates(): Promise<Array<Survey & { states: StateCode[] }>>;
+
+  // Survey Schedule methods
+  createSurveySchedule(schedule: InsertSurveySchedule): Promise<SurveySchedule>;
+  getSurveySchedule(id: number): Promise<SurveySchedule | undefined>;
+  getSurveySchedules(surveyId: number): Promise<SurveySchedule[]>;
+  getAllActiveSchedules(): Promise<SurveySchedule[]>;
+  getSchedulesDueToRun(currentTime: Date): Promise<SurveySchedule[]>;
+  updateSurveySchedule(id: number, updates: Partial<InsertSurveySchedule>): Promise<SurveySchedule>;
+  updateScheduleRunTimes(id: number, lastRun: Date, nextRun: Date | null): Promise<void>;
+  deleteSurveySchedule(id: number): Promise<void>;
+  toggleScheduleActive(id: number, isActive: boolean): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -820,6 +834,73 @@ export class DatabaseStorage implements IStorage {
       }
       throw error;
     }
+  }
+
+  // Survey Schedule methods
+  async createSurveySchedule(schedule: InsertSurveySchedule): Promise<SurveySchedule> {
+    const [newSchedule] = await db.insert(surveySchedules).values(schedule).returning();
+    return newSchedule;
+  }
+
+  async getSurveySchedule(id: number): Promise<SurveySchedule | undefined> {
+    const [schedule] = await db.select().from(surveySchedules).where(eq(surveySchedules.id, id));
+    return schedule;
+  }
+
+  async getSurveySchedules(surveyId: number): Promise<SurveySchedule[]> {
+    return await db.select().from(surveySchedules)
+      .where(eq(surveySchedules.surveyId, surveyId))
+      .orderBy(desc(surveySchedules.createdAt));
+  }
+
+  async getAllActiveSchedules(): Promise<SurveySchedule[]> {
+    return await db.select().from(surveySchedules)
+      .where(eq(surveySchedules.isActive, true))
+      .orderBy(desc(surveySchedules.createdAt));
+  }
+
+  async getSchedulesDueToRun(currentTime: Date): Promise<SurveySchedule[]> {
+    return await db.select().from(surveySchedules)
+      .where(
+        and(
+          eq(surveySchedules.isActive, true),
+          lte(surveySchedules.nextRun, currentTime),
+          lte(surveySchedules.startDate, currentTime), // Should have already started
+          sql`(${surveySchedules.endDate} IS NULL OR ${surveySchedules.endDate} >= ${currentTime})` // Not expired
+        )
+      )
+      .orderBy(surveySchedules.nextRun);
+  }
+
+  async updateSurveySchedule(id: number, updates: Partial<InsertSurveySchedule>): Promise<SurveySchedule> {
+    const [updatedSchedule] = await db.update(surveySchedules)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(surveySchedules.id, id))
+      .returning();
+    return updatedSchedule;
+  }
+
+  async updateScheduleRunTimes(id: number, lastRun: Date, nextRun: Date | null): Promise<void> {
+    await db.update(surveySchedules)
+      .set({ 
+        lastRun, 
+        nextRun,
+        updatedAt: new Date() 
+      })
+      .where(eq(surveySchedules.id, id));
+  }
+
+  async deleteSurveySchedule(id: number): Promise<void> {
+    await db.delete(surveySchedules).where(eq(surveySchedules.id, id));
+  }
+
+  async toggleScheduleActive(id: number, isActive: boolean): Promise<void> {
+    await db.update(surveySchedules)
+      .set({ 
+        isActive,
+        updatedAt: new Date() 
+      })
+      .where(eq(surveySchedules.id, id));
   }
 }
 
