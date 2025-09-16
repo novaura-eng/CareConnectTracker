@@ -408,6 +408,9 @@ export const insertSurveyScheduleSchema = createInsertSchema(surveySchedules).om
   updatedAt: true,
   lastRun: true,
   nextRun: true,
+}).extend({
+  startDate: z.string().transform((str) => new Date(str)),
+  endDate: z.string().optional().transform((str) => str ? new Date(str) : undefined),
 });
 
 // Types
