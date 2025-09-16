@@ -83,11 +83,7 @@ export default function SurveyManager() {
     mutationFn: async (surveyIds: number[]) => {
       console.log('Starting bulk delete mutation with IDs:', surveyIds);
       try {
-        const result = await apiRequest("/api/admin/surveys/bulk-delete", {
-          method: "POST",
-          body: JSON.stringify({ surveyIds }),
-          headers: { "Content-Type": "application/json" },
-        });
+        const result = await apiRequest("POST", "/api/admin/surveys/bulk-delete", { surveyIds });
         console.log('Bulk delete mutation successful:', result);
         return result;
       } catch (error) {
