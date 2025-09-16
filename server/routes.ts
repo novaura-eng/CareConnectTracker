@@ -11,7 +11,9 @@ import {
   insertSurveyOptionSchema,
   insertSurveyAssignmentSchema,
   insertSurveyResponseV2Schema,
-  insertSurveyResponseItemSchema
+  insertSurveyResponseItemSchema,
+  StateCodeSchema,
+  type StateCode
 } from "@shared/schema";
 import { smsService } from "./services/sms";
 import { sendCaregiverWeeklyEmail } from "./services/email";
@@ -739,7 +741,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Survey CRUD Operations
   app.get("/api/admin/surveys", isAuthenticated, async (req, res) => {
     try {
-      const surveys = await storage.getAllSurveys();
+      const surveys = await storage.getAllSurveysWithStates();
       res.json(surveys);
     } catch (error) {
       console.error("Error fetching surveys:", error);
@@ -756,7 +758,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Survey not found" });
       }
       
-      res.json(survey);
+      // Get states for this survey
+      const states = await storage.getSurveyStates(surveyId);
+      
+      res.json({ ...survey, states });
     } catch (error) {
       console.error("Error fetching survey:", error);
       res.status(500).json({ message: "Internal server error" });
@@ -766,13 +771,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/surveys", isAuthenticated, async (req, res) => {
     try {
       const userId = (req as any).user.claims.sub;
+      const { states, ...surveyData } = req.body;
+      
       const validatedData = insertSurveySchema.parse({
-        ...req.body,
+        ...surveyData,
         createdBy: userId
       });
       
+      // Validate states if provided
+      let validatedStates: StateCode[] = [];
+      if (states && Array.isArray(states)) {
+        validatedStates = states.map(state => StateCodeSchema.parse(state));
+      }
+      
       const survey = await storage.createSurvey(validatedData);
-      res.json(survey);
+      
+      // Set states if provided
+      if (validatedStates.length > 0) {
+        await storage.setSurveyStates(survey.id, validatedStates);
+      }
+      
+      // Return survey with states
+      const surveyWithStates = { ...survey, states: validatedStates };
+      res.json(surveyWithStates);
     } catch (error) {
       console.error("Error creating survey:", error);
       res.status(500).json({ message: "Internal server error" });
@@ -782,7 +803,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/surveys/:id", isAuthenticated, async (req, res) => {
     try {
       const surveyId = parseInt(req.params.id);
-      const updates = req.body;
+      const { states, ...updates } = req.body;
       
       // Remove fields that shouldn't be updated via this endpoint
       delete updates.id;
@@ -790,7 +811,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       delete updates.createdAt;
       
       const survey = await storage.updateSurvey(surveyId, updates);
-      res.json(survey);
+      
+      // Handle states update if provided
+      if (states !== undefined) {
+        let validatedStates: StateCode[] = [];
+        if (Array.isArray(states)) {
+          validatedStates = states.map(state => StateCodeSchema.parse(state));
+        }
+        await storage.setSurveyStates(surveyId, validatedStates);
+      }
+      
+      // Return survey with current states
+      const currentStates = await storage.getSurveyStates(surveyId);
+      res.json({ ...survey, states: currentStates });
     } catch (error) {
       console.error("Error updating survey:", error);
       res.status(500).json({ message: "Internal server error" });
@@ -804,6 +837,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Survey deleted successfully" });
     } catch (error) {
       console.error("Error deleting survey:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Survey State Management
+  app.patch("/api/admin/surveys/:id/states", isAuthenticated, async (req, res) => {
+    try {
+      const surveyId = parseInt(req.params.id);
+      const { states } = req.body;
+      
+      if (!Array.isArray(states)) {
+        return res.status(400).json({ message: "States must be an array" });
+      }
+      
+      // Validate state codes
+      const validatedStates = states.map(state => StateCodeSchema.parse(state));
+      
+      await storage.setSurveyStates(surveyId, validatedStates);
+      res.json({ message: "Survey states updated successfully", states: validatedStates });
+    } catch (error) {
+      console.error("Error updating survey states:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
