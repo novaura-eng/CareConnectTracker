@@ -879,10 +879,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Validate schedule data
+      console.log("Raw schedule data received:", JSON.stringify(scheduleData, null, 2));
       const validatedData = insertSurveyScheduleSchema.parse({
         ...scheduleData,
         surveyId
       });
+      console.log("Validated schedule data:", JSON.stringify(validatedData, null, 2));
       
       const schedule = await storage.createSurveySchedule(validatedData);
       res.json(schedule);
