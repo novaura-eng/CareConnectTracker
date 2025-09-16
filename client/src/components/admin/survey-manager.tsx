@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +9,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Plus, MoreVertical, Edit, Trash2, Send, Calendar, Users, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import SurveyBuilder from "./survey-builder";
 import SurveyAssignments from "./survey-assignments";
 
 interface Survey {
@@ -22,8 +22,8 @@ interface Survey {
 
 export default function SurveyManager() {
   const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null);
-  const [isBuilderOpen, setIsBuilderOpen] = useState(false);
   const [isAssignmentsOpen, setIsAssignmentsOpen] = useState(false);
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
 
   const { data: surveys, isLoading } = useQuery({
@@ -106,13 +106,11 @@ export default function SurveyManager() {
   });
 
   const handleCreateNew = () => {
-    setSelectedSurvey(null);
-    setIsBuilderOpen(true);
+    setLocation("/admin/surveys/builder");
   };
 
   const handleEditSurvey = (survey: Survey) => {
-    setSelectedSurvey(survey);
-    setIsBuilderOpen(true);
+    setLocation(`/admin/surveys/builder/${survey.id}`);
   };
 
   const handleAssignSurvey = (survey: Survey) => {
@@ -250,28 +248,6 @@ export default function SurveyManager() {
         </Card>
       )}
 
-      {/* Survey Builder Dialog */}
-      <Dialog open={isBuilderOpen} onOpenChange={setIsBuilderOpen}>
-        <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedSurvey ? "Edit Survey" : "Create New Survey"}
-            </DialogTitle>
-            <DialogDescription>
-              {selectedSurvey 
-                ? "Modify your survey questions and settings"
-                : "Build a custom survey with multiple question types"
-              }
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex-1 overflow-hidden">
-            <SurveyBuilder 
-              survey={selectedSurvey} 
-              onClose={() => setIsBuilderOpen(false)}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Survey Assignments Dialog */}
       <Dialog open={isAssignmentsOpen} onOpenChange={setIsAssignmentsOpen}>

@@ -25,6 +25,7 @@ import CaregiverPatients from "@/pages/caregiver/CaregiverPatients";
 import CaregiverProfile from "@/pages/caregiver/CaregiverProfile";
 import CaregiverCheckIns from "@/pages/caregiver/CaregiverCheckIns";
 import CaregiverDynamicSurvey from "@/pages/caregiver/CaregiverDynamicSurvey";
+import AdminSurveyBuilder from "@/pages/admin/AdminSurveyBuilder";
 import Sidebar from "@/components/layout/sidebar";
 
 function UnauthenticatedRouter() {
@@ -54,6 +55,8 @@ function AuthenticatedRouter() {
       <Route path="/" component={Home} />
       <Route path="/survey/:checkInId" component={Survey} />
       <Route path="/admin" component={Admin} />
+      <Route path="/admin/surveys/builder" component={AdminSurveyBuilder} />
+      <Route path="/admin/surveys/builder/:surveyId" component={AdminSurveyBuilder} />
       <Route path="/caregivers" component={Caregivers} />
       <Route path="/patients" component={Patients} />
       <Route path="/reports" component={Reports} />
