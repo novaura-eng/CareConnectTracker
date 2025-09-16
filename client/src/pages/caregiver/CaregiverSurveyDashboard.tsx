@@ -54,8 +54,10 @@ export default function CaregiverSurveyDashboard() {
   });
 
   // Separate pending and completed assignments
-  const assignments = allAssignments?.filter(a => a.status !== 'completed') || [];
-  const completedAssignments = allAssignments?.filter(a => a.status === 'completed') || [];
+  // Handle case where API returns error object instead of array
+  const assignmentsArray = Array.isArray(allAssignments) ? allAssignments : [];
+  const assignments = assignmentsArray.filter(a => a.status !== 'completed') || [];
+  const completedAssignments = assignmentsArray.filter(a => a.status === 'completed') || [];
 
   const handleStartAssignment = (assignment: UnifiedAssignment) => {
     if (assignment.type === 'weekly_checkin') {

@@ -224,10 +224,10 @@ export const weeklyCheckInsRelations = relations(weeklyCheckIns, ({ one, many })
     fields: [weeklyCheckIns.id],
     references: [surveyResponses.checkInId],
   }),
-  survey: one(surveys, {
-    fields: [weeklyCheckIns.surveyId],
-    references: [surveys.id],
-  }),
+  // survey: one(surveys, {
+  //   fields: [weeklyCheckIns.surveyId],
+  //   references: [surveys.id],
+  // }), // Commented out - surveyId column doesn't exist in production DB yet
   assignments: many(surveyAssignments),
   surveyResponsesV2: many(surveyResponsesV2),
 }));
