@@ -23,7 +23,7 @@ import CaregiverPatient from "@/pages/caregiver-patient";
 import CaregiverSurvey from "@/pages/caregiver-survey";
 import CaregiverPatients from "@/pages/caregiver/CaregiverPatients";
 import CaregiverProfile from "@/pages/caregiver/CaregiverProfile";
-import CaregiverCheckIns from "@/pages/caregiver/CaregiverCheckIns";
+import CaregiverSurveyDashboard from "@/pages/caregiver/CaregiverSurveyDashboard";
 import CaregiverDynamicSurvey from "@/pages/caregiver/CaregiverDynamicSurvey";
 import AdminSurveyBuilder from "@/pages/admin/AdminSurveyBuilder";
 import Sidebar from "@/components/layout/sidebar";
@@ -37,10 +37,10 @@ function UnauthenticatedRouter() {
       <Route path="/caregiver" component={CaregiverStateSelection} />
       <Route path="/caregiver/login" component={CaregiverLogin} />
       <Route path="/caregiver/setup" component={CaregiverSetup} />
-      <Route path="/caregiver/dashboard" component={CaregiverDashboard} />
+      <Route path="/caregiver/dashboard" component={CaregiverSurveyDashboard} />
       <Route path="/caregiver/patients" component={CaregiverPatients} />
       <Route path="/caregiver/profile" component={CaregiverProfile} />
-      <Route path="/caregiver/checkins" component={CaregiverCheckIns} />
+      <Route path="/caregiver/checkins" component={CaregiverSurveyDashboard} />
       <Route path="/caregiver/dynamic-survey/:assignmentId" component={CaregiverDynamicSurvey} />
       <Route path="/caregiver/patient/:patientId" component={CaregiverPatient} />
       <Route path="/caregiver/survey/:patientId" component={CaregiverSurvey} />

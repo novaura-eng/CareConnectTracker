@@ -435,6 +435,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get unified assignments (check-ins + surveys) for caregiver dashboard
+  app.get("/api/caregiver/assignments/unified", isCaregiver, async (req, res) => {
+    try {
+      const caregiver = (req as any).caregiver;
+      const assignments = await storage.getUnifiedAssignmentsForCaregiver(caregiver.id);
+      res.json(assignments);
+    } catch (error) {
+      console.error("Error fetching unified assignments:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get survey details for assignment
   app.get("/api/caregiver/surveys/:assignmentId", isCaregiver, async (req, res) => {
     try {

@@ -121,6 +121,7 @@ export interface IStorage {
   createSurveyAssignment(assignment: InsertSurveyAssignment): Promise<SurveyAssignment>;
   getSurveyAssignment(id: number): Promise<SurveyAssignment | undefined>;
   getPendingSurveysByCaregiver(caregiverId: number): Promise<any[]>;
+  getUnifiedAssignmentsForCaregiver(caregiverId: number): Promise<any[]>;
   assignSurveyToCaregiver(surveyId: number, caregiverId: number, patientId?: number, dueAt?: Date): Promise<SurveyAssignment>;
   completeSurveyAssignment(id: number): Promise<void>;
   
@@ -790,6 +791,91 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .orderBy(surveyAssignments.dueAt);
+  }
+
+  // Unified assignment view for improved caregiver UX
+  async getUnifiedAssignmentsForCaregiver(caregiverId: number): Promise<any[]> {
+    // Get pending weekly check-ins with DB-side date calculations
+    const checkIns = await db
+      .select({
+        id: weeklyCheckIns.id,
+        type: sql<string>`'weekly_checkin'`.as('type'),
+        patientId: weeklyCheckIns.patientId,
+        patientName: patients.name,
+        title: sql<string>`'Weekly Health Check-in'`.as('title'),
+        description: sql<string>`'Complete weekly health and safety assessment'`.as('description'),
+        dueDate: weeklyCheckIns.weekEndDate,
+        status: sql<string>`CASE 
+          WHEN ${weeklyCheckIns.isCompleted} THEN 'completed'
+          WHEN ${weeklyCheckIns.weekEndDate}::date < now()::date THEN 'overdue' 
+          ELSE 'pending'
+        END`.as('status'),
+        completedAt: weeklyCheckIns.completedAt,
+        estimatedMinutes: sql<number>`10`.as('estimatedMinutes'),
+        surveyId: sql<number>`null`.as('surveyId'),
+        assignmentId: sql<number>`null`.as('assignmentId'),
+        checkInId: weeklyCheckIns.id,
+        priority: sql<number>`CASE 
+          WHEN ${weeklyCheckIns.weekEndDate}::date < now()::date THEN 3
+          WHEN ${weeklyCheckIns.weekEndDate}::date = now()::date THEN 2
+          ELSE 1
+        END`.as('priority')
+      })
+      .from(weeklyCheckIns)
+      .innerJoin(patients, eq(weeklyCheckIns.patientId, patients.id))
+      .where(
+        and(
+          eq(weeklyCheckIns.caregiverId, caregiverId),
+          eq(weeklyCheckIns.isCompleted, false)
+        )
+      );
+
+    // Get pending dynamic survey assignments with DB-side date calculations
+    const dynamicSurveyAssignments = await db
+      .select({
+        id: surveyAssignments.id,
+        type: sql<string>`'dynamic_survey'`.as('type'),
+        patientId: surveyAssignments.patientId,
+        patientName: patients.name,
+        title: surveys.title,
+        description: surveys.description,
+        dueDate: surveyAssignments.dueAt,
+        status: sql<string>`CASE 
+          WHEN ${surveyAssignments.status} = 'completed' THEN 'completed'
+          WHEN ${surveyAssignments.dueAt}::date < now()::date THEN 'overdue'
+          ELSE 'pending'
+        END`.as('status'),
+        completedAt: surveyAssignments.completedAt,
+        estimatedMinutes: sql<number>`15`.as('estimatedMinutes'),
+        surveyId: surveys.id,
+        assignmentId: surveyAssignments.id,
+        checkInId: surveyAssignments.checkInId,
+        priority: sql<number>`CASE 
+          WHEN ${surveyAssignments.dueAt}::date < now()::date THEN 3
+          WHEN ${surveyAssignments.dueAt}::date = now()::date THEN 2
+          ELSE 1
+        END`.as('priority')
+      })
+      .from(surveyAssignments)
+      .innerJoin(surveys, eq(surveyAssignments.surveyId, surveys.id))
+      .leftJoin(patients, eq(surveyAssignments.patientId, patients.id))
+      .where(
+        and(
+          eq(surveyAssignments.caregiverId, caregiverId),
+          eq(surveyAssignments.status, 'pending')
+        )
+      );
+
+    // Combine and sort by priority (desc), then by due date (asc)
+    const allAssignments = [...checkIns, ...dynamicSurveyAssignments];
+    return allAssignments.sort((a, b) => {
+      // First sort by priority (3=overdue, 2=due today, 1=upcoming)
+      if (a.priority !== b.priority) {
+        return b.priority - a.priority;
+      }
+      // Then sort by due date (earliest first)
+      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+    });
   }
 
   async assignSurveyToCaregiver(surveyId: number, caregiverId: number, patientId?: number, dueAt?: Date): Promise<SurveyAssignment> {
