@@ -816,7 +816,7 @@ export class DatabaseStorage implements IStorage {
         END`.as('status'),
         completedAt: weeklyCheckIns.completedAt,
         estimatedMinutes: sql<number>`10`.as('estimatedMinutes'),
-        surveyId: sql<number>`null`.as('surveyId'),
+        surveyId: weeklyCheckIns.surveyId,
         assignmentId: sql<number>`null`.as('assignmentId'),
         checkInId: weeklyCheckIns.id,
         priority: sql<number>`CASE 

@@ -476,6 +476,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get survey details for weekly check-in with associated survey
+  app.get("/api/caregiver/checkin-survey/:checkInId", isCaregiver, async (req, res) => {
+    try {
+      const caregiver = (req as any).caregiver;
+      const checkInId = parseInt(req.params.checkInId);
+      
+      if (isNaN(checkInId)) {
+        return res.status(400).json({ message: "Invalid check-in ID" });
+      }
+
+      // Get weekly check-in
+      const checkIn = await storage.getWeeklyCheckIn(checkInId);
+      if (!checkIn || checkIn.caregiverId !== caregiver.id) {
+        return res.status(403).json({ message: "Check-in not found or access denied" });
+      }
+
+      if (!checkIn.surveyId) {
+        return res.status(404).json({ message: "No survey associated with this check-in" });
+      }
+
+      // Get survey with questions and options
+      const surveyDetails = await storage.getSurveyWithQuestions(checkIn.surveyId);
+      if (!surveyDetails) {
+        return res.status(404).json({ message: "Survey not found" });
+      }
+
+      // Get patient info
+      let patientName = "Unknown Patient";
+      if (checkIn.patientId) {
+        const patient = await storage.getPatient(checkIn.patientId);
+        if (patient) {
+          patientName = patient.name;
+        }
+      }
+
+      // Create assignment-like structure for the renderer
+      const assignment = {
+        id: checkInId,
+        type: 'weekly_checkin_survey',
+        surveyId: checkIn.surveyId,
+        caregiverId: checkIn.caregiverId,
+        patientId: checkIn.patientId,
+        checkInId: checkInId,
+        status: checkIn.isCompleted ? 'completed' : 'pending',
+        patientName,
+        dueAt: checkIn.weekEndDate,
+        createdAt: checkIn.createdAt
+      };
+
+      res.json({
+        assignment,
+        survey: surveyDetails
+      });
+    } catch (error) {
+      console.error("Error fetching check-in survey:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Submit survey response
   app.post("/api/caregiver/surveys/:assignmentId/submit", isCaregiver, async (req, res) => {
     try {
