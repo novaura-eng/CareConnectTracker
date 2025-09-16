@@ -28,12 +28,17 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import DynamicSurveyRenderer from "@/components/survey/dynamic-survey-renderer";
 import QuestionEditor from "@/components/admin/QuestionEditor";
+import { US_STATE_CODES, StateCodeSchema, type StateCode } from "@shared/schema";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Check, ChevronsUpDown, X, MapPin } from "lucide-react";
 
 interface Survey {
   id: number;
   title: string;
   description: string;
   status: 'draft' | 'published' | 'archived';
+  states?: StateCode[];
 }
 
 interface Question {
@@ -56,6 +61,7 @@ interface QuestionOption {
 const surveySchema = z.object({
   title: z.string().min(1, "Title is required").max(200, "Title must be under 200 characters"),
   description: z.string().max(1000, "Description must be under 1000 characters").optional(),
+  states: z.array(StateCodeSchema).optional().default([]),
 });
 
 const questionSchema = z.object({
@@ -81,6 +87,8 @@ export default function AdminSurveyBuilder() {
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [surveyData, setSurveyData] = useState<Survey | null>(null);
+  const [selectedStates, setSelectedStates] = useState<StateCode[]>([]);
+  const [isStatesOpen, setIsStatesOpen] = useState(false);
   const { toast } = useToast();
 
   const surveyForm = useForm<SurveyForm>({
@@ -88,6 +96,7 @@ export default function AdminSurveyBuilder() {
     defaultValues: {
       title: "",
       description: "",
+      states: [],
     },
   });
 
@@ -100,11 +109,14 @@ export default function AdminSurveyBuilder() {
 
   useEffect(() => {
     if (survey && typeof survey === 'object' && 'id' in survey) {
-      const surveyData = survey as Survey;
+      const surveyData = survey as Survey & { states?: StateCode[] };
       setSurveyData(surveyData);
+      const states = surveyData.states || [];
+      setSelectedStates(states);
       surveyForm.reset({
         title: surveyData.title,
         description: surveyData.description || "",
+        states: states,
       });
       fetchSurveyQuestions(surveyData.id);
     }
@@ -128,10 +140,15 @@ export default function AdminSurveyBuilder() {
         ? `/api/admin/surveys/${surveyData.id}`
         : '/api/admin/surveys';
       
+      const payload = {
+        ...data,
+        states: selectedStates
+      };
+      
       const response = await fetch(url, {
         method: surveyData?.id ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
       if (!response.ok) throw new Error("Failed to save survey");
       return response.json();
@@ -407,6 +424,95 @@ export default function AdminSurveyBuilder() {
                         </FormItem>
                       )}
                     />
+                    
+                    {/* State Selection */}
+                    <div className="space-y-2">
+                      <FormLabel className="text-sm font-medium">
+                        <MapPin className="inline-block h-4 w-4 mr-1" />
+                        Target States (Optional)
+                      </FormLabel>
+                      <FormDescription className="text-xs text-gray-500">
+                        Select states where this survey will be used. Leave empty for all states.
+                      </FormDescription>
+                      <Popover open={isStatesOpen} onOpenChange={setIsStatesOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={isStatesOpen}
+                            className="w-full justify-between text-left font-normal"
+                            data-testid="button-select-states"
+                          >
+                            {selectedStates.length === 0 
+                              ? "Select states..." 
+                              : selectedStates.length === 1 
+                                ? `${selectedStates[0]}` 
+                                : `${selectedStates.length} states selected`
+                            }
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search states..." />
+                            <CommandEmpty>No states found.</CommandEmpty>
+                            <CommandList>
+                              <CommandGroup>
+                                {US_STATE_CODES.map((stateCode) => (
+                                  <CommandItem
+                                    key={stateCode}
+                                    value={stateCode}
+                                    onSelect={() => {
+                                      const newStates = selectedStates.includes(stateCode)
+                                        ? selectedStates.filter(s => s !== stateCode)
+                                        : [...selectedStates, stateCode];
+                                      setSelectedStates(newStates);
+                                      surveyForm.setValue('states', newStates);
+                                    }}
+                                    data-testid={`option-state-${stateCode}`}
+                                  >
+                                    <Check
+                                      className={`mr-2 h-4 w-4 ${
+                                        selectedStates.includes(stateCode) ? "opacity-100" : "opacity-0"
+                                      }`}
+                                    />
+                                    {stateCode}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      
+                      {/* Selected States Display */}
+                      {selectedStates.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {selectedStates.map((state) => (
+                            <Badge 
+                              key={state} 
+                              variant="secondary" 
+                              className="text-xs"
+                              data-testid={`badge-state-${state}`}
+                            >
+                              {state}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newStates = selectedStates.filter(s => s !== state);
+                                  setSelectedStates(newStates);
+                                  surveyForm.setValue('states', newStates);
+                                }}
+                                className="ml-1 hover:bg-gray-300 rounded-full w-3 h-3 flex items-center justify-center"
+                                data-testid={`button-remove-state-${state}`}
+                              >
+                                <X className="h-2 w-2" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </form>
                 </Form>
               </CardContent>
