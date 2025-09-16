@@ -407,7 +407,7 @@ export default function SurveyManager() {
                     onCheckedChange={handleSelectAll}
                     aria-label="Select all surveys"
                     data-testid="checkbox-select-all-surveys"
-                    className="h-4 w-4 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                    className="!h-3 !w-3 !data-[state=checked]:bg-blue-600 !data-[state=checked]:border-blue-600 !border-gray-300"
                   />
                 </TableHead>
                 <TableHead>Title</TableHead>
@@ -427,7 +427,7 @@ export default function SurveyManager() {
                       onCheckedChange={(checked) => handleSelectSurvey(survey.id, checked as boolean)}
                       aria-label={`Select survey ${survey.title}`}
                       data-testid={`checkbox-select-survey-${survey.id}`}
-                      className="h-4 w-4 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                      className="!h-3 !w-3 !data-[state=checked]:bg-blue-600 !data-[state=checked]:border-blue-600 !border-gray-300"
                     />
                   </TableCell>
                   <TableCell className="font-medium">
