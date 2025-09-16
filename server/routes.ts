@@ -859,6 +859,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk create/update questions for a survey
+  app.post("/api/admin/surveys/:id/questions/bulk", isAuthenticated, async (req, res) => {
+    try {
+      const surveyId = parseInt(req.params.id);
+      const { questions } = req.body;
+
+      if (!Array.isArray(questions)) {
+        return res.status(400).json({ message: "questions must be an array" });
+      }
+
+      // Get existing questions for this survey and delete them
+      const existingQuestions = await storage.getSurveyQuestions(surveyId);
+      for (const question of existingQuestions) {
+        await storage.deleteSurveyQuestion(question.id);
+      }
+
+      // Create all questions with their options
+      const createdQuestions = [];
+      for (const questionData of questions) {
+        const validatedQuestionData = insertSurveyQuestionSchema.parse({
+          ...questionData,
+          surveyId,
+          label: questionData.text || questionData.label,
+          type: questionData.type,
+          required: questionData.required || false,
+          order: questionData.orderIndex || 0,
+          validation: questionData.validation || null
+        });
+        
+        const question = await storage.createSurveyQuestion(validatedQuestionData);
+        
+        // Create options for choice questions
+        if (questionData.options && Array.isArray(questionData.options)) {
+          for (const [index, optionData] of questionData.options.entries()) {
+            await storage.createSurveyOption({
+              questionId: question.id,
+              label: optionData.label,
+              value: optionData.value || optionData.label,
+              order: index
+            });
+          }
+        }
+        
+        createdQuestions.push(question);
+      }
+
+      res.json({ message: "Questions saved successfully", questions: createdQuestions });
+    } catch (error) {
+      console.error("Error bulk creating survey questions:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.patch("/api/admin/questions/:id", isAuthenticated, async (req, res) => {
     try {
       const questionId = parseInt(req.params.id);
