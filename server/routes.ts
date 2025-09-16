@@ -439,7 +439,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/caregiver/assignments/unified", isCaregiver, async (req, res) => {
     try {
       const caregiver = (req as any).caregiver;
-      const assignments = await storage.getUnifiedAssignmentsForCaregiver(caregiver.id);
+      const includeCompleted = req.query.includeCompleted === 'true';
+      const assignments = await storage.getUnifiedAssignmentsForCaregiver(caregiver.id, includeCompleted);
       res.json(assignments);
     } catch (error) {
       console.error("Error fetching unified assignments:", error);
