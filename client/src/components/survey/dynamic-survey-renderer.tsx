@@ -271,7 +271,7 @@ export default function DynamicSurveyRenderer({
     submitSurveyMutation.mutate(data);
   };
 
-  const renderQuestion = (question: SurveyQuestion) => {
+  const renderQuestion = (question: SurveyQuestion, questionNumber?: number) => {
     const fieldName = `question_${question.id}` as keyof FormData;
 
     return (
@@ -282,6 +282,7 @@ export default function DynamicSurveyRenderer({
         render={({ field }) => (
           <FormItem className="space-y-3">
             <FormLabel className="text-base font-medium">
+              {questionNumber && <span className="text-slate-600 mr-2">{questionNumber}.</span>}
               {question.text}
               {question.required && <span className="text-red-500 ml-1">*</span>}
             </FormLabel>
@@ -469,9 +470,9 @@ export default function DynamicSurveyRenderer({
                   <CardTitle>Survey Questions</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {sortedQuestions.map((question) => (
+                  {sortedQuestions.map((question, index) => (
                     <div key={question.id} className="border-b border-slate-200 pb-6 last:border-b-0 last:pb-0">
-                      {renderQuestion(question)}
+                      {renderQuestion(question, index + 1)}
                     </div>
                   ))}
                 </CardContent>
