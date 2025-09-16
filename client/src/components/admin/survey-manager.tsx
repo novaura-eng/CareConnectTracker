@@ -6,9 +6,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, MoreVertical, Edit, Trash2, Send, Calendar, Users, FileText } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, MoreVertical, Edit, Trash2, Send, Calendar, Users, FileText, MapPin, Filter, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { US_STATE_CODES, type StateCode } from "@shared/schema";
 import SurveyAssignments from "./survey-assignments";
 
 interface Survey {
@@ -18,17 +20,25 @@ interface Survey {
   status: 'draft' | 'published' | 'archived';
   createdAt: string;
   updatedAt: string;
+  states?: StateCode[];
 }
 
 export default function SurveyManager() {
   const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null);
   const [isAssignmentsOpen, setIsAssignmentsOpen] = useState(false);
+  const [filterState, setFilterState] = useState<StateCode | "all">("all");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
   const { data: surveys, isLoading } = useQuery({
     queryKey: ["/api/admin/surveys"],
   });
+
+  // Filter surveys based on selected state
+  const filteredSurveys = surveys && Array.isArray(surveys) ? (surveys as Survey[]).filter((survey: Survey) => {
+    if (filterState === "all") return true;
+    return survey.states && survey.states.includes(filterState);
+  }) : [];
 
   const deleteSurveyMutation = useMutation({
     mutationFn: async (surveyId: number) => {
@@ -131,6 +141,37 @@ export default function SurveyManager() {
     }
   };
 
+  const renderStatesBadges = (states?: StateCode[]) => {
+    if (!states || states.length === 0) {
+      return <span className="text-sm text-gray-500">All states</span>;
+    }
+    
+    if (states.length <= 3) {
+      return (
+        <div className="flex flex-wrap gap-1">
+          {states.map((state) => (
+            <Badge key={state} variant="outline" className="text-xs">
+              {state}
+            </Badge>
+          ))}
+        </div>
+      );
+    }
+    
+    return (
+      <div className="flex flex-wrap gap-1">
+        {states.slice(0, 2).map((state) => (
+          <Badge key={state} variant="outline" className="text-xs">
+            {state}
+          </Badge>
+        ))}
+        <Badge variant="outline" className="text-xs bg-gray-100">
+          +{states.length - 2}
+        </Badge>
+      </div>
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -147,6 +188,7 @@ export default function SurveyManager() {
                 <TableHead>Title</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="hidden sm:table-cell">States</TableHead>
                 <TableHead>Last Updated</TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
@@ -157,6 +199,7 @@ export default function SurveyManager() {
                   <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse" /></TableCell>
                   <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse" /></TableCell>
                   <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse" /></TableCell>
+                  <TableCell className="hidden sm:table-cell"><div className="h-4 bg-gray-200 rounded animate-pulse" /></TableCell>
                   <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse" /></TableCell>
                   <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse" /></TableCell>
                 </TableRow>
@@ -176,10 +219,40 @@ export default function SurveyManager() {
           <h2 className="text-lg font-semibold text-slate-900">Custom Surveys</h2>
           <p className="text-sm text-slate-600">Create and manage dynamic surveys with custom questions</p>
         </div>
-        <Button onClick={handleCreateNew} data-testid="button-create-new-survey">
-          <Plus className="mr-2 h-4 w-4" />
-          Create New Survey
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          {/* State Filter */}
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-gray-500" />
+            <Select value={filterState} onValueChange={(value) => setFilterState(value as StateCode | "all")}>
+              <SelectTrigger className="w-32" data-testid="select-state-filter">
+                <SelectValue placeholder="All states" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All states</SelectItem>
+                {US_STATE_CODES.map((state) => (
+                  <SelectItem key={state} value={state}>
+                    {state}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {filterState !== "all" && (
+              <Button
+                variant="ghost" 
+                size="sm"
+                onClick={() => setFilterState("all")}
+                className="h-8 w-8 p-0"
+                data-testid="button-clear-state-filter"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          <Button onClick={handleCreateNew} data-testid="button-create-new-survey">
+            <Plus className="mr-2 h-4 w-4" />
+            Create New Survey
+          </Button>
+        </div>
       </div>
 
       {/* Survey Table */}
@@ -191,12 +264,13 @@ export default function SurveyManager() {
                 <TableHead>Title</TableHead>
                 <TableHead className="hidden md:table-cell">Description</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="hidden lg:table-cell">States</TableHead>
                 <TableHead className="hidden sm:table-cell">Last Updated</TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(surveys as Survey[]).map((survey: Survey) => (
+              {filteredSurveys.map((survey: Survey) => (
                 <TableRow key={survey.id} className="hover:bg-gray-50">
                   <TableCell className="font-medium">
                     <div className="space-y-1">
@@ -217,6 +291,9 @@ export default function SurveyManager() {
                   </TableCell>
                   <TableCell>
                     {getStatusBadge(survey.status)}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    {renderStatesBadges(survey.states)}
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
                     <div className="text-sm text-gray-500">
