@@ -130,13 +130,35 @@ export const surveyOptions = pgTable("survey_options", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Survey Schedules for automated assignment creation
+export const surveySchedules = pgTable("survey_schedules", {
+  id: serial("id").primaryKey(),
+  surveyId: integer("survey_id").references(() => surveys.id).notNull(),
+  scheduleType: text("schedule_type").notNull(), // one_time, daily, weekly, monthly, custom
+  frequencyValue: integer("frequency_value"), // 1=daily, 7=weekly, 30=monthly, etc.
+  dayOfWeek: integer("day_of_week"), // 0-6 for Sunday-Saturday, nullable
+  dayOfMonth: integer("day_of_month"), // 1-31, nullable  
+  timeOfDay: text("time_of_day").notNull().default("09:00"), // HH:mm format
+  timezone: text("timezone").notNull().default("America/New_York"),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date"), // nullable for indefinite schedules
+  isActive: boolean("is_active").notNull().default(true),
+  lastRun: timestamp("last_run"), // when schedule last created assignments
+  nextRun: timestamp("next_run"), // when schedule should next run
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const surveyAssignments = pgTable("survey_assignments", {
   id: serial("id").primaryKey(),
   surveyId: integer("survey_id").references(() => surveys.id).notNull(),
   caregiverId: integer("caregiver_id").references(() => caregivers.id),
   patientId: integer("patient_id").references(() => patients.id),
   checkInId: integer("check_in_id").references(() => weeklyCheckIns.id),
+  scheduleId: integer("schedule_id").references(() => surveySchedules.id), // link to schedule if auto-created
   dueAt: timestamp("due_at"),
+  scheduledFor: timestamp("scheduled_for"), // intended completion date from schedule
+  autoCreated: boolean("auto_created").notNull().default(false), // was this created automatically
   status: text("status").notNull().default("pending"), // pending, completed, cancelled
   createdAt: timestamp("created_at").defaultNow().notNull(),
   completedAt: timestamp("completed_at"),
@@ -228,6 +250,15 @@ export const surveysRelations = relations(surveys, ({ one, many }) => ({
   responses: many(surveyResponsesV2),
   weeklyCheckIns: many(weeklyCheckIns),
   stateTags: many(surveyStateTags),
+  schedules: many(surveySchedules),
+}));
+
+export const surveySchedulesRelations = relations(surveySchedules, ({ one, many }) => ({
+  survey: one(surveys, {
+    fields: [surveySchedules.surveyId],
+    references: [surveys.id],
+  }),
+  assignments: many(surveyAssignments),
 }));
 
 export const surveyQuestionsRelations = relations(surveyQuestions, ({ one, many }) => ({
@@ -262,6 +293,10 @@ export const surveyAssignmentsRelations = relations(surveyAssignments, ({ one, m
   checkIn: one(weeklyCheckIns, {
     fields: [surveyAssignments.checkInId],
     references: [weeklyCheckIns.id],
+  }),
+  schedule: one(surveySchedules, {
+    fields: [surveyAssignments.scheduleId],
+    references: [surveySchedules.id],
   }),
   responses: many(surveyResponsesV2),
 }));
@@ -367,6 +402,14 @@ export const insertSurveyStateTagSchema = createInsertSchema(surveyStateTags).om
   createdAt: true,
 });
 
+export const insertSurveyScheduleSchema = createInsertSchema(surveySchedules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastRun: true,
+  nextRun: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -404,3 +447,31 @@ export type InsertSurveyResponseItem = z.infer<typeof insertSurveyResponseItemSc
 
 export type SurveyStateTag = typeof surveyStateTags.$inferSelect;
 export type InsertSurveyStateTag = z.infer<typeof insertSurveyStateTagSchema>;
+
+export type SurveySchedule = typeof surveySchedules.$inferSelect;
+export type InsertSurveySchedule = z.infer<typeof insertSurveyScheduleSchema>;
+
+// Schedule Type Constants
+export const SCHEDULE_TYPES = {
+  ONE_TIME: 'one_time',
+  DAILY: 'daily', 
+  WEEKLY: 'weekly',
+  MONTHLY: 'monthly',
+  CUSTOM: 'custom'
+} as const;
+
+export type ScheduleType = typeof SCHEDULE_TYPES[keyof typeof SCHEDULE_TYPES];
+
+// Helper type for creating schedules with validation
+export const scheduleTypeSchema = z.enum(['one_time', 'daily', 'weekly', 'monthly', 'custom']);
+
+// Day of week constants (0 = Sunday, 6 = Saturday)
+export const DAY_OF_WEEK = {
+  SUNDAY: 0,
+  MONDAY: 1,
+  TUESDAY: 2,
+  WEDNESDAY: 3,
+  THURSDAY: 4,
+  FRIDAY: 5,
+  SATURDAY: 6
+} as const;
