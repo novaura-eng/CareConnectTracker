@@ -582,6 +582,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteSurvey(id: number): Promise<void> {
+    // First delete all related schedules to avoid foreign key constraint
+    await db.delete(surveySchedules).where(eq(surveySchedules.surveyId, id));
+    
+    // Then delete the survey itself
     await db.delete(surveys).where(eq(surveys.id, id));
   }
 
