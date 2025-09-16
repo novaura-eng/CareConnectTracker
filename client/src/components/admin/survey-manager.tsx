@@ -402,12 +402,18 @@ export default function SurveyManager() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[50px]">
-                  <Checkbox
-                    checked={allFilteredSelected ? true : someFilteredSelected ? "indeterminate" : false}
-                    onCheckedChange={handleSelectAll}
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-blue-600 rounded border-gray-300"
+                    ref={(el) => {
+                      if (el) {
+                        el.indeterminate = someFilteredSelected && !allFilteredSelected;
+                        el.checked = allFilteredSelected;
+                      }
+                    }}
+                    onChange={(e) => handleSelectAll(e.target.checked)}
                     aria-label="Select all surveys"
                     data-testid="checkbox-select-all-surveys"
-                    className="!h-3 !w-3 !data-[state=checked]:bg-blue-600 !data-[state=checked]:border-blue-600 !border-gray-300"
                   />
                 </TableHead>
                 <TableHead>Title</TableHead>
@@ -422,12 +428,13 @@ export default function SurveyManager() {
               {filteredSurveys.map((survey: Survey) => (
                 <TableRow key={survey.id} className="hover:bg-gray-50">
                   <TableCell>
-                    <Checkbox
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-blue-600 rounded border-gray-300"
                       checked={selectedSurveyIds.has(survey.id)}
-                      onCheckedChange={(checked) => handleSelectSurvey(survey.id, checked as boolean)}
+                      onChange={(e) => handleSelectSurvey(survey.id, e.target.checked)}
                       aria-label={`Select survey ${survey.title}`}
                       data-testid={`checkbox-select-survey-${survey.id}`}
-                      className="!h-3 !w-3 !data-[state=checked]:bg-blue-600 !data-[state=checked]:border-blue-600 !border-gray-300"
                     />
                   </TableCell>
                   <TableCell className="font-medium">
