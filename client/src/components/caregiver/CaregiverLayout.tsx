@@ -23,7 +23,8 @@ import {
   ClipboardList, 
   Menu,
   X,
-  Home
+  Home,
+  FileText
 } from "lucide-react";
 
 interface CaregiverLayoutProps {
@@ -53,6 +54,8 @@ function generateBreadcrumbs(location: string): BreadcrumbItem[] {
     breadcrumbs.push({ label: "Profile", href: "/caregiver/profile", icon: User });
   } else if (location.startsWith("/caregiver/checkins")) {
     breadcrumbs.push({ label: "Check-ins", href: "/caregiver/checkins", icon: ClipboardList });
+  } else if (location.startsWith("/caregiver/surveys")) {
+    breadcrumbs.push({ label: "Surveys", href: "/caregiver/surveys", icon: FileText });
   } else if (location.startsWith("/caregiver/dashboard")) {
     breadcrumbs.push({ label: "Dashboard" });
   } else if (location.startsWith("/caregiver/survey")) {
@@ -135,6 +138,12 @@ export default function CaregiverLayout({ children }: CaregiverLayoutProps) {
       href: "/caregiver/checkins",
       icon: ClipboardList,
       current: location.startsWith("/caregiver/checkins")
+    },
+    {
+      name: "Surveys",
+      href: "/caregiver/surveys",
+      icon: FileText,
+      current: location.startsWith("/caregiver/surveys")
     },
   ];
 
