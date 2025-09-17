@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +8,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Users, Phone, MapPin, Heart, Calendar, FileText, Activity, Clock } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ArrowLeft, Users, Phone, MapPin, Heart, Calendar, FileText, Activity, Clock, X } from "lucide-react";
 import CaregiverLayout from "@/components/caregiver/CaregiverLayout";
 import type { PatientWithSurveyStatus } from "@shared/schema";
 
@@ -15,6 +17,8 @@ export default function CaregiverPatientDetail() {
   const { id } = useParams();
   const [, setLocation] = useLocation();
   const patientId = parseInt(id || "0");
+  const [selectedResponse, setSelectedResponse] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const { data: patients, isLoading, error } = useQuery<PatientWithSurveyStatus[]>({
     queryKey: ["/api/caregiver/patients/enhanced"],
@@ -335,8 +339,8 @@ export default function CaregiverPatientDetail() {
                             size="sm"
                             variant="outline"
                             onClick={() => {
-                              // TODO: Open detailed view of survey response
-                              console.log('View response:', response.responseId);
+                              setSelectedResponse(response);
+                              setIsModalOpen(true);
                             }}
                             data-testid={`view-response-${response.responseId}`}
                           >
@@ -361,6 +365,119 @@ export default function CaregiverPatientDetail() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Survey Response Modal */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              Survey Response Details
+            </DialogTitle>
+            <DialogDescription>
+              View the complete survey response and answers
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedResponse && (
+            <div className="space-y-6">
+              {/* Survey Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">{selectedResponse.surveyTitle}</CardTitle>
+                  {selectedResponse.surveyDescription && (
+                    <CardDescription>{selectedResponse.surveyDescription}</CardDescription>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-slate-500" />
+                      <div>
+                        <span className="font-medium">Submitted:</span>{' '}
+                        {new Date(selectedResponse.submittedAt).toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-slate-500" />
+                      <div>
+                        <span className="font-medium">Total Answers:</span>{' '}
+                        {selectedResponse.answerCount}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Survey Answers */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Questions & Answers</CardTitle>
+                  <CardDescription>
+                    Complete responses to all survey questions
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {selectedResponse.answers && selectedResponse.answers.length > 0 ? (
+                    <div className="space-y-6">
+                      {selectedResponse.answers.map((answer: any, index: number) => (
+                        <div key={answer.questionId || index} className="border-l-4 border-primary/20 pl-4">
+                          <div className="space-y-2">
+                            <div className="font-medium text-slate-900">
+                              {answer.questionLabel || `Question ${index + 1}`}
+                            </div>
+                            <div className="text-sm text-slate-600 bg-slate-50 p-3 rounded-md">
+                              {answer.answerText && (
+                                <div>
+                                  <span className="font-medium">Answer:</span> {answer.answerText}
+                                </div>
+                              )}
+                              {answer.answerBoolean !== null && answer.answerBoolean !== undefined && (
+                                <div>
+                                  <span className="font-medium">Answer:</span>{' '}
+                                  <Badge variant={answer.answerBoolean ? "default" : "secondary"}>
+                                    {answer.answerBoolean ? "Yes" : "No"}
+                                  </Badge>
+                                </div>
+                              )}
+                              {answer.answerNumber !== null && answer.answerNumber !== undefined && (
+                                <div>
+                                  <span className="font-medium">Answer:</span> {answer.answerNumber}
+                                </div>
+                              )}
+                              {answer.questionType && (
+                                <div className="text-xs text-slate-500 mt-1">
+                                  Question Type: {answer.questionType}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-slate-500">
+                      <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No answer details available for this response.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Modal Actions */}
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsModalOpen(false)}
+                  data-testid="close-survey-modal"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </CaregiverLayout>
   );
 }
