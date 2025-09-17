@@ -230,13 +230,20 @@ export default function CaregiverSurveyDashboard() {
         <div>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900">Your Assignments</h1>
+              <h1 className="text-3xl font-bold text-slate-900">Surveys & Check-ins</h1>
               <p className="text-slate-600 mt-2">
                 {totalPending === 0 
-                  ? "Great! All your assignments are complete." 
-                  : `${totalPending} assignment${totalPending === 1 ? '' : 's'} need${totalPending === 1 ? 's' : ''} your attention.`
+                  ? "Great! All your surveys are complete." 
+                  : `${totalPending} survey${totalPending === 1 ? '' : 's'} ready to complete.`
                 }
               </p>
+              {totalPending > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
+                  <p className="text-sm text-blue-800">
+                    💡 <strong>How it works:</strong> Click any survey card or "Start Survey" button below to answer the required questions. You can save progress and return later.
+                  </p>
+                </div>
+              )}
             </div>
             <div className="mt-4 md:mt-0 md:text-right">
               <div className="text-sm text-slate-600 mb-1">Overall Progress</div>
@@ -331,7 +338,11 @@ export default function CaregiverSurveyDashboard() {
               </h2>
               <div className="space-y-3">
                 {priorityGroups.overdue.map((assignment) => (
-                  <Card key={`${assignment.type}-${assignment.id}`} className="border-l-4 border-l-red-500 hover:shadow-md transition-all cursor-pointer">
+                  <Card 
+                    key={`${assignment.type}-${assignment.id}`} 
+                    className="border-l-4 border-l-red-500 hover:shadow-md transition-all cursor-pointer"
+                    onClick={() => handleStartAssignment(assignment)}
+                  >
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
@@ -506,7 +517,7 @@ export default function CaregiverSurveyDashboard() {
                           variant="outline"
                           data-testid={`button-start-${assignment.type}-${assignment.id}`}
                         >
-                          Start Assignment
+                          {assignment.type === 'weekly_checkin' ? 'Start Check-in' : 'Start Survey'}
                           <ChevronRight className="h-4 w-4 ml-2" />
                         </Button>
                       </div>
