@@ -1043,13 +1043,29 @@ export class DatabaseStorage implements IStorage {
       .orderBy(surveyAssignments.dueAt);
   }
 
-  // Unified assignment view for improved caregiver UX - now only returns survey assignments
-  async getUnifiedAssignmentsForCaregiver(caregiverId: number, includeCompleted: boolean = false): Promise<any[]> {
+  // Unified assignment view for improved caregiver UX - supports filtering by assignment type
+  async getUnifiedAssignmentsForCaregiver(caregiverId: number, includeCompleted: boolean = false, type?: 'weekly_checkin' | 'survey'): Promise<any[]> {
+    // Build base conditions
+    const baseConditions = [
+      eq(surveyAssignments.caregiverId, caregiverId),
+      includeCompleted ? sql<boolean>`true` : eq(surveyAssignments.status, 'pending')
+    ];
+
+    // Add type filtering based on checkInId presence
+    if (type === 'weekly_checkin') {
+      baseConditions.push(sql`${surveyAssignments.checkInId} IS NOT NULL`);
+    } else if (type === 'survey') {
+      baseConditions.push(sql`${surveyAssignments.checkInId} IS NULL`);
+    }
+
     // Get survey assignments with DB-side date calculations
     const assignments = await db
       .select({
         id: surveyAssignments.id,
-        type: sql<string>`'survey'`.as('type'),
+        type: sql<string>`CASE 
+          WHEN ${surveyAssignments.checkInId} IS NOT NULL THEN 'weekly_checkin'
+          ELSE 'survey'
+        END`.as('type'),
         patientId: surveyAssignments.patientId,
         patientName: patients.name,
         title: surveys.title,
@@ -1079,12 +1095,7 @@ export class DatabaseStorage implements IStorage {
       .from(surveyAssignments)
       .innerJoin(surveys, eq(surveyAssignments.surveyId, surveys.id))
       .leftJoin(patients, eq(surveyAssignments.patientId, patients.id))
-      .where(
-        and(
-          eq(surveyAssignments.caregiverId, caregiverId),
-          includeCompleted ? sql<boolean>`true` : eq(surveyAssignments.status, 'pending')
-        )
-      );
+      .where(and(...baseConditions));
 
     // Sort by priority (desc), then by due date (asc)
     return assignments.sort((a, b) => {

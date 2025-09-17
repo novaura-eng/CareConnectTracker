@@ -521,7 +521,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const caregiver = (req as any).caregiver;
       const includeCompleted = req.query.includeCompleted === 'true';
-      const assignments = await storage.getUnifiedAssignmentsForCaregiver(caregiver.id, includeCompleted);
+      const type = req.query.type as 'weekly_checkin' | 'survey' | undefined;
+      
+      // Validate type parameter if provided
+      if (type && !['weekly_checkin', 'survey'].includes(type)) {
+        return res.status(400).json({ message: "Invalid type parameter. Must be 'weekly_checkin' or 'survey'" });
+      }
+      
+      const assignments = await storage.getUnifiedAssignmentsForCaregiver(caregiver.id, includeCompleted, type);
       res.json(assignments);
     } catch (error) {
       console.error("Error fetching unified assignments:", error);
