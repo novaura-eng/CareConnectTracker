@@ -42,7 +42,6 @@ const assignmentSchema = z.object({
   dueAt: z.date({
     required_error: "Due date is required",
   }),
-  checkInId: z.number().optional(),
 });
 
 type AssignmentForm = z.infer<typeof assignmentSchema>;
@@ -54,7 +53,6 @@ interface SurveyAssignmentsProps {
 
 export default function SurveyAssignments({ survey, onClose }: SurveyAssignmentsProps) {
   const [selectedCaregivers, setSelectedCaregivers] = useState<number[]>([]);
-  const [assignmentMode, setAssignmentMode] = useState<'standalone' | 'checkin'>('standalone');
   const { toast } = useToast();
 
   const assignmentForm = useForm<AssignmentForm>({
@@ -84,20 +82,16 @@ export default function SurveyAssignments({ survey, onClose }: SurveyAssignments
           caregiverId: caregiverId,
           patientId: patient.id,
           dueAt: data.dueAt.toISOString(),
-          checkInId: data.checkInId || null,
         }));
       }).flat();
 
-      return apiRequest(`/api/admin/surveys/${survey.id}/assign`, {
-        method: "POST",
-        body: JSON.stringify({ assignments }),
-      });
+      return apiRequest("POST", `/api/admin/surveys/${survey.id}/assign`, { assignments });
     },
-    onSuccess: (response) => {
+    onSuccess: (response: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/surveys"] });
       toast({
         title: "Survey Assigned",
-        description: `Survey assigned to ${response.assignmentCount} caregiver(s) successfully.`,
+        description: `Survey assigned to ${selectedCaregivers.length} caregiver(s) successfully.`,
       });
       onClose();
     },
@@ -122,11 +116,12 @@ export default function SurveyAssignments({ survey, onClose }: SurveyAssignments
   };
 
   const handleSelectAll = () => {
-    if (selectedCaregivers.length === caregivers?.length) {
+    const caregiverArray = (caregivers as Caregiver[]) || [];
+    if (selectedCaregivers.length === caregiverArray.length) {
       setSelectedCaregivers([]);
       assignmentForm.setValue('caregiverIds', []);
     } else {
-      const allIds = caregivers?.map((c: Caregiver) => c.id) || [];
+      const allIds = caregiverArray.map((c: Caregiver) => c.id) || [];
       setSelectedCaregivers(allIds);
       assignmentForm.setValue('caregiverIds', allIds);
     }
@@ -137,7 +132,8 @@ export default function SurveyAssignments({ survey, onClose }: SurveyAssignments
   };
 
   const getCaregiverPatientCount = (caregiverId: number) => {
-    return patients?.filter((p: Patient) => p.caregiverId === caregiverId).length || 0;
+    const patientArray = (patients as Patient[]) || [];
+    return patientArray.filter((p: Patient) => p.caregiverId === caregiverId).length || 0;
   };
 
   const getTotalAssignments = () => {
@@ -172,41 +168,6 @@ export default function SurveyAssignments({ survey, onClose }: SurveyAssignments
 
       <Form {...assignmentForm}>
         <form onSubmit={assignmentForm.handleSubmit(handleAssign)} className="space-y-6">
-          {/* Assignment Mode */}
-          <div className="space-y-3">
-            <Label className="text-base font-medium">Assignment Type</Label>
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  id="standalone"
-                  name="assignmentMode"
-                  value="standalone"
-                  checked={assignmentMode === 'standalone'}
-                  onChange={(e) => setAssignmentMode(e.target.value as 'standalone' | 'checkin')}
-                  data-testid="radio-assignment-standalone"
-                />
-                <Label htmlFor="standalone" className="font-normal">
-                  Standalone Survey - Assign directly to caregivers
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  id="checkin"
-                  name="assignmentMode"
-                  value="checkin"
-                  checked={assignmentMode === 'checkin'}
-                  onChange={(e) => setAssignmentMode(e.target.value as 'standalone' | 'checkin')}
-                  data-testid="radio-assignment-checkin"
-                />
-                <Label htmlFor="checkin" className="font-normal">
-                  Link to Weekly Check-in - Include with regular check-ins
-                </Label>
-              </div>
-            </div>
-          </div>
-
           {/* Due Date */}
           <FormField
             control={assignmentForm.control}
@@ -262,14 +223,14 @@ export default function SurveyAssignments({ survey, onClose }: SurveyAssignments
                 onClick={handleSelectAll}
                 data-testid="button-select-all-caregivers"
               >
-                {selectedCaregivers.length === caregivers?.length ? "Deselect All" : "Select All"}
+                {selectedCaregivers.length === ((caregivers as Caregiver[]) || []).length ? "Deselect All" : "Select All"}
               </Button>
             </div>
 
             <div className="border rounded-lg max-h-60 overflow-y-auto">
-              {caregivers && caregivers.length > 0 ? (
+              {(caregivers as Caregiver[]) && (caregivers as Caregiver[]).length > 0 ? (
                 <div className="space-y-0">
-                  {caregivers.map((caregiver: Caregiver) => {
+                  {(caregivers as Caregiver[]).map((caregiver: Caregiver) => {
                     const patientCount = getCaregiverPatientCount(caregiver.id);
                     const isSelected = selectedCaregivers.includes(caregiver.id);
                     
