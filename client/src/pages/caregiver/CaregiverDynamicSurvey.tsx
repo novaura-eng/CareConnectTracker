@@ -10,7 +10,7 @@ import CaregiverLayout from "@/components/caregiver/CaregiverLayout";
 export default function CaregiverDynamicSurvey() {
   const { assignmentId } = useParams<{ assignmentId: string }>();
   const [, setLocation] = useLocation();
-  const { isAuthenticated } = useCaregiverAuth();
+  const { isAuthenticated, isLoading: authLoading } = useCaregiverAuth();
 
   // Use unified survey assignment API endpoint
   const apiEndpoint = `/api/caregiver/surveys/${assignmentId}`;
@@ -23,7 +23,19 @@ export default function CaregiverDynamicSurvey() {
     enabled: !!assignmentId && isAuthenticated,
   });
 
-  // Redirect if not authenticated
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="space-y-4 text-center">
+          <Skeleton className="h-8 w-48 mx-auto" />
+          <Skeleton className="h-4 w-32 mx-auto" />
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect if not authenticated (only after auth check is complete)
   if (!isAuthenticated) {
     setLocation("/caregiver");
     return null;
