@@ -27,7 +27,7 @@ import CaregiverLayout from "@/components/caregiver/CaregiverLayout";
 
 interface UnifiedAssignment {
   id: number;
-  type: 'survey';
+  type: 'weekly_checkin' | 'survey';
   patientId: number;
   patientName: string;
   title: string;
@@ -43,13 +43,22 @@ interface UnifiedAssignment {
   progressTotal: number;
 }
 
-export default function CaregiverSurveyDashboard() {
+interface CaregiverSurveyDashboardProps {
+  filterType?: 'weekly_checkin' | 'survey';
+}
+
+export default function CaregiverSurveyDashboard({ filterType }: CaregiverSurveyDashboardProps = {}) {
   const [, setLocation] = useLocation();
 
   // Fetch both pending and completed assignments from the unified endpoint
+  const queryParams = new URLSearchParams({ includeCompleted: 'true' });
+  if (filterType) {
+    queryParams.append('type', filterType);
+  }
+
   const { data: allAssignments, isLoading, error } = useQuery<UnifiedAssignment[]>({
-    queryKey: ["/api/caregiver/assignments/unified", { includeCompleted: true }],
-    queryFn: () => fetch('/api/caregiver/assignments/unified?includeCompleted=true').then(res => res.json()),
+    queryKey: ["/api/caregiver/assignments/unified", { includeCompleted: true, type: filterType }],
+    queryFn: () => fetch(`/api/caregiver/assignments/unified?${queryParams}`).then(res => res.json()),
   });
 
   // Separate pending and completed assignments
@@ -213,11 +222,15 @@ export default function CaregiverSurveyDashboard() {
         <div>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900">Surveys & Check-ins</h1>
+              <h1 className="text-3xl font-bold text-slate-900">
+                {filterType === 'weekly_checkin' ? 'Weekly Check-ins' : 
+                 filterType === 'survey' ? 'Surveys' : 
+                 'Surveys & Check-ins'}
+              </h1>
               <p className="text-slate-600 mt-2">
                 {totalPending === 0 
-                  ? "Great! All your surveys are complete." 
-                  : `${totalPending} survey${totalPending === 1 ? '' : 's'} ready to complete.`
+                  ? `Great! All your ${filterType === 'weekly_checkin' ? 'check-ins' : filterType === 'survey' ? 'surveys' : 'assignments'} are complete.` 
+                  : `${totalPending} ${filterType === 'weekly_checkin' ? 'check-in' : filterType === 'survey' ? 'survey' : 'assignment'}${totalPending === 1 ? '' : 's'} ready to complete.`
                 }
               </p>
               {totalPending > 0 && (

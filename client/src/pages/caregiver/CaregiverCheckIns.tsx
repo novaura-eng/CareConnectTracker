@@ -70,7 +70,7 @@ export default function CaregiverCheckIns() {
   });
 
   const handleStartCheckIn = (checkInId: number, patientId: number) => {
-    setLocation(`/caregiver/survey/${patientId}?checkInId=${checkInId}`);
+    setLocation(`/caregiver/patient-survey/${patientId}?checkInId=${checkInId}`);
   };
 
   const handleViewSurvey = (surveyId: number) => {

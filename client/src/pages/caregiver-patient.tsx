@@ -68,7 +68,7 @@ export default function CaregiverPatient() {
   };
 
   const handleStartSurvey = () => {
-    setLocation(`/caregiver/survey/${patient.id}`);
+    setLocation(`/caregiver/patient-survey/${patient.id}`);
   };
 
   return (

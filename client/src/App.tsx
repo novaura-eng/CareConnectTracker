@@ -40,10 +40,11 @@ function UnauthenticatedRouter() {
       <Route path="/caregiver/dashboard" component={CaregiverSurveyDashboard} />
       <Route path="/caregiver/patients" component={CaregiverPatients} />
       <Route path="/caregiver/profile" component={CaregiverProfile} />
-      <Route path="/caregiver/checkins" component={CaregiverSurveyDashboard} />
+      <Route path="/caregiver/checkins" component={() => <CaregiverSurveyDashboard filterType="weekly_checkin" />} />
+      <Route path="/caregiver/surveys" component={() => <CaregiverSurveyDashboard filterType="survey" />} />
       <Route path="/caregiver/survey/:assignmentId" component={CaregiverDynamicSurvey} />
       <Route path="/caregiver/patient/:id" component={CaregiverPatientDetail} />
-      <Route path="/caregiver/survey/:patientId" component={CaregiverSurvey} />
+      <Route path="/caregiver/patient-survey/:patientId" component={CaregiverSurvey} />
       <Route component={Landing} />
     </Switch>
   );
