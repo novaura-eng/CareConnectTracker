@@ -157,8 +157,8 @@ export const surveyAssignments = pgTable("survey_assignments", {
   checkInId: integer("check_in_id").references(() => weeklyCheckIns.id),
   // scheduleId: integer("schedule_id").references(() => surveySchedules.id), // Column doesn't exist in production DB yet
   dueAt: timestamp("due_at"),
-  scheduledFor: timestamp("scheduled_for"), // intended completion date from schedule
-  autoCreated: boolean("auto_created").notNull().default(false), // was this created automatically
+  // scheduledFor: timestamp("scheduled_for"), // Column doesn't exist in production DB yet
+  // autoCreated: boolean("auto_created").notNull().default(false), // Column doesn't exist in production DB yet
   status: text("status").notNull().default("pending"), // pending, completed, cancelled
   createdAt: timestamp("created_at").defaultNow().notNull(),
   completedAt: timestamp("completed_at"),
