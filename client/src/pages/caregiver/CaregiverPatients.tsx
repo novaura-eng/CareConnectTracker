@@ -56,7 +56,7 @@ export default function CaregiverPatients() {
   };
 
   const handlePatientSelect = (patientId: number) => {
-    setLocation(`/caregiver/patients/${patientId}`);
+    setLocation(`/caregiver/patient/${patientId}`);
   };
 
   const handleStartSurvey = (patientId: number, e: React.MouseEvent) => {

@@ -45,7 +45,7 @@ function generateBreadcrumbs(location: string): BreadcrumbItem[] {
     breadcrumbs.push({ label: "Patients", href: "/caregiver/patients", icon: Users });
     
     // Check if this is a patient detail page
-    const patientDetailMatch = location.match(/^\/caregiver\/patients\/[^/]+$/);
+    const patientDetailMatch = location.match(/^\/caregiver\/patient\/[^/]+$/);
     if (patientDetailMatch) {
       breadcrumbs.push({ label: "Patient Detail" });
     }
