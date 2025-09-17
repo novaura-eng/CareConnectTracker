@@ -10,7 +10,7 @@ import {
   insertSurveyQuestionSchema,
   insertSurveyOptionSchema,
   insertSurveyAssignmentSchema,
-  insertSurveyResponseV2Schema,
+  insertSurveyResponseSchema,
   insertSurveyResponseItemSchema,
   insertSurveyScheduleSchema,
   StateCodeSchema,
@@ -25,7 +25,7 @@ import { db } from "./db";
 import { 
   weeklyCheckIns, 
   surveyAssignments, 
-  surveyResponsesV2, 
+  surveyResponses, 
   surveyResponseItems 
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
@@ -584,7 +584,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use database transaction for atomic operations
       const result = await db.transaction(async (tx) => {
         // Create survey response
-        const responseData = insertSurveyResponseV2Schema.parse({
+        const responseData = insertSurveyResponseSchema.parse({
           surveyId: assignment.surveyId,
           assignmentId: assignmentId,
           checkInId: assignment.checkInId,
@@ -594,7 +594,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         const [surveyResponse] = await tx
-          .insert(surveyResponsesV2)
+          .insert(surveyResponses)
           .values(responseData)
           .returning();
         

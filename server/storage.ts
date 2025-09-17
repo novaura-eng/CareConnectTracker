@@ -8,7 +8,7 @@ import {
   surveyQuestions,
   surveyOptions,
   surveyAssignments,
-  surveyResponsesV2,
+  surveyResponses,
   surveyResponseItems,
   surveyStateTags,
   surveySchedules,
@@ -30,8 +30,8 @@ import {
   type InsertSurveyOption,
   type SurveyAssignment,
   type InsertSurveyAssignment,
-  type SurveyResponseV2,
-  type InsertSurveyResponseV2,
+  type SurveyResponse,
+  type InsertSurveyResponse,
   type SurveyResponseItem,
   type InsertSurveyResponseItem,
   type SurveyStateTag,
@@ -126,9 +126,9 @@ export interface IStorage {
   completeSurveyAssignment(id: number): Promise<void>;
   
   // Survey Response V2 methods
-  createSurveyResponseV2(response: InsertSurveyResponseV2): Promise<SurveyResponseV2>;
-  getSurveyResponseV2(id: number): Promise<SurveyResponseV2 | undefined>;
-  getSurveyResponsesByAssignment(assignmentId: number): Promise<SurveyResponseV2[]>;
+  createSurveyResponse(response: InsertSurveyResponse): Promise<SurveyResponse>;
+  getSurveyResponse(id: number): Promise<SurveyResponse | undefined>;
+  getSurveyResponsesByAssignment(assignmentId: number): Promise<SurveyResponse[]>;
   
   // Survey Response Item methods
   createSurveyResponseItem(item: InsertSurveyResponseItem): Promise<SurveyResponseItem>;
@@ -651,7 +651,7 @@ export class DatabaseStorage implements IStorage {
     }
     
     // 3. Delete survey responses v2
-    await db.delete(surveyResponsesV2).where(eq(surveyResponsesV2.surveyId, id));
+    await db.delete(surveyResponses).where(eq(surveyResponses.surveyId, id));
     
     // 4. Delete survey assignments
     await db.delete(surveyAssignments).where(eq(surveyAssignments.surveyId, id));
@@ -899,24 +899,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Survey Response V2 methods
-  async createSurveyResponseV2(insertResponse: InsertSurveyResponseV2): Promise<SurveyResponseV2> {
+  async createSurveyResponse(insertResponse: InsertSurveyResponse): Promise<SurveyResponse> {
     const [response] = await db
-      .insert(surveyResponsesV2)
+      .insert(surveyResponses)
       .values(insertResponse)
       .returning();
     return response;
   }
 
-  async getSurveyResponseV2(id: number): Promise<SurveyResponseV2 | undefined> {
-    const [response] = await db.select().from(surveyResponsesV2).where(eq(surveyResponsesV2.id, id));
+  async getSurveyResponse(id: number): Promise<SurveyResponse | undefined> {
+    const [response] = await db.select().from(surveyResponses).where(eq(surveyResponses.id, id));
     return response || undefined;
   }
 
-  async getSurveyResponsesByAssignment(assignmentId: number): Promise<SurveyResponseV2[]> {
+  async getSurveyResponsesByAssignment(assignmentId: number): Promise<SurveyResponse[]> {
     return await db
       .select()
-      .from(surveyResponsesV2)
-      .where(eq(surveyResponsesV2.assignmentId, assignmentId));
+      .from(surveyResponses)
+      .where(eq(surveyResponses.assignmentId, assignmentId));
   }
 
   // Survey Response Item methods

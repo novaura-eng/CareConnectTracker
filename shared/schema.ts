@@ -79,22 +79,7 @@ export const weeklyCheckIns = pgTable("weekly_check_ins", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const surveyResponses = pgTable("survey_responses", {
-  id: serial("id").primaryKey(),
-  checkInId: integer("check_in_id").references(() => weeklyCheckIns.id).notNull(),
-  hospitalVisits: boolean("hospital_visits").default(false).notNull(),
-  hospitalDetails: text("hospital_details"),
-  accidentsFalls: boolean("accidents_falls").default(false).notNull(),
-  accidentDetails: text("accident_details"),
-  mentalHealth: boolean("mental_health").default(false).notNull(),
-  mentalHealthDetails: text("mental_health_details"),
-  physicalHealth: boolean("physical_health").default(false).notNull(),
-  physicalHealthDetails: text("physical_health_details"),
-  contactChanges: boolean("contact_changes").default(false).notNull(),
-  contactDetails: text("contact_details"),
-  additionalComments: text("additional_comments"),
-  submittedAt: timestamp("submitted_at").defaultNow().notNull(),
-});
+// Legacy survey_responses table removed - now using dynamic survey system
 
 // Dynamic Survey System Tables
 export const surveys = pgTable("surveys", {
@@ -164,7 +149,7 @@ export const surveyAssignments = pgTable("survey_assignments", {
   completedAt: timestamp("completed_at"),
 });
 
-export const surveyResponsesV2 = pgTable("survey_responses_v2", {
+export const surveyResponses = pgTable("survey_responses", {
   id: serial("id").primaryKey(),
   surveyId: integer("survey_id").references(() => surveys.id).notNull(),
   assignmentId: integer("assignment_id").references(() => surveyAssignments.id),
@@ -177,7 +162,7 @@ export const surveyResponsesV2 = pgTable("survey_responses_v2", {
 
 export const surveyResponseItems = pgTable("survey_response_items", {
   id: serial("id").primaryKey(),
-  responseId: integer("response_id").references(() => surveyResponsesV2.id).notNull(),
+  responseId: integer("response_id").references(() => surveyResponses.id).notNull(),
   questionId: integer("question_id").references(() => surveyQuestions.id).notNull(),
   answer: jsonb("answer").notNull(), // JSON to support any answer type
   answerText: text("answer_text"), // For indexing text answers
@@ -229,15 +214,10 @@ export const weeklyCheckInsRelations = relations(weeklyCheckIns, ({ one, many })
   //   references: [surveys.id],
   // }), // Commented out - surveyId column doesn't exist in production DB yet
   assignments: many(surveyAssignments),
-  surveyResponsesV2: many(surveyResponsesV2),
+  surveyResponses: many(surveyResponses),
 }));
 
-export const surveyResponsesRelations = relations(surveyResponses, ({ one }) => ({
-  checkIn: one(weeklyCheckIns, {
-    fields: [surveyResponses.checkInId],
-    references: [weeklyCheckIns.id],
-  }),
-}));
+// Legacy surveyResponses relation removed - using dynamic survey relations below
 
 // Survey System Relations
 export const surveysRelations = relations(surveys, ({ one, many }) => ({
@@ -247,7 +227,7 @@ export const surveysRelations = relations(surveys, ({ one, many }) => ({
   }),
   questions: many(surveyQuestions),
   assignments: many(surveyAssignments),
-  responses: many(surveyResponsesV2),
+  responses: many(surveyResponses),
   weeklyCheckIns: many(weeklyCheckIns),
   stateTags: many(surveyStateTags),
   schedules: many(surveySchedules),
@@ -298,37 +278,37 @@ export const surveyAssignmentsRelations = relations(surveyAssignments, ({ one, m
   //   fields: [surveyAssignments.scheduleId],
   //   references: [surveySchedules.id],
   // }), // Commented out - scheduleId column doesn't exist in production DB yet
-  responses: many(surveyResponsesV2),
+  responses: many(surveyResponses),
 }));
 
-export const surveyResponsesV2Relations = relations(surveyResponsesV2, ({ one, many }) => ({
+export const surveyResponsesRelations = relations(surveyResponses, ({ one, many }) => ({
   survey: one(surveys, {
-    fields: [surveyResponsesV2.surveyId],
+    fields: [surveyResponses.surveyId],
     references: [surveys.id],
   }),
   assignment: one(surveyAssignments, {
-    fields: [surveyResponsesV2.assignmentId],
+    fields: [surveyResponses.assignmentId],
     references: [surveyAssignments.id],
   }),
   checkIn: one(weeklyCheckIns, {
-    fields: [surveyResponsesV2.checkInId],
+    fields: [surveyResponses.checkInId],
     references: [weeklyCheckIns.id],
   }),
   caregiver: one(caregivers, {
-    fields: [surveyResponsesV2.caregiverId],
+    fields: [surveyResponses.caregiverId],
     references: [caregivers.id],
   }),
   patient: one(patients, {
-    fields: [surveyResponsesV2.patientId],
+    fields: [surveyResponses.patientId],
     references: [patients.id],
   }),
   items: many(surveyResponseItems),
 }));
 
 export const surveyResponseItemsRelations = relations(surveyResponseItems, ({ one }) => ({
-  response: one(surveyResponsesV2, {
+  response: one(surveyResponses, {
     fields: [surveyResponseItems.responseId],
-    references: [surveyResponsesV2.id],
+    references: [surveyResponses.id],
   }),
   question: one(surveyQuestions, {
     fields: [surveyResponseItems.questionId],
@@ -359,10 +339,7 @@ export const insertWeeklyCheckInSchema = createInsertSchema(weeklyCheckIns).omit
   createdAt: true,
 });
 
-export const insertSurveyResponseSchema = createInsertSchema(surveyResponses).omit({
-  id: true,
-  submittedAt: true,
-});
+// Legacy surveyResponse insert schema removed - using dynamic survey schema below
 
 // Dynamic Survey Insert Schemas
 export const insertSurveySchema = createInsertSchema(surveys).omit({
@@ -387,7 +364,7 @@ export const insertSurveyAssignmentSchema = createInsertSchema(surveyAssignments
   completedAt: true,
 });
 
-export const insertSurveyResponseV2Schema = createInsertSchema(surveyResponsesV2).omit({
+export const insertSurveyResponseSchema = createInsertSchema(surveyResponses).omit({
   id: true,
   submittedAt: true,
 });
@@ -428,8 +405,7 @@ export type InsertPatient = z.infer<typeof insertPatientSchema>;
 export type WeeklyCheckIn = typeof weeklyCheckIns.$inferSelect;
 export type InsertWeeklyCheckIn = z.infer<typeof insertWeeklyCheckInSchema>;
 
-export type SurveyResponse = typeof surveyResponses.$inferSelect;
-export type InsertSurveyResponse = z.infer<typeof insertSurveyResponseSchema>;
+// Legacy survey response types removed - using dynamic survey types below
 
 // Dynamic Survey Types
 export type Survey = typeof surveys.$inferSelect;
@@ -444,8 +420,8 @@ export type InsertSurveyOption = z.infer<typeof insertSurveyOptionSchema>;
 export type SurveyAssignment = typeof surveyAssignments.$inferSelect;
 export type InsertSurveyAssignment = z.infer<typeof insertSurveyAssignmentSchema>;
 
-export type SurveyResponseV2 = typeof surveyResponsesV2.$inferSelect;
-export type InsertSurveyResponseV2 = z.infer<typeof insertSurveyResponseV2Schema>;
+export type SurveyResponse = typeof surveyResponses.$inferSelect;
+export type InsertSurveyResponse = z.infer<typeof insertSurveyResponseSchema>;
 
 export type SurveyResponseItem = typeof surveyResponseItems.$inferSelect;
 export type InsertSurveyResponseItem = z.infer<typeof insertSurveyResponseItemSchema>;
