@@ -42,17 +42,6 @@ interface CompletedSurvey {
   hasSafetyConcerns: boolean;
 }
 
-interface DynamicSurveyAssignment {
-  id: number;
-  surveyId: number;
-  surveyTitle: string;
-  surveyDescription?: string;
-  patientId: number;
-  patientName: string;
-  dueAt: string;
-  status: 'pending' | 'completed';
-  checkInId?: number;
-}
 
 export default function CaregiverCheckIns() {
   const [, setLocation] = useLocation();
@@ -65,9 +54,6 @@ export default function CaregiverCheckIns() {
     queryKey: ["/api/caregiver/checkins/completed"],
   });
 
-  const { data: dynamicSurveys, isLoading: dynamicLoading } = useQuery<DynamicSurveyAssignment[]>({
-    queryKey: ["/api/caregiver/surveys/pending"],
-  });
 
   const handleStartCheckIn = (checkInId: number, patientId: number) => {
     setLocation(`/caregiver/patient-survey/${patientId}?checkInId=${checkInId}`);
@@ -77,9 +63,6 @@ export default function CaregiverCheckIns() {
     setLocation(`/survey/${surveyId}`);
   };
 
-  const handleStartDynamicSurvey = (assignmentId: number) => {
-    setLocation(`/caregiver/dynamic-survey/${assignmentId}`);
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -128,9 +111,9 @@ export default function CaregiverCheckIns() {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Check-ins & Surveys</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Weekly Check-ins</h1>
           <p className="text-slate-600 mt-1">
-            Manage weekly patient check-ins and view your completed surveys.
+            Complete weekly patient check-ins to track their well-being and safety.
           </p>
         </div>
 
@@ -162,7 +145,7 @@ export default function CaregiverCheckIns() {
 
           {/* Pending Check-ins Tab */}
           <TabsContent value="pending" className="space-y-4">
-            {pendingLoading || dynamicLoading ? (
+            {pendingLoading ? (
               <div className="space-y-4">
                 {[1, 2, 3].map((i) => (
                   <Skeleton key={i} className="h-32 w-full" />
@@ -218,64 +201,13 @@ export default function CaregiverCheckIns() {
                   </div>
                 )}
 
-                {/* Dynamic Surveys Section */}
-                {dynamicSurveys && dynamicSurveys.length > 0 && (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                      <FormInput className="h-4 w-4" />
-                      Custom Surveys
-                    </div>
-                    {dynamicSurveys.map((survey) => (
-                      <Card key={`survey-${survey.id}`} className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500">
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center justify-between">
-                            <CardTitle className="flex items-center gap-2 text-lg">
-                              <FormInput className="h-5 w-5 text-blue-600" />
-                              {survey.patientName}
-                            </CardTitle>
-                            <Badge className="bg-blue-100 text-blue-800">
-                              <FormInput className="h-3 w-3 mr-1" />
-                              Custom Survey
-                            </Badge>
-                          </div>
-                          <CardDescription>
-                            Survey: {survey.surveyTitle}
-                            {survey.surveyDescription && (
-                              <span className="block text-xs mt-1">{survey.surveyDescription}</span>
-                            )}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4 text-sm text-slate-600">
-                              <div className="flex items-center gap-1">
-                                <Calendar className="h-4 w-4" />
-                                <span>Due: {formatDate(survey.dueAt)}</span>
-                              </div>
-                            </div>
-                            <Button 
-                              size="sm"
-                              onClick={() => handleStartDynamicSurvey(survey.id)}
-                              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-                              data-testid={`button-start-survey-${survey.id}`}
-                            >
-                              <FormInput className="h-4 w-4" />
-                              Start Survey
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
 
-                {/* Empty state when no pending items */}
-                {(!pendingCheckIns || pendingCheckIns.length === 0) && 
-                 (!dynamicSurveys || dynamicSurveys.length === 0) && (
+                {/* Empty state when no pending check-ins */}
+                {(!pendingCheckIns || pendingCheckIns.length === 0) && (
                   <Alert>
                     <CheckCircle className="h-4 w-4" />
                     <AlertDescription>
-                      Great! You have no pending check-ins or surveys at this time. All your tasks are up to date.
+                      Great! You have no pending check-ins at this time. All your weekly check-ins are up to date.
                     </AlertDescription>
                   </Alert>
                 )}
