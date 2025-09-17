@@ -57,6 +57,22 @@ export default function CaregiverDynamicSurvey() {
     );
   }
 
+  // Handle API errors or missing data
+  if (!surveyData || !surveyData.assignment || !surveyData.survey) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="max-w-md mx-4">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Survey assignment not found or unable to load. Please try again or contact support.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </div>
+    );
+  }
+
   const { assignment, survey } = surveyData;
 
   // Find patient name from assignment

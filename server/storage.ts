@@ -41,7 +41,7 @@ import {
   type StateCode
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
+import { eq, desc, and, gte, lte, sql, ne } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (for Replit Auth)
@@ -873,12 +873,6 @@ export class DatabaseStorage implements IStorage {
       );
   }
 
-  async getPatientsByCaregiver(caregiverId: number): Promise<Patient[]> {
-    return await db
-      .select()
-      .from(patients)
-      .where(eq(patients.caregiverId, caregiverId));
-  }
 
   async getSurveyAssignmentByIds(surveyId: number, caregiverId: number, patientId: number): Promise<SurveyAssignment | undefined> {
     const [assignment] = await db
