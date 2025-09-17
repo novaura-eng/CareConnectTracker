@@ -643,8 +643,8 @@ export class DatabaseStorage implements IStorage {
           completedAt: surveyResponses.submittedAt,
           weekStartDate: weeklyCheckIns.weekStartDate,
           weekEndDate: weeklyCheckIns.weekEndDate,
-          hasHealthConcerns: sql<boolean>`${surveyResponses.mentalHealth} = true OR ${surveyResponses.physicalHealth} = true`,
-          hasSafetyConcerns: sql<boolean>`${surveyResponses.hospitalVisits} = true OR ${surveyResponses.accidentsFalls} = true`,
+          hasHealthConcerns: sql<boolean>`false`, // TODO: Calculate from surveyResponseItems 
+          hasSafetyConcerns: sql<boolean>`false`, // TODO: Calculate from surveyResponseItems
         })
         .from(surveyResponses)
         .innerJoin(weeklyCheckIns, eq(surveyResponses.checkInId, weeklyCheckIns.id))
