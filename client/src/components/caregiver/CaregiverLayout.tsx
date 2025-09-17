@@ -8,22 +8,62 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useCaregiverAuth } from "@/hooks/useCaregiverAuth";
 import { 
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator
+} from "@/components/ui/breadcrumb";
+import { 
   HeartHandshake, 
   LogOut, 
   Users, 
   User, 
   ClipboardList, 
   Menu,
-  X
+  X,
+  Home
 } from "lucide-react";
 
 interface CaregiverLayoutProps {
   children: React.ReactNode;
 }
 
+interface BreadcrumbItem {
+  label: string;
+  href?: string;
+  icon?: any;
+}
+
+function generateBreadcrumbs(location: string): BreadcrumbItem[] {
+  const breadcrumbs: BreadcrumbItem[] = [
+    { label: "Portal", href: "/caregiver/patients", icon: Home }
+  ];
+
+  if (location.startsWith("/caregiver/patients")) {
+    breadcrumbs.push({ label: "Patients", href: "/caregiver/patients", icon: Users });
+    
+    // Check if this is a patient detail page
+    const patientDetailMatch = location.match(/^\/caregiver\/patients\/[^/]+$/);
+    if (patientDetailMatch) {
+      breadcrumbs.push({ label: "Patient Detail" });
+    }
+  } else if (location.startsWith("/caregiver/profile")) {
+    breadcrumbs.push({ label: "Profile", href: "/caregiver/profile", icon: User });
+  } else if (location.startsWith("/caregiver/checkins")) {
+    breadcrumbs.push({ label: "Check-ins", href: "/caregiver/checkins", icon: ClipboardList });
+  } else if (location.startsWith("/caregiver/dashboard")) {
+    breadcrumbs.push({ label: "Dashboard" });
+  } else if (location.startsWith("/caregiver/survey")) {
+    breadcrumbs.push({ label: "Survey" });
+  }
+
+  return breadcrumbs;
+}
+
 export default function CaregiverLayout({ children }: CaregiverLayoutProps) {
-  const [, setLocation] = useLocation();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const { caregiver, isLoading: authLoading, isAuthenticated } = useCaregiverAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -98,6 +138,8 @@ export default function CaregiverLayout({ children }: CaregiverLayoutProps) {
     },
   ];
 
+  const breadcrumbs = generateBreadcrumbs(location);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="flex">
@@ -152,6 +194,37 @@ export default function CaregiverLayout({ children }: CaregiverLayoutProps) {
           <main className="flex-1">
             <div className="py-6">
               <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                {/* Breadcrumb Navigation */}
+                {breadcrumbs.length > 1 && (
+                  <div className="mb-6">
+                    <Breadcrumb>
+                      <BreadcrumbList>
+                        {breadcrumbs.map((breadcrumb, index) => (
+                          <div key={`breadcrumb-${index}`} className="flex items-center">
+                            <BreadcrumbItem>
+                              {breadcrumb.href && index < breadcrumbs.length - 1 ? (
+                                <BreadcrumbLink asChild>
+                                  <Link href={breadcrumb.href}>
+                                    <a className="flex items-center gap-1 hover:text-primary transition-colors">
+                                      {breadcrumb.icon && <breadcrumb.icon className="h-4 w-4" />}
+                                      {breadcrumb.label}
+                                    </a>
+                                  </Link>
+                                </BreadcrumbLink>
+                              ) : (
+                                <BreadcrumbPage className="flex items-center gap-1">
+                                  {breadcrumb.icon && <breadcrumb.icon className="h-4 w-4" />}
+                                  {breadcrumb.label}
+                                </BreadcrumbPage>
+                              )}
+                            </BreadcrumbItem>
+                            {index < breadcrumbs.length - 1 && <BreadcrumbSeparator />}
+                          </div>
+                        ))}
+                      </BreadcrumbList>
+                    </Breadcrumb>
+                  </div>
+                )}
                 {children}
               </div>
             </div>
