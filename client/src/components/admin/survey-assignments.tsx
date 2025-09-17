@@ -89,9 +89,10 @@ export default function SurveyAssignments({ survey, onClose }: SurveyAssignments
     },
     onSuccess: (response: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/surveys"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/caregiver/assignments/unified"] });
       toast({
         title: "Survey Assigned",
-        description: `Survey assigned to ${selectedCaregivers.length} caregiver(s) successfully.`,
+        description: `Survey assigned successfully! Created ${response.assignmentCount} assignment(s).`,
       });
       onClose();
     },

@@ -1450,24 +1450,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Survey Assignment Operations
+  // Survey Assignment Operations - Bulk Assignment
   app.post("/api/admin/surveys/:id/assign", isAuthenticated, async (req, res) => {
     try {
       const surveyId = parseInt(req.params.id);
-      const { caregiverId, patientId, dueAt } = req.body;
+      const { assignments } = req.body;
       
-      if (!caregiverId) {
-        return res.status(400).json({ message: "caregiverId is required" });
+      if (!assignments || !Array.isArray(assignments) || assignments.length === 0) {
+        return res.status(400).json({ message: "assignments array is required" });
       }
       
-      const assignment = await storage.assignSurveyToCaregiver(
-        surveyId, 
-        caregiverId, 
-        patientId, 
-        dueAt ? new Date(dueAt) : undefined
-      );
+      // Validate each assignment
+      for (const assignment of assignments) {
+        if (!assignment.caregiverId) {
+          return res.status(400).json({ message: "caregiverId is required for all assignments" });
+        }
+        if (!assignment.patientId) {
+          return res.status(400).json({ message: "patientId is required for all assignments" });
+        }
+      }
       
-      res.json(assignment);
+      // Create all assignments
+      const createdAssignments = [];
+      for (const assignment of assignments) {
+        const created = await storage.assignSurveyToCaregiver(
+          surveyId,
+          assignment.caregiverId,
+          assignment.patientId,
+          assignment.dueAt ? new Date(assignment.dueAt) : undefined
+        );
+        createdAssignments.push(created);
+      }
+      
+      res.json({ 
+        message: "Survey assignments created successfully",
+        assignmentCount: createdAssignments.length,
+        assignments: createdAssignments 
+      });
     } catch (error) {
       console.error("Error assigning survey:", error);
       res.status(500).json({ message: "Internal server error" });
