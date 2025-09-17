@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Phone, MapPin, Heart, Calendar } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Users, Phone, MapPin, Heart, Calendar, Search, ArrowUpDown, Eye, FileText } from "lucide-react";
 import CaregiverLayout from "@/components/caregiver/CaregiverLayout";
 
 interface Patient {
@@ -20,18 +23,55 @@ interface Patient {
 
 export default function CaregiverPatients() {
   const [, setLocation] = useLocation();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState<keyof Patient>("name");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   const { data: patients, isLoading } = useQuery<Patient[]>({
     queryKey: ["/api/caregiver/patients"],
   });
 
+  // Filter and sort patients
+  const filteredAndSortedPatients = useMemo(() => {
+    if (!patients) return [];
+
+    let filtered = patients.filter(patient =>
+      patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      patient.medicaidId.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    filtered.sort((a, b) => {
+      const aVal = a[sortField];
+      const bVal = b[sortField];
+      
+      if (aVal === undefined && bVal === undefined) return 0;
+      if (aVal === undefined) return 1;
+      if (bVal === undefined) return -1;
+      
+      const comparison = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
+
+    return filtered;
+  }, [patients, searchTerm, sortField, sortDirection]);
+
+  const handleSort = (field: keyof Patient) => {
+    if (field === sortField) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
   const handlePatientSelect = (patientId: number) => {
     setLocation(`/caregiver/patient/${patientId}`);
   };
 
-  const handleStartCheckIn = (patientId: number, e: React.MouseEvent) => {
+  const handleStartSurvey = (patientId: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    setLocation(`/caregiver/survey/${patientId}`);
+    // Navigate to the assignment dashboard to show available surveys for this patient
+    setLocation(`/caregiver/dashboard`);
   };
 
   return (
@@ -50,82 +90,141 @@ export default function CaregiverPatients() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-blue-900">
               <Users className="h-5 w-5" />
-              Patient Care Instructions
+              Patient Management
             </CardTitle>
             <CardDescription className="text-blue-700">
-              You can view patient details by clicking on their card, or start a weekly check-in survey directly from the buttons below.
+              View your assigned patients, access their profiles, and navigate to available surveys. Use the search bar to find specific patients quickly.
             </CardDescription>
           </CardHeader>
         </Card>
 
-        {/* Patients Grid */}
+        {/* Search Bar */}
+        <div className="flex items-center gap-4">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="Search patients by name or Medicaid ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+              data-testid="patient-search"
+            />
+          </div>
+          {searchTerm && (
+            <p className="text-sm text-slate-600">
+              Found {filteredAndSortedPatients.length} patient{filteredAndSortedPatients.length !== 1 ? 's' : ''}
+            </p>
+          )}
+        </div>
+
+        {/* Patients Table */}
         {isLoading ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="space-y-4">
+            <Skeleton className="h-8 w-full" />
             {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-64 w-full" />
+              <Skeleton key={i} className="h-16 w-full" />
             ))}
           </div>
-        ) : patients && patients.length > 0 ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {patients.map((patient: Patient) => (
-              <Card 
-                key={patient.id} 
-                className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-105 bg-white"
-                onClick={() => handlePatientSelect(patient.id)}
-              >
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Users className="h-5 w-5 text-primary" />
-                    {patient.name}
-                  </CardTitle>
-                  <CardDescription>
-                    Medicaid ID: {patient.medicaidId}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {patient.address && (
-                    <div className="flex items-center gap-2 text-sm text-slate-600">
-                      <MapPin className="h-4 w-4 flex-shrink-0" />
-                      <span className="truncate">{patient.address}</span>
-                    </div>
-                  )}
-                  
-                  {patient.phone && (
-                    <div className="flex items-center gap-2 text-sm text-slate-600">
-                      <Phone className="h-4 w-4 flex-shrink-0" />
-                      <span>{patient.phone}</span>
-                    </div>
-                  )}
-                  
-                  {patient.dateOfBirth && (
-                    <div className="flex items-center gap-2 text-sm text-slate-600">
-                      <Calendar className="h-4 w-4 flex-shrink-0" />
-                      <span>DOB: {new Date(patient.dateOfBirth).toLocaleDateString()}</span>
-                    </div>
-                  )}
-                  
-                  {patient.medicalConditions && (
-                    <div className="flex items-start gap-2 text-sm text-slate-600">
-                      <Heart className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                      <span className="text-xs bg-slate-100 px-2 py-1 rounded truncate">
-                        {patient.medicalConditions}
-                      </span>
-                    </div>
-                  )}
-                  
-                  <div className="pt-3 border-t border-slate-100">
-                    <Button 
-                      size="sm" 
-                      className="w-full"
-                      onClick={(e) => handleStartCheckIn(patient.id, e)}
+        ) : filteredAndSortedPatients.length > 0 ? (
+          <Card>
+            <div className="overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-slate-50 select-none"
+                      onClick={() => handleSort("name")}
+                      data-testid="sort-name"
                     >
-                      Start Check-in
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                      <div className="flex items-center gap-2">
+                        Patient Name
+                        <ArrowUpDown className="h-4 w-4" />
+                      </div>
+                    </TableHead>
+                    <TableHead className="hidden md:table-cell">Medicaid ID</TableHead>
+                    <TableHead className="hidden lg:table-cell">Contact</TableHead>
+                    <TableHead className="hidden xl:table-cell">Medical Conditions</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredAndSortedPatients.map((patient) => (
+                    <TableRow key={patient.id} className="cursor-pointer hover:bg-slate-50">
+                      <TableCell 
+                        className="font-medium"
+                        onClick={() => handlePatientSelect(patient.id)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-primary flex-shrink-0" />
+                          <div>
+                            <div className="font-medium">{patient.name}</div>
+                            <div className="md:hidden text-sm text-slate-500">{patient.medicaidId}</div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-slate-600">
+                        {patient.medicaidId}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        <div className="space-y-1 text-sm text-slate-600">
+                          {patient.phone && (
+                            <div className="flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              {patient.phone}
+                            </div>
+                          )}
+                          {patient.address && (
+                            <div className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              <span className="truncate max-w-40">{patient.address}</span>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden xl:table-cell">
+                        {patient.medicalConditions && (
+                          <Badge variant="secondary" className="text-xs">
+                            {patient.medicalConditions.length > 30 
+                              ? `${patient.medicalConditions.substring(0, 30)}...` 
+                              : patient.medicalConditions
+                            }
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handlePatientSelect(patient.id)}
+                            data-testid={`view-patient-${patient.id}`}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            <span className="hidden sm:inline">View</span>
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={(e) => handleStartSurvey(patient.id, e)}
+                            data-testid={`survey-patient-${patient.id}`}
+                          >
+                            <FileText className="h-4 w-4 mr-1" />
+                            <span className="hidden sm:inline">Surveys</span>
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+        ) : patients && patients.length > 0 ? (
+          <Alert>
+            <Search className="h-4 w-4" />
+            <AlertDescription>
+              No patients match your search criteria. Try adjusting your search terms.
+            </AlertDescription>
+          </Alert>
         ) : (
           <Alert>
             <Users className="h-4 w-4" />
