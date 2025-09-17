@@ -75,7 +75,6 @@ export const weeklyCheckIns = pgTable("weekly_check_ins", {
   completedAt: timestamp("completed_at"),
   remindersSent: integer("reminders_sent").default(0).notNull(),
   lastReminderAt: timestamp("last_reminder_at"),
-  surveyId: integer("survey_id").references(() => surveys.id), // Optional link to dynamic survey
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

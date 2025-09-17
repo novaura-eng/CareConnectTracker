@@ -734,7 +734,13 @@ export class DatabaseStorage implements IStorage {
         and(
           gte(weeklyCheckIns.weekStartDate, currentWeekStart),
           lte(weeklyCheckIns.weekEndDate, currentWeekEnd),
-          sql`(${surveyResponses.hospitalVisits} = true OR ${surveyResponses.accidentsFalls} = true OR ${surveyResponses.mentalHealth} = true OR ${surveyResponses.physicalHealth} = true)`
+          sql`(
+            (${surveyResponses.meta}->>'formType' = 'weekly_checkin' AND 
+             (${surveyResponses.meta}->'responses'->>'hospitalVisits' = 'true' OR 
+              ${surveyResponses.meta}->'responses'->>'accidentsFalls' = 'true' OR 
+              ${surveyResponses.meta}->'responses'->>'mentalHealth' = 'true' OR 
+              ${surveyResponses.meta}->'responses'->>'physicalHealth' = 'true'))
+          )`
         )
       );
 
@@ -1158,13 +1164,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Survey Response V2 methods
-  async createSurveyResponse(insertResponse: InsertSurveyResponse): Promise<SurveyResponse> {
-    const [response] = await db
-      .insert(surveyResponses)
-      .values(insertResponse)
-      .returning();
-    return response;
-  }
 
   async getSurveyResponse(id: number): Promise<SurveyResponse | undefined> {
     const [response] = await db.select().from(surveyResponses).where(eq(surveyResponses.id, id));
