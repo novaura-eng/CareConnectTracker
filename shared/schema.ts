@@ -155,7 +155,7 @@ export const surveyAssignments = pgTable("survey_assignments", {
   caregiverId: integer("caregiver_id").references(() => caregivers.id),
   patientId: integer("patient_id").references(() => patients.id),
   checkInId: integer("check_in_id").references(() => weeklyCheckIns.id),
-  scheduleId: integer("schedule_id").references(() => surveySchedules.id), // link to schedule if auto-created
+  // scheduleId: integer("schedule_id").references(() => surveySchedules.id), // Column doesn't exist in production DB yet
   dueAt: timestamp("due_at"),
   scheduledFor: timestamp("scheduled_for"), // intended completion date from schedule
   autoCreated: boolean("auto_created").notNull().default(false), // was this created automatically
@@ -294,10 +294,10 @@ export const surveyAssignmentsRelations = relations(surveyAssignments, ({ one, m
     fields: [surveyAssignments.checkInId],
     references: [weeklyCheckIns.id],
   }),
-  schedule: one(surveySchedules, {
-    fields: [surveyAssignments.scheduleId],
-    references: [surveySchedules.id],
-  }),
+  // schedule: one(surveySchedules, {
+  //   fields: [surveyAssignments.scheduleId],
+  //   references: [surveySchedules.id],
+  // }), // Commented out - scheduleId column doesn't exist in production DB yet
   responses: many(surveyResponsesV2),
 }));
 
