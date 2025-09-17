@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { 
   ClipboardList, 
   Calendar, 
@@ -220,69 +221,85 @@ export default function CaregiverCheckIns() {
             {completedLoading ? (
               <div className="space-y-4">
                 {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-32 w-full" />
+                  <Skeleton key={i} className="h-16 w-full" />
                 ))}
               </div>
             ) : completedSurveys && completedSurveys.length > 0 ? (
-              <div className="space-y-4">
-                {completedSurveys.map((survey) => (
-                  <Card key={survey.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                          <User className="h-5 w-5 text-primary" />
-                          {survey.patientName}
-                        </CardTitle>
-                        <div className="flex gap-2">
-                          {survey.hasHealthConcerns && (
-                            <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-                              <AlertTriangle className="h-3 w-3 mr-1" />
-                              Health Concern
-                            </Badge>
-                          )}
-                          {survey.hasSafetyConcerns && (
-                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                              <AlertTriangle className="h-3 w-3 mr-1" />
-                              Safety Concern
-                            </Badge>
-                          )}
-                          <Badge className="bg-green-100 text-green-800">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Completed
-                          </Badge>
-                        </div>
-                      </div>
-                      <CardDescription>
-                        Week of {formatWeekRange(survey.weekStartDate, survey.weekEndDate)}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4 text-sm text-slate-600">
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-4 w-4" />
-                            <span>Completed: {formatDate(survey.completedAt)}</span>
+              <div className="border rounded-md">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Patient</TableHead>
+                      <TableHead>Week</TableHead>
+                      <TableHead>Completed</TableHead>
+                      <TableHead>Concerns</TableHead>
+                      <TableHead className="w-[100px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {completedSurveys.map((survey) => (
+                      <TableRow key={survey.id} className="hover:bg-slate-50">
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-primary" />
+                            <span className="font-medium">{survey.patientName}</span>
                           </div>
-                        </div>
-                        <Button 
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewSurvey(survey.id)}
-                          className="flex items-center gap-2"
-                        >
-                          <FileText className="h-4 w-4" />
-                          View Survey
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-slate-600">
+                            {formatWeekRange(survey.weekStartDate, survey.weekEndDate)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1 text-sm text-slate-600">
+                            <Clock className="h-3 w-3" />
+                            <span>{formatDate(survey.completedAt)}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            {survey.hasHealthConcerns && (
+                              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 text-xs">
+                                <AlertTriangle className="h-2 w-2 mr-1" />
+                                Health
+                              </Badge>
+                            )}
+                            {survey.hasSafetyConcerns && (
+                              <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs">
+                                <AlertTriangle className="h-2 w-2 mr-1" />
+                                Safety
+                              </Badge>
+                            )}
+                            {!survey.hasHealthConcerns && !survey.hasSafetyConcerns && (
+                              <Badge className="bg-green-100 text-green-800 text-xs">
+                                <CheckCircle className="h-2 w-2 mr-1" />
+                                All Good
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Button 
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewSurvey(survey.id)}
+                            className="flex items-center gap-1 h-8 px-2 text-xs"
+                            data-testid={`button-view-checkin-${survey.id}`}
+                          >
+                            <FileText className="h-3 w-3" />
+                            View
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             ) : (
               <Alert>
                 <ClipboardList className="h-4 w-4" />
                 <AlertDescription>
-                  No completed surveys yet. Your completed check-ins will appear here for future reference.
+                  No completed check-ins yet. Your completed check-ins will appear here for future reference.
                 </AlertDescription>
               </Alert>
             )}
