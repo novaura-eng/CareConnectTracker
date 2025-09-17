@@ -476,63 +476,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get survey details for weekly check-in with associated survey
-  app.get("/api/caregiver/checkin-survey/:checkInId", isCaregiver, async (req, res) => {
-    try {
-      const caregiver = (req as any).caregiver;
-      const checkInId = parseInt(req.params.checkInId);
-      
-      if (isNaN(checkInId)) {
-        return res.status(400).json({ message: "Invalid check-in ID" });
-      }
-
-      // Get weekly check-in
-      const checkIn = await storage.getWeeklyCheckIn(checkInId);
-      if (!checkIn || checkIn.caregiverId !== caregiver.id) {
-        return res.status(403).json({ message: "Check-in not found or access denied" });
-      }
-
-      // For now, use the test survey (ID: 1) for weekly check-ins that don't have a survey assigned
-      // TODO: Once the database is updated with survey_id column, use checkIn.surveyId
-      const surveyId = checkIn.surveyId || 1; // Default to test survey
-
-      // Get survey with questions and options
-      const surveyDetails = await storage.getSurveyWithQuestions(surveyId);
-      if (!surveyDetails) {
-        return res.status(404).json({ message: "Survey not found" });
-      }
-
-      // Get patient info
-      let patientName = "Unknown Patient";
-      if (checkIn.patientId) {
-        const patient = await storage.getPatient(checkIn.patientId);
-        if (patient) {
-          patientName = patient.name;
-        }
-      }
-
-      // Create assignment-like structure for the renderer
-      const assignment = {
-        id: checkInId,
-        type: 'weekly_checkin_survey',
-        surveyId: surveyId,
-        caregiverId: checkIn.caregiverId,
-        patientId: checkIn.patientId,
-        checkInId: checkInId,
-        status: checkIn.isCompleted ? 'completed' : 'pending',
-        patientName,
-        dueAt: checkIn.weekEndDate,
-        createdAt: checkIn.createdAt
-      };
-
-      res.json({
-        assignment,
-        survey: surveyDetails
-      });
-    } catch (error) {
-      console.error("Error fetching check-in survey:", error);
-      res.status(500).json({ message: "Internal server error" });
-    }
+  // DEPRECATED: Weekly check-in endpoints have been replaced with unified survey system
+  app.get("/api/caregiver/checkin-survey/:checkInId", (req, res) => {
+    res.status(410).json({ 
+      message: "This endpoint has been deprecated. Weekly check-ins are now handled as survey assignments. Please use /api/caregiver/survey/:assignmentId instead." 
+    });
   });
 
   // Submit survey response
@@ -635,13 +583,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .set({ status: 'completed', completedAt: new Date() })
           .where(eq(surveyAssignments.id, assignmentId));
         
-        // If linked to a check-in, mark check-in as completed
-        if (assignment.checkInId) {
-          await tx
-            .update(weeklyCheckIns)
-            .set({ isCompleted: true, completedAt: new Date() })
-            .where(eq(weeklyCheckIns.id, assignment.checkInId));
-        }
+        // Note: Weekly check-in completion is no longer handled here as we've moved to unified survey assignments
         
         return surveyResponse;
       });
