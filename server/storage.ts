@@ -565,6 +565,8 @@ export class DatabaseStorage implements IStorage {
         if (!questionsMap.has(row.question.id)) {
           questionsMap.set(row.question.id, {
             ...row.question,
+            text: row.question.label, // Map 'label' to 'text' for frontend compatibility
+            orderIndex: row.question.order, // Map 'order' to 'orderIndex' for frontend compatibility
             options: []
           });
         }
