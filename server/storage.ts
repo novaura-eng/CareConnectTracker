@@ -793,62 +793,13 @@ export class DatabaseStorage implements IStorage {
       .orderBy(surveyAssignments.dueAt);
   }
 
-  // Unified assignment view for improved caregiver UX
+  // Unified assignment view for improved caregiver UX - now only returns survey assignments
   async getUnifiedAssignmentsForCaregiver(caregiverId: number, includeCompleted: boolean = false): Promise<any[]> {
-    const statusCondition = includeCompleted ? 
-      sql<boolean>`true` : // Include all statuses
-      sql<boolean>`${weeklyCheckIns.isCompleted} = false`; // Only pending
-
-    // Get weekly check-ins with DB-side date calculations
-    const checkIns = await db
-      .select({
-        id: weeklyCheckIns.id,
-        type: sql<string>`'weekly_checkin'`.as('type'),
-        patientId: weeklyCheckIns.patientId,
-        patientName: patients.name,
-        title: sql<string>`'Weekly Health Check-in'`.as('title'),
-        description: sql<string>`'Complete weekly health and safety assessment'`.as('description'),
-        dueDate: weeklyCheckIns.weekEndDate,
-        status: sql<string>`CASE 
-          WHEN ${weeklyCheckIns.isCompleted} THEN 'completed'
-          WHEN ${weeklyCheckIns.weekEndDate}::date < now()::date THEN 'overdue' 
-          ELSE 'pending'
-        END`.as('status'),
-        completedAt: weeklyCheckIns.completedAt,
-        estimatedMinutes: sql<number>`10`.as('estimatedMinutes'),
-        surveyId: sql<number>`null`.as('surveyId'), // Column doesn't exist yet in production DB
-        assignmentId: sql<number>`null`.as('assignmentId'),
-        checkInId: weeklyCheckIns.id,
-        priority: sql<number>`CASE 
-          WHEN ${weeklyCheckIns.isCompleted} THEN 0
-          WHEN ${weeklyCheckIns.weekEndDate}::date < now()::date THEN 3
-          WHEN ${weeklyCheckIns.weekEndDate}::date = now()::date THEN 2
-          ELSE 1
-        END`.as('priority'),
-        progressCurrent: sql<number>`CASE 
-          WHEN ${weeklyCheckIns.isCompleted} THEN 10 
-          ELSE 0 
-        END`.as('progressCurrent'),
-        progressTotal: sql<number>`10`.as('progressTotal')
-      })
-      .from(weeklyCheckIns)
-      .innerJoin(patients, eq(weeklyCheckIns.patientId, patients.id))
-      .where(
-        and(
-          eq(weeklyCheckIns.caregiverId, caregiverId),
-          includeCompleted ? sql<boolean>`true` : eq(weeklyCheckIns.isCompleted, false)
-        )
-      );
-
-    const surveyStatusCondition = includeCompleted ?
-      sql<boolean>`true` : // Include all statuses  
-      eq(surveyAssignments.status, 'pending'); // Only pending
-
-    // Get dynamic survey assignments with DB-side date calculations
-    const dynamicSurveyAssignments = await db
+    // Get survey assignments with DB-side date calculations
+    const assignments = await db
       .select({
         id: surveyAssignments.id,
-        type: sql<string>`'dynamic_survey'`.as('type'),
+        type: sql<string>`'survey'`.as('type'),
         patientId: surveyAssignments.patientId,
         patientName: patients.name,
         title: surveys.title,
@@ -863,7 +814,6 @@ export class DatabaseStorage implements IStorage {
         estimatedMinutes: sql<number>`15`.as('estimatedMinutes'),
         surveyId: surveys.id,
         assignmentId: surveyAssignments.id,
-        checkInId: surveyAssignments.checkInId,
         priority: sql<number>`CASE 
           WHEN ${surveyAssignments.status} = 'completed' THEN 0
           WHEN ${surveyAssignments.dueAt}::date < now()::date THEN 3
@@ -886,9 +836,8 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
-    // Combine and sort by priority (desc), then by due date (asc)
-    const allAssignments = [...checkIns, ...dynamicSurveyAssignments];
-    return allAssignments.sort((a, b) => {
+    // Sort by priority (desc), then by due date (asc)
+    return assignments.sort((a, b) => {
       // First sort by priority (3=overdue, 2=due today, 1=upcoming, 0=completed)
       if (a.priority !== b.priority) {
         return b.priority - a.priority;
