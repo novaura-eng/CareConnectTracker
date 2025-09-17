@@ -27,7 +27,7 @@ import CaregiverLayout from "@/components/caregiver/CaregiverLayout";
 
 interface UnifiedAssignment {
   id: number;
-  type: 'weekly_checkin' | 'dynamic_survey';
+  type: 'survey';
   patientId: number;
   patientName: string;
   title: string;
@@ -36,9 +36,8 @@ interface UnifiedAssignment {
   status: 'pending' | 'overdue' | 'completed';
   completedAt?: string;
   estimatedMinutes: number;
-  surveyId?: number;
-  assignmentId?: number;
-  checkInId?: number;
+  surveyId: number;
+  assignmentId: number;
   priority: number; // 3=overdue, 2=due today, 1=upcoming, 0=completed
   progressCurrent: number;
   progressTotal: number;
@@ -60,13 +59,8 @@ export default function CaregiverSurveyDashboard() {
   const completedAssignments = assignmentsArray.filter(a => a.status === 'completed') || [];
 
   const handleStartAssignment = (assignment: UnifiedAssignment) => {
-    if (assignment.type === 'weekly_checkin') {
-      // Weekly check-ins now use the dynamic survey system instead of hardcoded questions
-      // Route to dynamic survey renderer for check-ins
-      setLocation(`/caregiver/dynamic-survey/checkin/${assignment.checkInId}`);
-    } else if (assignment.type === 'dynamic_survey') {
-      setLocation(`/caregiver/dynamic-survey/${assignment.assignmentId}`);
-    }
+    // All assignments now route to the unified survey system
+    setLocation(`/caregiver/survey/${assignment.assignmentId}`);
   };
 
   const getPriorityBadge = (priority: number, status: string) => {
@@ -506,7 +500,7 @@ export default function CaregiverSurveyDashboard() {
                           variant="outline"
                           data-testid={`button-start-${assignment.type}-${assignment.id}`}
                         >
-                          {assignment.type === 'weekly_checkin' ? 'Start Check-in' : 'Start Survey'}
+                          Start Survey
                           <ChevronRight className="h-4 w-4 ml-2" />
                         </Button>
                       </div>

@@ -7,24 +7,19 @@ import { useCaregiverAuth } from "@/hooks/useCaregiverAuth";
 import DynamicSurveyRenderer from "@/components/survey/dynamic-survey-renderer";
 
 export default function CaregiverDynamicSurvey() {
-  const { assignmentId, checkInId } = useParams<{ assignmentId?: string; checkInId?: string }>();
+  const { assignmentId } = useParams<{ assignmentId: string }>();
   const [, setLocation] = useLocation();
   const { isAuthenticated } = useCaregiverAuth();
 
-  // Determine API endpoint based on route type
-  const apiEndpoint = checkInId 
-    ? `/api/caregiver/checkin-survey/${checkInId}`
-    : `/api/caregiver/surveys/${assignmentId}`;
-  
-  const queryKey = checkInId 
-    ? [`/api/caregiver/checkin-survey/${checkInId}`]
-    : [`/api/caregiver/surveys/${assignmentId}`];
+  // Use unified survey assignment API endpoint
+  const apiEndpoint = `/api/caregiver/surveys/${assignmentId}`;
+  const queryKey = [`/api/caregiver/surveys/${assignmentId}`];
 
   // Fetch survey assignment and survey details
   const { data: surveyData, isLoading, error } = useQuery({
     queryKey: queryKey,
     queryFn: () => fetch(apiEndpoint).then(res => res.json()),
-    enabled: !!(assignmentId || checkInId) && isAuthenticated,
+    enabled: !!assignmentId && isAuthenticated,
   });
 
   // Redirect if not authenticated
