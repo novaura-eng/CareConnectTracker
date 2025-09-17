@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CalendarIcon, Send, CheckCircle, ArrowLeft } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { CalendarIcon, Send, CheckCircle, ArrowLeft, RotateCcw, History, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
@@ -73,6 +74,12 @@ export default function DynamicSurveyRenderer({
 }: DynamicSurveyRendererProps) {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const { toast } = useToast();
+
+  // Fetch prior response data for recurring surveys
+  const { data: priorResponseData, isLoading: isPriorResponseLoading } = useQuery({
+    queryKey: [`/api/caregiver/surveys/${assignment.id}/prior-response`],
+    enabled: !!assignment.id,
+  });
 
   // Create dynamic validation schema based on survey questions
   const createValidationSchema = () => {
@@ -200,6 +207,17 @@ export default function DynamicSurveyRenderer({
     resolver: zodResolver(validationSchema),
     defaultValues: createDefaultValues(),
   });
+
+  // Function to load prior response data into the form
+  const loadPriorResponse = () => {
+    if (priorResponseData?.priorResponse?.formData) {
+      form.reset(priorResponseData.priorResponse.formData);
+      toast({
+        title: "Prior Response Loaded",
+        description: `Loaded your previous response from ${new Date(priorResponseData.priorResponse.submittedAt).toLocaleDateString()}`,
+      });
+    }
+  };
 
   const submitSurveyMutation = useMutation({
     mutationFn: async (formData: FormData) => {
@@ -458,6 +476,37 @@ export default function DynamicSurveyRenderer({
             {survey.description && (
               <Alert>
                 <AlertDescription>{survey.description}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Prior Response Section - for recurring surveys */}
+            {!isPriorResponseLoading && priorResponseData?.hasRecurringSchedule && priorResponseData?.priorResponse && (
+              <Alert className="border-blue-200 bg-blue-50">
+                <History className="h-4 w-4" />
+                <AlertDescription className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div>
+                      <div className="font-medium text-blue-900">Previous Response Available</div>
+                      <div className="text-sm text-blue-700">
+                        You completed this survey on {new Date(priorResponseData.priorResponse.submittedAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                      <Clock className="h-3 w-3 mr-1" />
+                      Recurring Survey
+                    </Badge>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={loadPriorResponse}
+                    className="ml-4 border-blue-300 text-blue-700 hover:bg-blue-100"
+                    data-testid="button-load-prior-response"
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Use Previous Answers
+                  </Button>
+                </AlertDescription>
               </Alert>
             )}
           </div>

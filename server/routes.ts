@@ -442,6 +442,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get prior response for reuse in recurring surveys
+  app.get("/api/caregiver/surveys/:assignmentId/prior-response", isCaregiver, async (req, res) => {
+    try {
+      const caregiver = (req as any).caregiver;
+      const assignmentId = parseInt(req.params.assignmentId);
+      
+      if (isNaN(assignmentId)) {
+        return res.status(400).json({ message: "Invalid assignment ID" });
+      }
+
+      // Get assignment details first
+      const assignment = await storage.getSurveyAssignment(assignmentId);
+      if (!assignment || assignment.caregiverId !== caregiver.id) {
+        return res.status(403).json({ message: "Assignment not found or access denied" });
+      }
+
+      // Check if survey has active recurring schedules
+      const schedules = await storage.getSurveySchedules(assignment.surveyId);
+      const hasRecurringSchedule = schedules.some(schedule => 
+        schedule.isActive && 
+        schedule.scheduleType !== 'one_time'
+      );
+
+      // Get prior response if survey is recurring
+      let priorResponse = null;
+      if (hasRecurringSchedule) {
+        priorResponse = await storage.getPriorSurveyResponseForReuse(
+          caregiver.id, 
+          assignment.surveyId, 
+          assignment.patientId
+        );
+      }
+
+      res.json({
+        hasRecurringSchedule,
+        priorResponse
+      });
+    } catch (error) {
+      console.error("Error fetching prior response:", error);
+      if (error instanceof Error && error.message.includes("not found or not assigned")) {
+        res.status(404).json({ message: "Patient not found or not assigned to you" });
+      } else {
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  });
+
   app.get("/api/caregiver/previous-response/:patientId", isCaregiver, async (req, res) => {
     try {
       const caregiver = (req as any).caregiver;

@@ -367,6 +367,85 @@ export class DatabaseStorage implements IStorage {
     return patientsWithStatus;
   }
 
+  async getPriorSurveyResponseForReuse(caregiverId: number, surveyId: number, patientId: number): Promise<any> {
+    // Verify the patient belongs to this caregiver
+    const patient = await db
+      .select()
+      .from(patients)
+      .where(
+        and(
+          eq(patients.id, patientId),
+          eq(patients.caregiverId, caregiverId),
+          eq(patients.isActive, true)
+        )
+      )
+      .limit(1);
+
+    if (patient.length === 0) {
+      throw new Error("Patient not found or not assigned to this caregiver");
+    }
+
+    // Get the most recent completed response for this survey-patient combination
+    const [latestResponse] = await db
+      .select({
+        responseId: surveyResponses.id,
+        surveyId: surveyResponses.surveyId,
+        submittedAt: surveyResponses.submittedAt,
+        assignmentId: surveyResponses.assignmentId,
+      })
+      .from(surveyResponses)
+      .where(
+        and(
+          eq(surveyResponses.caregiverId, caregiverId),
+          eq(surveyResponses.surveyId, surveyId),
+          eq(surveyResponses.patientId, patientId)
+        )
+      )
+      .orderBy(desc(surveyResponses.submittedAt))
+      .limit(1);
+
+    if (!latestResponse) {
+      return null; // No prior responses found
+    }
+
+    // Get all response items for this response
+    const responseItems = await db
+      .select({
+        questionId: surveyResponseItems.questionId,
+        answerText: surveyResponseItems.answerText,
+        answerNumber: surveyResponseItems.answerNumber,
+        answerBoolean: surveyResponseItems.answerBoolean,
+        answerDate: surveyResponseItems.answerDate,
+        multipleChoiceSelections: surveyResponseItems.multipleChoiceSelections,
+      })
+      .from(surveyResponseItems)
+      .where(eq(surveyResponseItems.responseId, latestResponse.responseId));
+
+    // Convert response items to form data format
+    const formData: Record<string, any> = {};
+    responseItems.forEach((item) => {
+      const key = `question_${item.questionId}`;
+      
+      if (item.answerText !== null) {
+        formData[key] = item.answerText;
+      } else if (item.answerNumber !== null) {
+        formData[key] = item.answerNumber;
+      } else if (item.answerBoolean !== null) {
+        formData[key] = item.answerBoolean;
+      } else if (item.answerDate !== null) {
+        formData[key] = new Date(item.answerDate);
+      } else if (item.multipleChoiceSelections && item.multipleChoiceSelections.length > 0) {
+        formData[key] = item.multipleChoiceSelections;
+      }
+    });
+
+    return {
+      responseId: latestResponse.responseId,
+      submittedAt: latestResponse.submittedAt,
+      formData,
+    };
+  }
+
   async getSurveyHistoryByPatient(caregiverId: number, patientId: number): Promise<any[]> {
     // First verify the patient belongs to this caregiver
     const patient = await db
