@@ -568,7 +568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Validate survey is published
-      if (surveyDetails.survey.status !== 'published') {
+      if (surveyDetails.status !== 'published') {
         return res.status(400).json({ message: "Survey is not available for submission" });
       }
       
