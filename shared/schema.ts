@@ -402,6 +402,16 @@ export type InsertCaregiver = z.infer<typeof insertCaregiverSchema>;
 export type Patient = typeof patients.$inferSelect;
 export type InsertPatient = z.infer<typeof insertPatientSchema>;
 
+// Enhanced Patient type with survey status information
+export interface PatientWithSurveyStatus extends Patient {
+  surveyStatus: {
+    pendingAssignments: number;
+    completedSurveys: number;
+    lastSurveyDate: string | null;
+    availableSurveys: number;
+  };
+}
+
 export type WeeklyCheckIn = typeof weeklyCheckIns.$inferSelect;
 export type InsertWeeklyCheckIn = z.infer<typeof insertWeeklyCheckInSchema>;
 

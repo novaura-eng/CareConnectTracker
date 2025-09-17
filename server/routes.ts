@@ -408,6 +408,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enhanced patients endpoint with survey status data
+  app.get("/api/caregiver/patients/enhanced", isCaregiver, async (req, res) => {
+    try {
+      const caregiver = (req as any).caregiver;
+      const patientsWithStatus = await storage.getPatientsWithSurveyStatusByCaregiver(caregiver.id);
+      res.json(patientsWithStatus);
+    } catch (error) {
+      console.error("Error fetching enhanced caregiver patients:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.get("/api/caregiver/previous-response/:patientId", isCaregiver, async (req, res) => {
     try {
       const caregiver = (req as any).caregiver;

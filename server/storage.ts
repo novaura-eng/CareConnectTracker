@@ -8,7 +8,6 @@ import {
   surveyQuestions,
   surveyOptions,
   surveyAssignments,
-  surveyResponses,
   surveyResponseItems,
   surveyStateTags,
   surveySchedules,
@@ -18,6 +17,7 @@ import {
   type InsertCaregiver,
   type Patient,
   type InsertPatient,
+  type PatientWithSurveyStatus,
   type WeeklyCheckIn,
   type InsertWeeklyCheckIn,
   type SurveyResponse,
@@ -30,8 +30,6 @@ import {
   type InsertSurveyOption,
   type SurveyAssignment,
   type InsertSurveyAssignment,
-  type SurveyResponse,
-  type InsertSurveyResponse,
   type SurveyResponseItem,
   type InsertSurveyResponseItem,
   type SurveyStateTag,
@@ -61,6 +59,7 @@ export interface IStorage {
   // Patient methods
   getPatient(id: number): Promise<Patient | undefined>;
   getPatientsByCaregiver(caregiverId: number): Promise<Patient[]>;
+  getPatientsWithSurveyStatusByCaregiver(caregiverId: number): Promise<PatientWithSurveyStatus[]>;
   getAllPatients(): Promise<Patient[]>;
   createPatient(patient: InsertPatient): Promise<Patient>;
   
@@ -266,6 +265,105 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(patients).where(
       and(eq(patients.caregiverId, caregiverId), eq(patients.isActive, true))
     );
+  }
+
+  async getPatientsWithSurveyStatusByCaregiver(caregiverId: number): Promise<PatientWithSurveyStatus[]> {
+    // Get the caregiver's state to find available surveys
+    const [caregiver] = await db.select().from(caregivers).where(eq(caregivers.id, caregiverId));
+    if (!caregiver) {
+      throw new Error("Caregiver not found");
+    }
+
+    // Get all active patients for this caregiver
+    const patientsData = await db.select().from(patients).where(
+      and(eq(patients.caregiverId, caregiverId), eq(patients.isActive, true))
+    );
+
+    if (patientsData.length === 0) {
+      return [];
+    }
+
+    const patientIds = patientsData.map(p => p.id);
+
+    // Execute all queries in parallel using Promise.all for efficiency
+    const [pendingByPatientResults, completedByPatientResults, availableSurveysResult] = await Promise.all([
+      // Get pending assignments by patient (filtered by caregiver)
+      db
+        .select({ 
+          patientId: surveyAssignments.patientId, 
+          count: sql<string>`COUNT(*)::text` 
+        })
+        .from(surveyAssignments)
+        .where(
+          and(
+            eq(surveyAssignments.caregiverId, caregiverId),
+            sql`${surveyAssignments.patientId} IN (${sql.join(patientIds, sql`, `)})`,
+            eq(surveyAssignments.status, 'pending')
+          )
+        )
+        .groupBy(surveyAssignments.patientId),
+
+      // Get completed surveys by patient with latest completion date (filtered by caregiver)
+      db
+        .select({ 
+          patientId: surveyResponses.patientId,
+          count: sql<string>`COUNT(*)::text`,
+          lastDate: sql<Date>`MAX(${surveyResponses.submittedAt})`
+        })
+        .from(surveyResponses)
+        .where(
+          and(
+            eq(surveyResponses.caregiverId, caregiverId),
+            sql`${surveyResponses.patientId} IN (${sql.join(patientIds, sql`, `)})`
+          )
+        )
+        .groupBy(surveyResponses.patientId),
+
+      // Get available surveys for this state (calculate once)
+      db
+        .select({ count: sql<string>`COUNT(DISTINCT ${surveys.id})::text` })
+        .from(surveys)
+        .innerJoin(surveyStateTags, eq(surveys.id, surveyStateTags.surveyId))
+        .where(
+          and(
+            eq(surveys.status, 'published'),
+            eq(surveyStateTags.stateCode, caregiver.state)
+          )
+        )
+    ]);
+
+    // Create lookup maps for efficient data access
+    const pendingByPatient = new Map<number, number>();
+    pendingByPatientResults.forEach(row => {
+      pendingByPatient.set(row.patientId, Number(row.count));
+    });
+
+    const completedByPatient = new Map<number, { count: number; lastDate: Date | null }>();
+    completedByPatientResults.forEach(row => {
+      completedByPatient.set(row.patientId, {
+        count: Number(row.count),
+        lastDate: row.lastDate || null
+      });
+    });
+
+    const availableSurveysCount = Number(availableSurveysResult[0]?.count || 0);
+
+    // Build the final result with survey status
+    const patientsWithStatus: PatientWithSurveyStatus[] = patientsData.map(patient => {
+      const completed = completedByPatient.get(patient.id);
+      
+      return {
+        ...patient,
+        surveyStatus: {
+          pendingAssignments: pendingByPatient.get(patient.id) || 0,
+          completedSurveys: completed?.count || 0,
+          lastSurveyDate: completed?.lastDate?.toISOString() || null,
+          availableSurveys: availableSurveysCount,
+        }
+      };
+    });
+
+    return patientsWithStatus;
   }
 
   async getAllPatients(): Promise<Patient[]> {
