@@ -17,6 +17,7 @@ import {
   scheduleTypeSchema,
   type StateCode
 } from "@shared/schema";
+import { z } from "zod";
 import { smsService } from "./services/sms";
 import { sendCaregiverWeeklyEmail } from "./services/email";
 import { setupAuth, isAuthenticated } from "./replitAuth";
@@ -828,19 +829,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const checkInId = parseInt(req.params.checkInId);
       
-      // Validate request body
-      const validatedData = insertSurveyResponseSchema.parse({
-        ...req.body,
-        checkInId,
-      });
+      // Get check-in details to extract caregiver info
+      const checkInDetails = await storage.getWeeklyCheckInWithDetails(checkInId);
+      if (!checkInDetails) {
+        return res.status(404).json({ message: "Check-in not found" });
+      }
 
-      // Create survey response
-      const response = await storage.createSurveyResponse(validatedData);
-      
-      // Mark check-in as completed
-      await storage.updateCheckInCompletion(checkInId);
+      // For weekly check-ins, handle the legacy survey response format
+      if (req.body.hospitalVisits !== undefined) {
+        // This is a weekly check-in submission with legacy format
+        // Create a modified schema that allows optional surveyId for weekly check-ins
+        const weeklyCheckInResponseSchema = insertSurveyResponseSchema.omit({ surveyId: true }).extend({
+          surveyId: z.number().optional()
+        });
+        
+        const validatedData = weeklyCheckInResponseSchema.parse({
+          checkInId,
+          caregiverId: checkInDetails.checkIn.caregiverId,
+          patientId: checkInDetails.checkIn.patientId,
+          meta: {
+            formType: 'weekly_checkin',
+            responses: req.body
+          }
+        });
 
-      res.json({ message: "Survey submitted successfully", response });
+        // Create survey response
+        const response = await storage.createSurveyResponse(validatedData);
+        
+        // Mark check-in as completed
+        await storage.updateCheckInCompletion(checkInId);
+
+        res.json({ message: "Survey submitted successfully", response });
+      } else {
+        // This is a dynamic survey submission
+        const validatedData = insertSurveyResponseSchema.parse({
+          ...req.body,
+          checkInId,
+        });
+
+        // Create survey response
+        const response = await storage.createSurveyResponse(validatedData);
+        
+        // Mark check-in as completed
+        await storage.updateCheckInCompletion(checkInId);
+
+        res.json({ message: "Survey submitted successfully", response });
+      }
     } catch (error) {
       console.error("Error submitting survey:", error);
       res.status(500).json({ message: "Internal server error" });
