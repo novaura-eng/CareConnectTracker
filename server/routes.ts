@@ -420,6 +420,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get survey history for a specific patient
+  app.get("/api/caregiver/patient/:id/survey-history", isCaregiver, async (req, res) => {
+    try {
+      const caregiver = (req as any).caregiver;
+      const patientId = parseInt(req.params.id);
+      
+      if (isNaN(patientId)) {
+        return res.status(400).json({ message: "Invalid patient ID" });
+      }
+
+      const surveyHistory = await storage.getSurveyHistoryByPatient(caregiver.id, patientId);
+      res.json(surveyHistory);
+    } catch (error) {
+      console.error("Error fetching patient survey history:", error);
+      if (error instanceof Error && error.message.includes("not found or not assigned")) {
+        res.status(404).json({ message: "Patient not found or not assigned to you" });
+      } else {
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  });
+
   app.get("/api/caregiver/previous-response/:patientId", isCaregiver, async (req, res) => {
     try {
       const caregiver = (req as any).caregiver;

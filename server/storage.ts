@@ -60,6 +60,7 @@ export interface IStorage {
   getPatient(id: number): Promise<Patient | undefined>;
   getPatientsByCaregiver(caregiverId: number): Promise<Patient[]>;
   getPatientsWithSurveyStatusByCaregiver(caregiverId: number): Promise<PatientWithSurveyStatus[]>;
+  getSurveyHistoryByPatient(caregiverId: number, patientId: number): Promise<any[]>;
   getAllPatients(): Promise<Patient[]>;
   createPatient(patient: InsertPatient): Promise<Patient>;
   
@@ -364,6 +365,76 @@ export class DatabaseStorage implements IStorage {
     });
 
     return patientsWithStatus;
+  }
+
+  async getSurveyHistoryByPatient(caregiverId: number, patientId: number): Promise<any[]> {
+    // First verify the patient belongs to this caregiver
+    const patient = await db
+      .select()
+      .from(patients)
+      .where(
+        and(
+          eq(patients.id, patientId),
+          eq(patients.caregiverId, caregiverId),
+          eq(patients.isActive, true)
+        )
+      )
+      .limit(1);
+
+    if (patient.length === 0) {
+      throw new Error("Patient not found or not assigned to this caregiver");
+    }
+
+    // Get survey history with survey details
+    const surveyHistory = await db
+      .select({
+        responseId: surveyResponses.id,
+        submittedAt: surveyResponses.submittedAt,
+        surveyId: surveyResponses.surveyId,
+        surveyTitle: surveys.title,
+        surveyDescription: surveys.description,
+        assignmentId: surveyResponses.assignmentId,
+        checkInId: surveyResponses.checkInId,
+        meta: surveyResponses.meta,
+      })
+      .from(surveyResponses)
+      .innerJoin(surveys, eq(surveyResponses.surveyId, surveys.id))
+      .where(
+        and(
+          eq(surveyResponses.caregiverId, caregiverId),
+          eq(surveyResponses.patientId, patientId)
+        )
+      )
+      .orderBy(desc(surveyResponses.submittedAt));
+
+    // For each response, get the response items (answers)
+    const surveyHistoryWithAnswers = await Promise.all(
+      surveyHistory.map(async (response) => {
+        const responseItems = await db
+          .select({
+            questionId: surveyResponseItems.questionId,
+            answer: surveyResponseItems.answer,
+            answerText: surveyResponseItems.answerText,
+            answerNumber: surveyResponseItems.answerNumber,
+            answerBoolean: surveyResponseItems.answerBoolean,
+            answerDate: surveyResponseItems.answerDate,
+            questionLabel: surveyQuestions.label,
+            questionType: surveyQuestions.type,
+          })
+          .from(surveyResponseItems)
+          .innerJoin(surveyQuestions, eq(surveyResponseItems.questionId, surveyQuestions.id))
+          .where(eq(surveyResponseItems.responseId, response.responseId))
+          .orderBy(surveyQuestions.order);
+
+        return {
+          ...response,
+          answers: responseItems,
+          answerCount: responseItems.length,
+        };
+      })
+    );
+
+    return surveyHistoryWithAnswers;
   }
 
   async getAllPatients(): Promise<Patient[]> {
