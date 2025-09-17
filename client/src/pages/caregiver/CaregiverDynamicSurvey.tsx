@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle } from "lucide-react";
 import { useCaregiverAuth } from "@/hooks/useCaregiverAuth";
 import DynamicSurveyRenderer from "@/components/survey/dynamic-survey-renderer";
+import CaregiverLayout from "@/components/caregiver/CaregiverLayout";
 
 export default function CaregiverDynamicSurvey() {
   const { assignmentId } = useParams<{ assignmentId: string }>();
@@ -30,46 +31,48 @@ export default function CaregiverDynamicSurvey() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <div className="px-4 py-8 sm:px-6 lg:px-8">
-          <div className="max-w-2xl mx-auto space-y-6">
-            <Skeleton className="h-20 w-full" />
-            <Skeleton className="h-96 w-full" />
-            <Skeleton className="h-32 w-full" />
-          </div>
+      <CaregiverLayout>
+        <div className="space-y-6">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-96 w-full" />
+          <Skeleton className="h-32 w-full" />
         </div>
-      </div>
+      </CaregiverLayout>
     );
   }
 
   if (error || !surveyData) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="max-w-md mx-4">
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Survey not found or access denied. Please contact your care coordinator for assistance.
-            </AlertDescription>
-          </Alert>
+      <CaregiverLayout>
+        <div className="flex items-center justify-center min-h-96">
+          <div className="max-w-md mx-4">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Survey not found or access denied. Please contact your care coordinator for assistance.
+              </AlertDescription>
+            </Alert>
+          </div>
         </div>
-      </div>
+      </CaregiverLayout>
     );
   }
 
   // Handle API errors or missing data
   if (!surveyData || !surveyData.assignment || !surveyData.survey) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="max-w-md mx-4">
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Survey assignment not found or unable to load. Please try again or contact support.
-            </AlertDescription>
-          </Alert>
+      <CaregiverLayout>
+        <div className="flex items-center justify-center min-h-96">
+          <div className="max-w-md mx-4">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Survey assignment not found or unable to load. Please try again or contact support.
+              </AlertDescription>
+            </Alert>
+          </div>
         </div>
-      </div>
+      </CaregiverLayout>
     );
   }
 
@@ -79,20 +82,22 @@ export default function CaregiverDynamicSurvey() {
   const patientName = assignment.patientName || "Patient";
 
   const handleComplete = () => {
-    setLocation("/caregiver/checkins");
+    setLocation("/caregiver/dashboard");
   };
 
   const handleBack = () => {
-    setLocation("/caregiver/checkins");
+    setLocation("/caregiver/dashboard");
   };
 
   return (
-    <DynamicSurveyRenderer 
-      assignment={assignment}
-      survey={survey}
-      patientName={patientName}
-      onComplete={handleComplete}
-      onBack={handleBack}
-    />
+    <CaregiverLayout>
+      <DynamicSurveyRenderer 
+        assignment={assignment}
+        survey={survey}
+        patientName={patientName}
+        onComplete={handleComplete}
+        onBack={handleBack}
+      />
+    </CaregiverLayout>
   );
 }
