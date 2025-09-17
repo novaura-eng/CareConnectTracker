@@ -139,7 +139,7 @@ export default function CaregiverCheckIns() {
             </TabsTrigger>
             <TabsTrigger value="completed" className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4" />
-              Completed Surveys
+              Completed Check-Ins
             </TabsTrigger>
           </TabsList>
 
@@ -215,7 +215,7 @@ export default function CaregiverCheckIns() {
             )}
           </TabsContent>
 
-          {/* Completed Surveys Tab */}
+          {/* Completed Check-Ins Tab */}
           <TabsContent value="completed" className="space-y-4">
             {completedLoading ? (
               <div className="space-y-4">
