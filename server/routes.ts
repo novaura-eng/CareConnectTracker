@@ -483,6 +483,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Bulk assign survey to all caregivers in specified states
+  app.post("/api/surveys/:surveyId/assign-to-states", isAuthenticated, async (req, res) => {
+    try {
+      const surveyId = parseInt(req.params.surveyId);
+      const { states, dueAt } = req.body;
+      
+      if (!states || !Array.isArray(states) || states.length === 0) {
+        return res.status(400).json({ message: "States array is required" });
+      }
+      
+      // Validate survey exists
+      const survey = await storage.getSurvey(surveyId);
+      if (!survey) {
+        return res.status(404).json({ message: "Survey not found" });
+      }
+      
+      // Get all caregivers in the specified states
+      const caregivers = await storage.getCaregiversByStates(states);
+      let assignmentsCreated = 0;
+      
+      // Create assignments for each caregiver and each of their patients
+      for (const caregiver of caregivers) {
+        const patients = await storage.getPatientsByCaregiver(caregiver.id);
+        
+        for (const patient of patients) {
+          // Check if assignment already exists to avoid duplicates
+          const existingAssignment = await storage.getSurveyAssignmentByIds(surveyId, caregiver.id, patient.id);
+          
+          if (!existingAssignment) {
+            await storage.assignSurveyToCaregiver(
+              surveyId, 
+              caregiver.id, 
+              patient.id, 
+              dueAt ? new Date(dueAt) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // Default to 7 days from now
+            );
+            assignmentsCreated++;
+          }
+        }
+      }
+      
+      res.json({
+        message: `Survey assigned successfully`,
+        assignmentsCreated,
+        caregivers: caregivers.length,
+        states
+      });
+    } catch (error) {
+      console.error("Error bulk assigning survey:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Submit survey response
   app.post("/api/caregiver/surveys/:assignmentId/submit", isCaregiver, async (req, res) => {
     try {

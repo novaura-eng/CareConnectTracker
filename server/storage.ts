@@ -861,6 +861,40 @@ export class DatabaseStorage implements IStorage {
     return assignment;
   }
 
+  async getCaregiversByStates(states: string[]): Promise<Caregiver[]> {
+    return await db
+      .select()
+      .from(caregivers)
+      .where(
+        and(
+          sql`${caregivers.state} = ANY(${states})`,
+          eq(caregivers.isActive, true)
+        )
+      );
+  }
+
+  async getPatientsByCaregiver(caregiverId: number): Promise<Patient[]> {
+    return await db
+      .select()
+      .from(patients)
+      .where(eq(patients.caregiverId, caregiverId));
+  }
+
+  async getSurveyAssignmentByIds(surveyId: number, caregiverId: number, patientId: number): Promise<SurveyAssignment | undefined> {
+    const [assignment] = await db
+      .select()
+      .from(surveyAssignments)
+      .where(
+        and(
+          eq(surveyAssignments.surveyId, surveyId),
+          eq(surveyAssignments.caregiverId, caregiverId),
+          eq(surveyAssignments.patientId, patientId),
+          ne(surveyAssignments.status, 'completed')
+        )
+      );
+    return assignment || undefined;
+  }
+
   async completeSurveyAssignment(id: number): Promise<void> {
     await db
       .update(surveyAssignments)
