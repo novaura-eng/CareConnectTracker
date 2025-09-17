@@ -358,7 +358,7 @@ export class DatabaseStorage implements IStorage {
         surveyStatus: {
           pendingAssignments: pendingByPatient.get(patient.id) || 0,
           completedSurveys: completed?.count || 0,
-          lastSurveyDate: completed?.lastDate?.toISOString() || null,
+          lastSurveyDate: completed?.lastDate ? (completed.lastDate instanceof Date ? completed.lastDate.toISOString() : completed.lastDate) : null,
           availableSurveys: availableSurveysCount,
         }
       };
