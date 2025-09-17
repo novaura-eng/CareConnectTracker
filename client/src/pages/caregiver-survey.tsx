@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle } from "lucide-react";
 import { useCaregiverAuth } from "@/hooks/useCaregiverAuth";
 import SurveyForm from "@/components/survey/survey-form";
+import CaregiverLayout from "@/components/caregiver/CaregiverLayout";
 
 export default function CaregiverSurvey() {
   const { patientId } = useParams<{ patientId: string }>();
@@ -48,7 +49,7 @@ export default function CaregiverSurvey() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50">
+      <CaregiverLayout>
         <div className="px-4 py-8 sm:px-6 lg:px-8">
           <div className="max-w-2xl mx-auto space-y-6">
             <Skeleton className="h-20 w-full" />
@@ -56,24 +57,30 @@ export default function CaregiverSurvey() {
             <Skeleton className="h-32 w-full" />
           </div>
         </div>
-      </div>
+      </CaregiverLayout>
     );
   }
 
   if (error || !checkInDetails) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="max-w-md mx-4">
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Unable to load survey. Please try again or contact your care coordinator.
-            </AlertDescription>
-          </Alert>
+      <CaregiverLayout>
+        <div className="flex items-center justify-center py-12">
+          <div className="max-w-md mx-4">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Unable to load survey. Please try again or contact your care coordinator.
+              </AlertDescription>
+            </Alert>
+          </div>
         </div>
-      </div>
+      </CaregiverLayout>
     );
   }
 
-  return <SurveyForm checkInDetails={checkInDetails} patientId={parseInt(patientId!)} />;
+  return (
+    <CaregiverLayout>
+      <SurveyForm checkInDetails={checkInDetails} patientId={parseInt(patientId!)} />
+    </CaregiverLayout>
+  );
 }
