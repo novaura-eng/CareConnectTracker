@@ -6,7 +6,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Users, Phone, MapPin, Heart, Calendar, FileText, Activity } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ArrowLeft, Users, Phone, MapPin, Heart, Calendar, FileText, Activity, Clock } from "lucide-react";
 import CaregiverLayout from "@/components/caregiver/CaregiverLayout";
 import type { PatientWithSurveyStatus } from "@shared/schema";
 
@@ -17,6 +18,12 @@ export default function CaregiverPatientDetail() {
 
   const { data: patients, isLoading, error } = useQuery<PatientWithSurveyStatus[]>({
     queryKey: ["/api/caregiver/patients/enhanced"],
+  });
+
+  // Fetch survey history for this patient
+  const { data: surveyHistory, isLoading: historyLoading } = useQuery<any[]>({
+    queryKey: [`/api/caregiver/patient/${patientId}/survey-history`],
+    enabled: !isNaN(patientId) && patientId > 0,
   });
 
   // Find the specific patient from the enhanced patient list
@@ -245,7 +252,7 @@ export default function CaregiverPatientDetail() {
           </div>
         </div>
 
-        {/* Survey History Section - Placeholder for now */}
+        {/* Survey History Section */}
         <Card>
           <CardHeader>
             <CardTitle>Survey History</CardTitle>
@@ -254,11 +261,103 @@ export default function CaregiverPatientDetail() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8 text-slate-500">
-              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Survey history will be displayed here</p>
-              <p className="text-sm">This feature will be implemented in the next phase</p>
-            </div>
+            {historyLoading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-8 w-full" />
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-16 w-full" />
+                ))}
+              </div>
+            ) : surveyHistory && surveyHistory.length > 0 ? (
+              <div className="overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Survey</TableHead>
+                      <TableHead className="hidden md:table-cell">Submitted</TableHead>
+                      <TableHead className="hidden lg:table-cell">Answers</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {surveyHistory.map((response) => (
+                      <TableRow key={response.responseId} className="hover:bg-slate-50">
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="font-medium flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-primary flex-shrink-0" />
+                              {response.surveyTitle}
+                            </div>
+                            {response.surveyDescription && (
+                              <p className="text-sm text-slate-500 line-clamp-2">
+                                {response.surveyDescription}
+                              </p>
+                            )}
+                            <div className="md:hidden flex items-center gap-1 text-sm text-slate-500">
+                              <Clock className="h-3 w-3" />
+                              {new Date(response.submittedAt).toLocaleDateString()}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell text-slate-600">
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-4 w-4" />
+                            <div>
+                              <div>{new Date(response.submittedAt).toLocaleDateString()}</div>
+                              <div className="text-sm text-slate-500">
+                                {new Date(response.submittedAt).toLocaleTimeString([], { 
+                                  hour: '2-digit', 
+                                  minute: '2-digit' 
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          <div className="space-y-1">
+                            <Badge variant="outline" className="text-xs">
+                              {response.answerCount} {response.answerCount === 1 ? 'answer' : 'answers'}
+                            </Badge>
+                            {response.answers.length > 0 && (
+                              <div className="text-sm text-slate-500">
+                                <div className="truncate max-w-48">
+                                  Preview: {response.answers[0]?.answerText || 
+                                    response.answers[0]?.answerBoolean?.toString() || 
+                                    response.answers[0]?.answerNumber?.toString() || 
+                                    'Response recorded'}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              // TODO: Open detailed view of survey response
+                              console.log('View response:', response.responseId);
+                            }}
+                            data-testid={`view-response-${response.responseId}`}
+                          >
+                            <FileText className="h-4 w-4 mr-1" />
+                            <span className="hidden sm:inline">View</span>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-slate-500">
+                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="font-medium">No survey history found</p>
+                <p className="text-sm">
+                  {patient?.name} hasn't completed any surveys yet.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
