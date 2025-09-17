@@ -8,27 +8,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Users, Phone, MapPin, Heart, Calendar, Search, ArrowUpDown, Eye, FileText } from "lucide-react";
+import { Users, Phone, MapPin, Heart, Calendar, Search, ArrowUpDown, Eye, FileText, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import CaregiverLayout from "@/components/caregiver/CaregiverLayout";
-
-interface Patient {
-  id: number;
-  name: string;
-  medicaidId: string;
-  address?: string;
-  phone?: string;
-  medicalConditions?: string;
-  dateOfBirth?: string;
-}
+import type { PatientWithSurveyStatus } from "@shared/schema";
 
 export default function CaregiverPatients() {
   const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortField, setSortField] = useState<keyof Patient>("name");
+  const [sortField, setSortField] = useState<keyof PatientWithSurveyStatus>("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
-  const { data: patients, isLoading } = useQuery<Patient[]>({
-    queryKey: ["/api/caregiver/patients"],
+  const { data: patients, isLoading } = useQuery<PatientWithSurveyStatus[]>({
+    queryKey: ["/api/caregiver/patients/enhanced"],
   });
 
   // Filter and sort patients
@@ -55,7 +46,7 @@ export default function CaregiverPatients() {
     return filtered;
   }, [patients, searchTerm, sortField, sortDirection]);
 
-  const handleSort = (field: keyof Patient) => {
+  const handleSort = (field: keyof PatientWithSurveyStatus) => {
     if (field === sortField) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
@@ -65,12 +56,12 @@ export default function CaregiverPatients() {
   };
 
   const handlePatientSelect = (patientId: number) => {
-    setLocation(`/caregiver/patient/${patientId}`);
+    setLocation(`/caregiver/patients/${patientId}`);
   };
 
   const handleStartSurvey = (patientId: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    // Navigate to the assignment dashboard to show available surveys for this patient
+    // Navigate to the caregiver dashboard to show available surveys
     setLocation(`/caregiver/dashboard`);
   };
 
@@ -144,6 +135,7 @@ export default function CaregiverPatients() {
                     <TableHead className="hidden md:table-cell">Medicaid ID</TableHead>
                     <TableHead className="hidden lg:table-cell">Contact</TableHead>
                     <TableHead className="hidden xl:table-cell">Medical Conditions</TableHead>
+                    <TableHead className="hidden 2xl:table-cell">Survey Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -191,6 +183,28 @@ export default function CaregiverPatients() {
                           </Badge>
                         )}
                       </TableCell>
+                      <TableCell className="hidden 2xl:table-cell">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            {patient.availableSurveys > 0 ? (
+                              <Badge variant="default" className="text-xs">
+                                <Clock className="h-3 w-3 mr-1" />
+                                {patient.availableSurveys} Available
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary" className="text-xs">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Up to date
+                              </Badge>
+                            )}
+                          </div>
+                          {patient.lastSurveyDate && (
+                            <div className="text-xs text-slate-500">
+                              Last: {new Date(patient.lastSurveyDate).toLocaleDateString()}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
@@ -202,14 +216,40 @@ export default function CaregiverPatients() {
                             <Eye className="h-4 w-4 mr-1" />
                             <span className="hidden sm:inline">View</span>
                           </Button>
-                          <Button
-                            size="sm"
-                            onClick={(e) => handleStartSurvey(patient.id, e)}
-                            data-testid={`survey-patient-${patient.id}`}
-                          >
-                            <FileText className="h-4 w-4 mr-1" />
-                            <span className="hidden sm:inline">Surveys</span>
-                          </Button>
+                          {patient.availableSurveys > 0 ? (
+                            <Button
+                              size="sm"
+                              onClick={(e) => handleStartSurvey(patient.id, e)}
+                              data-testid={`survey-patient-${patient.id}`}
+                              className="relative"
+                            >
+                              <FileText className="h-4 w-4 mr-1" />
+                              <span className="hidden sm:inline">
+                                {patient.availableSurveys} Survey{patient.availableSurveys !== 1 ? 's' : ''}
+                              </span>
+                              <span className="sm:hidden">Surveys</span>
+                              {patient.availableSurveys > 0 && (
+                                <Badge 
+                                  variant="secondary" 
+                                  className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs bg-primary text-white"
+                                >
+                                  {patient.availableSurveys}
+                                </Badge>
+                              )}
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => handleStartSurvey(patient.id, e)}
+                              data-testid={`survey-patient-${patient.id}`}
+                              disabled
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              <span className="hidden sm:inline">Up to date</span>
+                              <span className="sm:hidden">Complete</span>
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
