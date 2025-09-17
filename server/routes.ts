@@ -10,7 +10,6 @@ import {
   insertSurveyQuestionSchema,
   insertSurveyOptionSchema,
   insertSurveyAssignmentSchema,
-  insertSurveyResponseSchema,
   insertSurveyResponseItemSchema,
   insertSurveyScheduleSchema,
   StateCodeSchema,
@@ -469,11 +468,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get prior response if survey is recurring
       let priorResponse = null;
       if (hasRecurringSchedule) {
-        priorResponse = await storage.getPriorSurveyResponseForReuse(
-          caregiver.id, 
-          assignment.surveyId, 
-          assignment.patientId
-        );
+        if (assignment.patientId) {
+          priorResponse = await storage.getPriorSurveyResponseForReuse(
+            caregiver.id, 
+            assignment.surveyId, 
+            assignment.patientId
+          );
+        }
       }
 
       res.json({
@@ -838,12 +839,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For weekly check-ins, handle the legacy survey response format
       if (req.body.hospitalVisits !== undefined) {
         // This is a weekly check-in submission with legacy format
-        // Create a modified schema that allows optional surveyId for weekly check-ins
-        const weeklyCheckInResponseSchema = insertSurveyResponseSchema.omit({ surveyId: true }).extend({
-          surveyId: z.number().optional()
-        });
-        
-        const validatedData = weeklyCheckInResponseSchema.parse({
+        // Use the existing "Weekly Check In" survey (ID 9)
+        const validatedData = insertSurveyResponseSchema.parse({
+          surveyId: 9, // Use the existing "Weekly Check In" survey
           checkInId,
           caregiverId: checkInDetails.checkIn.caregiverId,
           patientId: checkInDetails.checkIn.patientId,
