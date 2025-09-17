@@ -492,12 +492,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Check-in not found or access denied" });
       }
 
-      if (!checkIn.surveyId) {
-        return res.status(404).json({ message: "No survey associated with this check-in" });
-      }
+      // For now, use the test survey (ID: 1) for weekly check-ins that don't have a survey assigned
+      // TODO: Once the database is updated with survey_id column, use checkIn.surveyId
+      const surveyId = checkIn.surveyId || 1; // Default to test survey
 
       // Get survey with questions and options
-      const surveyDetails = await storage.getSurveyWithQuestions(checkIn.surveyId);
+      const surveyDetails = await storage.getSurveyWithQuestions(surveyId);
       if (!surveyDetails) {
         return res.status(404).json({ message: "Survey not found" });
       }
@@ -515,7 +515,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const assignment = {
         id: checkInId,
         type: 'weekly_checkin_survey',
-        surveyId: checkIn.surveyId,
+        surveyId: surveyId,
         caregiverId: checkIn.caregiverId,
         patientId: checkIn.patientId,
         checkInId: checkInId,

@@ -61,20 +61,9 @@ export default function CaregiverSurveyDashboard() {
 
   const handleStartAssignment = (assignment: UnifiedAssignment) => {
     if (assignment.type === 'weekly_checkin') {
-      // If the weekly check-in has an associated survey, use the dynamic survey renderer
-      if (assignment.surveyId) {
-        // Create a temporary assignment for dynamic survey rendering
-        const surveyAssignment = {
-          id: assignment.checkInId,
-          surveyId: assignment.surveyId,
-          patientId: assignment.patientId,
-          type: 'weekly_checkin_survey'
-        };
-        setLocation(`/caregiver/dynamic-survey/checkin/${assignment.checkInId}`);
-      } else {
-        // Traditional weekly check-in with hardcoded questions
-        setLocation(`/caregiver/survey/${assignment.patientId}?checkInId=${assignment.checkInId}`);
-      }
+      // Weekly check-ins now use the dynamic survey system instead of hardcoded questions
+      // Route to dynamic survey renderer for check-ins
+      setLocation(`/caregiver/dynamic-survey/checkin/${assignment.checkInId}`);
     } else if (assignment.type === 'dynamic_survey') {
       setLocation(`/caregiver/dynamic-survey/${assignment.assignmentId}`);
     }
