@@ -1617,8 +1617,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create new patient
-  app.post("/api/patients", async (req, res) => {
+  // Create new patient (protected)
+  app.post("/api/patients", isAuthenticated, async (req, res) => {
     try {
       console.log("Creating patient with data:", req.body);
       
@@ -1662,7 +1662,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
 
             // Get caregiver details for SMS notification
-            const caregiver = await storage.getCaregiverById(patient.caregiverId);
+            const caregiver = await storage.getCaregiver(patient.caregiverId);
             if (caregiver && caregiver.phone) {
               // Send initial SMS notification
               const surveyUrl = `${process.env.SURVEY_BASE_URL || 'http://localhost:5000'}/survey/${checkIn.id}`;
