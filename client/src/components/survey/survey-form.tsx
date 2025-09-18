@@ -406,28 +406,38 @@ export default function SurveyForm({ checkInDetails, patientId }: SurveyFormProp
       {/* Survey Form */}
       <main className="px-4 py-6 sm:py-8 sm:px-6 lg:px-8">
         <div className="max-w-2xl mx-auto">
-          {/* Copy from Previous Response Card - Only show for caregivers */}
+          {/* Nothing Changed - Quick Copy Card - Only show for caregivers */}
           {isCaregiverAuth && previousResponse && !copiedFromPrevious && (
-            <Card className="mb-8 border-green-200 shadow-sm bg-green-50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-green-900">
-                  <Copy className="h-5 w-5" />
-                  Previous Response Available
+            <Card className="mb-8 border-2 border-blue-300 shadow-lg bg-gradient-to-r from-blue-50 to-indigo-50">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-blue-900 text-xl">
+                  <Copy className="h-6 w-6" />
+                  Nothing Changed This Week?
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-green-700 mb-4">
-                  You can copy your responses from the last completed check-in to save time. 
-                  You'll be able to review and modify them before submitting.
+                <p className="text-blue-800 mb-4 text-base">
+                  If there are no new health concerns or incidents to report, you can quickly use your previous week's responses as a starting point. 
+                  You'll still be able to review and make any necessary changes before submitting.
                 </p>
-                <Button 
-                  onClick={handleCopyFromPrevious}
-                  variant="outline" 
-                  className="border-green-300 text-green-800 hover:bg-green-100"
-                >
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy from Previous Response
-                </Button>
+                <div className="flex gap-3">
+                  <Button 
+                    onClick={handleCopyFromPrevious}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 text-base font-medium"
+                    data-testid="button-copy-previous-responses"
+                  >
+                    <Copy className="mr-2 h-5 w-5" />
+                    Use Last Week's Answers
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                    onClick={() => setCopiedFromPrevious(true)}
+                    data-testid="button-start-fresh"
+                  >
+                    Start Fresh
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           )}
