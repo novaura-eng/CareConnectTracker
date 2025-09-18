@@ -828,38 +828,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Submit survey response
   app.post("/api/survey/:checkInId/submit", async (req, res) => {
     try {
-      console.log("=== SURVEY SUBMISSION DEBUG ===");
-      console.log("1. Raw checkInId param:", req.params.checkInId);
-      console.log("2. Request body:", JSON.stringify(req.body, null, 2));
-      
       const checkInId = parseInt(req.params.checkInId);
-      console.log("3. Parsed checkInId:", checkInId);
-      console.log("4. Is checkInId valid integer?", !isNaN(checkInId) && checkInId <= 2147483647);
       
       // Check if this looks like a timestamp instead of a real ID
       if (checkInId > 2147483647) {
-        console.log("5. ERROR: checkInId looks like a timestamp, not a database ID!");
         return res.status(400).json({ 
-          message: "Invalid check-in ID - appears to be a timestamp instead of database ID",
-          receivedId: req.params.checkInId,
-          hint: "Frontend may be passing timestamp instead of actual checkIn ID"
+          message: "Invalid check-in ID",
         });
       }
       
       // Get check-in details to extract caregiver info
-      console.log("5. Fetching check-in details for ID:", checkInId);
       const checkInDetails = await storage.getWeeklyCheckInWithDetails(checkInId);
-      console.log("6. Check-in details:", JSON.stringify(checkInDetails, null, 2));
       
       if (!checkInDetails) {
-        console.log("7. ERROR: Check-in not found");
         return res.status(404).json({ message: "Check-in not found" });
+      }
+
+      // SECURITY: Check if survey has already been completed (prevent data integrity violations)
+      if (checkInDetails.checkIn.isCompleted) {
+        return res.status(409).json({ 
+          message: "This survey has already been completed and cannot be modified",
+          completedAt: checkInDetails.checkIn.completedAt 
+        });
       }
 
       // For weekly check-ins, handle the legacy survey response format
       if (req.body.hospitalVisits !== undefined) {
-        console.log("8. Processing as weekly check-in (hospitalVisits detected)");
-        
         // Use the existing "Weekly Check In" survey (ID 9)
         const dataToValidate = {
           surveyId: 9, // Use the existing "Weekly Check In" survey
@@ -871,25 +865,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             responses: req.body
           }
         };
-        console.log("9. Data to validate:", JSON.stringify(dataToValidate, null, 2));
         
         const validatedData = insertSurveyResponseSchema.parse(dataToValidate);
-        console.log("10. Validated data:", JSON.stringify(validatedData, null, 2));
 
         // Create survey response
-        console.log("11. Creating survey response...");
         const response = await storage.createSurveyResponse(validatedData);
-        console.log("12. Survey response created:", JSON.stringify(response, null, 2));
         
         // Mark check-in as completed
-        console.log("13. Marking check-in as completed...");
         await storage.updateCheckInCompletion(checkInId);
-        console.log("14. Check-in marked as completed");
 
-        console.log("15. SUCCESS: Sending success response");
         res.json({ message: "Survey submitted successfully", response });
       } else {
-        console.log("8. Processing as dynamic survey submission");
         // This is a dynamic survey submission
         const validatedData = insertSurveyResponseSchema.parse({
           ...req.body,
@@ -905,10 +891,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json({ message: "Survey submitted successfully", response });
       }
     } catch (error) {
-      console.error("=== SURVEY SUBMISSION ERROR ===");
-      console.error("Error details:", error);
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
+      console.error("Survey submission error:", error.message);
       res.status(500).json({ message: "Internal server error" });
     }
   });
