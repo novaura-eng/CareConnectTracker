@@ -409,24 +409,31 @@ export default function SurveyForm({ checkInDetails, patientId }: SurveyFormProp
       {/* Survey Form */}
       <main className="px-4 py-6 sm:py-8 sm:px-6 lg:px-8">
         <div className="max-w-2xl mx-auto">
-          {/* Nothing Changed - Quick Copy Card - Only show for caregivers */}
-          {isCaregiverAuth && previousResponse && !copiedFromPrevious && (
-            <Card className="mb-8 border-2 border-blue-300 shadow-lg bg-gradient-to-r from-blue-50 to-indigo-50">
+          {/* Nothing Changed - Quick Copy Card - Always show for caregivers */}
+          {isCaregiverAuth && !copiedFromPrevious && (
+            <Card className={`mb-8 border-2 shadow-lg ${previousResponse ? 'border-blue-300 bg-gradient-to-r from-blue-50 to-indigo-50' : 'border-gray-300 bg-gradient-to-r from-gray-50 to-gray-100'}`}>
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-blue-900 text-xl">
+                <CardTitle className={`flex items-center gap-2 text-xl ${previousResponse ? 'text-blue-900' : 'text-gray-600'}`}>
                   <Copy className="h-6 w-6" />
                   Nothing Changed This Week?
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-blue-800 mb-4 text-base">
-                  If there are no new health concerns or incidents to report, you can quickly use your previous week's responses as a starting point. 
-                  You'll still be able to review and make any necessary changes before submitting.
+                <p className={`mb-4 text-base ${previousResponse ? 'text-blue-800' : 'text-gray-600'}`}>
+                  {previousResponse 
+                    ? "If there are no new health concerns or incidents to report, you can quickly use your previous week's responses as a starting point. You'll still be able to review and make any necessary changes before submitting."
+                    : "This feature allows you to copy previous responses when available. No previous submissions found for this patient yet."
+                  }
                 </p>
                 <div className="flex gap-3">
                   <Button 
                     onClick={handleCopyFromPrevious}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 text-base font-medium"
+                    disabled={!previousResponse}
+                    className={`px-6 py-2 text-base font-medium ${
+                      previousResponse 
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300'
+                    }`}
                     data-testid="button-copy-previous-responses"
                   >
                     <Copy className="mr-2 h-5 w-5" />
@@ -434,7 +441,7 @@ export default function SurveyForm({ checkInDetails, patientId }: SurveyFormProp
                   </Button>
                   <Button 
                     variant="outline" 
-                    className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                    className={`${previousResponse ? 'border-blue-300 text-blue-700 hover:bg-blue-100' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
                     onClick={() => setCopiedFromPrevious(true)}
                     data-testid="button-start-fresh"
                   >
