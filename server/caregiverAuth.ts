@@ -21,25 +21,33 @@ export function getCaregiverSession() {
     ? `postgresql://postgres.ripejazpgtjutmjqfiql:${encodeURIComponent(process.env.SUPABASE_PASSWORD)}@aws-1-us-east-1.pooler.supabase.com:6543/postgres`
     : null;
   
+  const connectionString = supabaseConnectionString || process.env.DATABASE_URL;
+  console.log(`🔐 Caregiver session store connecting to: ${connectionString ? 'DATABASE CONFIGURED' : 'NO DATABASE CONFIGURED'}`);
+  
   const sessionStore = new pgStore({
-    conString: supabaseConnectionString || process.env.DATABASE_URL,
+    conString: connectionString,
     createTableIfMissing: false,
     ttl: sessionTtl,
-    tableName: "sessions",
+    tableName: "sessions", // Same table as regular auth but different session name
   });
   
-  return session({
-    name: "caregiver-session",
+  const sessionConfig = {
+    name: "caregiver-session", // Unique name to separate from regular auth
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
+      secure: true, // Consistent with regular auth - always secure
       maxAge: sessionTtl,
+      sameSite: 'lax' as const, // Add explicit sameSite for better compatibility
     },
-  });
+  };
+  
+  console.log(`🔐 Caregiver session config: name="${sessionConfig.name}", secure=${sessionConfig.cookie.secure}, sameSite=${sessionConfig.cookie.sameSite}`);
+  
+  return session(sessionConfig);
 }
 
 export const isCaregiver: RequestHandler = async (req, res, next) => {

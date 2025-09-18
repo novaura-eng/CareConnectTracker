@@ -46,6 +46,17 @@ app.use((req, res, next) => {
   
   const server = await registerRoutes(app);
   log(`✅ Routes registered successfully`);
+  
+  // Add route verification for debugging
+  log(`🔍 Verifying critical API endpoints are registered:`);
+  const criticalRoutes = [
+    'POST /api/caregiver/login',
+    'POST /api/caregiver/check-eligibility',
+    'GET /api/caregiver/session',
+    'POST /api/caregiver/logout'
+  ];
+  log(`   📋 Expected caregiver endpoints: ${criticalRoutes.join(', ')}`);
+  log(`   🔧 If endpoints return 404 in production, check build process`);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -61,14 +72,40 @@ app.use((req, res, next) => {
     await setupVite(app, server);
   } else {
     log(`📦 Setting up production static file serving`);
+    
+    // Verify build artifacts before attempting to serve static files
+    const path = await import("path");
+    const fs = await import("fs");
+    const distPath = path.resolve(import.meta.dirname, "dist", "public");
+    const serverBundle = path.resolve(import.meta.dirname, "dist", "index.js");
+    
+    log(`🔍 Checking build artifacts:`);
+    log(`   - Client build: ${distPath}`);
+    log(`   - Server bundle: ${serverBundle}`);
+    
+    if (!fs.existsSync(distPath)) {
+      log(`❌ Client build directory not found: ${distPath}`);
+      log(`💡 Production requires building the client first`);
+      log(`🔧 Run: npm run build`);
+      throw new Error(`Missing client build artifacts. Run 'npm run build' first.`);
+    }
+    
+    if (!fs.existsSync(serverBundle)) {
+      log(`⚠️  Server bundle not found: ${serverBundle}`);
+      log(`💡 You might be running the unbundled server in production`);
+      log(`🔧 For optimal performance, run: npm run build && npm run start`);
+    }
+    
     try {
       serveStatic(app);
-      log(`✅ Production static files configured`);
+      log(`✅ Production static files configured successfully`);
+      log(`🌐 API endpoints available under /api/`);
+      log(`📱 Frontend served from: ${distPath}`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       log(`❌ Production static file setup failed: ${errorMessage}`);
-      log(`💡 This might indicate the app wasn't properly built for production`);
-      log(`🔍 Run 'npm run build' to create production assets`);
+      log(`💡 This might indicate corrupted build artifacts`);
+      log(`🔧 Try: rm -rf dist && npm run build`);
       throw error;
     }
   }
