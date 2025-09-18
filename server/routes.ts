@@ -1629,6 +1629,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const patient = await storage.createPatient(req.body);
       console.log("Patient created successfully:", patient);
+      
+      // If patient has a caregiver assigned, automatically create weekly check-in for current week
+      if (patient.caregiverId) {
+        try {
+          const currentDate = new Date();
+          
+          // Get Monday of current week
+          const weekStart = new Date(currentDate);
+          weekStart.setDate(currentDate.getDate() - currentDate.getDay() + 1);
+          weekStart.setHours(0, 0, 0, 0);
+          
+          // Get Sunday of current week  
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekStart.getDate() + 6);
+          weekEnd.setHours(23, 59, 59, 999);
+
+          // Check if check-in already exists for this week
+          const existingCheckIns = await storage.getCheckInsForWeek(weekStart, weekEnd);
+          const exists = existingCheckIns.some(
+            ci => ci.checkIn.caregiverId === patient.caregiverId && ci.checkIn.patientId === patient.id
+          );
+
+          if (!exists) {
+            const checkIn = await storage.createWeeklyCheckIn({
+              caregiverId: patient.caregiverId,
+              patientId: patient.id,
+              weekStartDate: weekStart,
+              weekEndDate: weekEnd,
+              isCompleted: false,
+              remindersSent: 0,
+            });
+
+            // Get caregiver details for SMS notification
+            const caregiver = await storage.getCaregiverById(patient.caregiverId);
+            if (caregiver && caregiver.phone) {
+              // Send initial SMS notification
+              const surveyUrl = `${process.env.SURVEY_BASE_URL || 'http://localhost:5000'}/survey/${checkIn.id}`;
+              await smsService.sendWeeklyCheckInReminder(
+                caregiver.phone,
+                caregiver.name,
+                patient.name,
+                surveyUrl
+              );
+              console.log(`Created weekly check-in and sent SMS for ${caregiver.name} - ${patient.name}`);
+            } else {
+              console.log(`Created weekly check-in for patient ${patient.name} (caregiver has no phone number)`);
+            }
+          }
+        } catch (checkInError) {
+          // Log error but don't fail patient creation
+          console.error("Error creating automatic weekly check-in:", checkInError);
+        }
+      }
+      
       res.json(patient);
     } catch (error: unknown) {
       console.error("Error creating patient:", error);
