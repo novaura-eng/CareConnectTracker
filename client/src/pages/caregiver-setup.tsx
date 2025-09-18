@@ -33,13 +33,33 @@ export default function CaregiverSetup() {
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  // Phone number formatting helper
-  const formatPhoneNumber = (phone: string): string => {
-    const digits = phone.replace(/\D/g, "");
-    if (digits.length === 10) {
-      return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+  // Function to format phone number with hyphens
+  const formatPhoneNumber = (value: string, previousValue: string = '') => {
+    // Remove all non-digits
+    const phoneNumber = value.replace(/\D/g, '');
+    
+    // Limit to 10 digits
+    const limitedPhoneNumber = phoneNumber.substring(0, 10);
+    
+    // If the new value has fewer digits than before, don't auto-format immediately
+    // This allows proper deletion/backspacing
+    const previousDigits = previousValue.replace(/\D/g, '');
+    const isDeleting = limitedPhoneNumber.length < previousDigits.length;
+    
+    // Apply formatting: XXX-XXX-XXXX, but be more careful with deletion
+    if (limitedPhoneNumber.length >= 6 && !isDeleting) {
+      return `${limitedPhoneNumber.substring(0, 3)}-${limitedPhoneNumber.substring(3, 6)}-${limitedPhoneNumber.substring(6)}`;
+    } else if (limitedPhoneNumber.length > 6) {
+      // When deleting, still format if we have more than 6 digits
+      return `${limitedPhoneNumber.substring(0, 3)}-${limitedPhoneNumber.substring(3, 6)}-${limitedPhoneNumber.substring(6)}`;
+    } else if (limitedPhoneNumber.length >= 3 && !isDeleting) {
+      return `${limitedPhoneNumber.substring(0, 3)}-${limitedPhoneNumber.substring(3)}`;
+    } else if (limitedPhoneNumber.length > 3) {
+      // When deleting, still format if we have more than 3 digits
+      return `${limitedPhoneNumber.substring(0, 3)}-${limitedPhoneNumber.substring(3)}`;
     }
-    return phone;
+    
+    return limitedPhoneNumber;
   };
 
   // Form validation
@@ -81,7 +101,7 @@ export default function CaregiverSetup() {
     setMessage("");
     
     try {
-      // Format phone number as XXX-XXX-XXXX
+      // Extract digits from the already formatted phone number
       const digits = formData.phone.replace(/\D/g, "");
       
       if (!digits || digits.length !== 10) {
@@ -96,7 +116,8 @@ export default function CaregiverSetup() {
         return;
       }
 
-      const formattedPhone = formatPhoneNumber(digits);
+      // Phone number is already formatted from the input
+      const formattedPhone = formData.phone;
 
       const responseObj = await apiRequest("POST", "/api/caregiver/check-eligibility", { 
         phone: formattedPhone, 
@@ -140,9 +161,8 @@ export default function CaregiverSetup() {
     setError("");
 
     try {
-      // Format phone number as XXX-XXX-XXXX
-      const digits = formData.phone.replace(/\D/g, "");
-      const formattedPhone = formatPhoneNumber(digits);
+      // Phone number is already formatted from the input
+      const formattedPhone = formData.phone;
       
       const setupResponse = await apiRequest("POST", "/api/caregiver/setup-password", {
         phone: formattedPhone,
@@ -210,10 +230,13 @@ export default function CaregiverSetup() {
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="(555) 123-4567"
+                  placeholder="203-555-1234"
                   disabled={eligible && eligibilityChecked}
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) => {
+                    const formattedValue = formatPhoneNumber(e.target.value, formData.phone);
+                    setFormData({ ...formData, phone: formattedValue });
+                  }}
                   className={formErrors.phone ? "border-red-500" : ""}
                 />
                 {formErrors.phone && (
