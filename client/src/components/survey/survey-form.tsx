@@ -40,6 +40,9 @@ export default function SurveyForm({ checkInDetails, patientId }: SurveyFormProp
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [copiedFromPrevious, setCopiedFromPrevious] = useState(false);
   
+  // Check if survey has already been completed
+  const isAlreadyCompleted = checkInDetails?.checkIn?.isCompleted || false;
+  
   // Check if user is a caregiver (for showing copy functionality)
   const { caregiver, isAuthenticated: isCaregiverAuth } = useCaregiverAuth();
   
@@ -119,6 +122,46 @@ export default function SurveyForm({ checkInDetails, patientId }: SurveyFormProp
       });
     }
   };
+
+  // If already completed, show read-only view
+  if (isAlreadyCompleted) {
+    const completedAt = checkInDetails.checkIn.completedAt;
+    const completedDate = completedAt ? new Date(completedAt).toLocaleDateString("en-US", { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }) : 'Previously';
+
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <Card className="w-full max-w-md mx-4">
+          <CardContent className="pt-6 text-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+            <h2 className="text-xl font-semibold text-slate-900 mb-2">
+              Survey Already Completed
+            </h2>
+            <p className="text-slate-600 mb-2">
+              This weekly check-in was submitted on:
+            </p>
+            <p className="text-sm font-medium text-slate-900 mb-4">
+              {completedDate}
+            </p>
+            <p className="text-slate-500 text-sm mb-6">
+              Responses cannot be edited after submission to maintain data integrity.
+            </p>
+            <Button onClick={() => window.close()} className="w-full" variant="outline">
+              Close
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isSubmitted) {
     return (
