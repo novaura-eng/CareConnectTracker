@@ -123,7 +123,7 @@ export default function SurveyForm({ checkInDetails, patientId }: SurveyFormProp
     }
   };
 
-  // If already completed, show read-only view
+  // If already completed, show read-only responses
   if (isAlreadyCompleted) {
     const completedAt = checkInDetails.checkIn.completedAt;
     const completedDate = completedAt ? new Date(completedAt).toLocaleDateString("en-US", { 
@@ -135,30 +135,227 @@ export default function SurveyForm({ checkInDetails, patientId }: SurveyFormProp
       minute: '2-digit'
     }) : 'Previously';
 
+    // Extract submitted responses from checkInDetails
+    const submittedResponses = checkInDetails.response?.meta?.responses || {};
+
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Card className="w-full max-w-md mx-4">
-          <CardContent className="pt-6 text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="h-8 w-8 text-green-600" />
+      <div className="min-h-screen bg-slate-50">
+        {/* Header */}
+        <header className="bg-white shadow-sm border-b border-slate-200">
+          <div className="max-w-7xl mx-auto px-4 py-4 sm:py-6 sm:px-6 lg:px-8">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900">Weekly Caregiver Check-in</h1>
+                </div>
+                <p className="mt-1 text-sm text-green-600">Completed on {completedDate}</p>
+              </div>
+              <div className="text-left sm:text-right flex-shrink-0">
+                <p className="text-xs sm:text-sm text-slate-500">Week of</p>
+                <p className="text-sm font-medium text-slate-900">
+                  {formatWeekRange(checkInDetails.checkIn.weekStartDate, checkInDetails.checkIn.weekEndDate)}
+                </p>
+              </div>
             </div>
-            <h2 className="text-xl font-semibold text-slate-900 mb-2">
-              Survey Already Completed
-            </h2>
-            <p className="text-slate-600 mb-2">
-              This weekly check-in was submitted on:
-            </p>
-            <p className="text-sm font-medium text-slate-900 mb-4">
-              {completedDate}
-            </p>
-            <p className="text-slate-500 text-sm mb-6">
-              Responses cannot be edited after submission to maintain data integrity.
-            </p>
-            <Button onClick={() => window.close()} className="w-full" variant="outline">
-              Close
-            </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </header>
+
+        {/* Read-only Survey Content */}
+        <main className="px-4 py-6 sm:py-8 sm:px-6 lg:px-8">
+          <div className="max-w-2xl mx-auto">
+            {/* Read-only Notice */}
+            <Alert className="mb-8 border-green-200 bg-green-50">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">
+                This survey has been completed and submitted. Responses are shown below for your records and cannot be modified.
+              </AlertDescription>
+            </Alert>
+
+            {/* Welcome Card */}
+            <Card className="mb-8">
+              <CardContent className="p-6">
+                <div className="flex items-start space-x-4">
+                  <div className="flex-shrink-0">
+                    <div className="w-12 h-12 bg-healthcare-100 rounded-lg flex items-center justify-center">
+                      <HeartHandshake className="h-6 w-6 text-healthcare-600" />
+                    </div>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">
+                      {checkInDetails.caregiver?.name}
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Caring for: {checkInDetails.patient?.name}
+                    </p>
+                    <p className="mt-2 text-sm text-slate-600">
+                      Your completed responses are shown below for your records.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Read-only Survey Questions */}
+            <div className="space-y-8">
+              {/* Question 1: Hospital Visits */}
+              <Card className="border-gray-200">
+                <CardContent className="p-6 bg-gray-50">
+                  <h3 className="text-lg font-medium text-slate-900 mb-4">
+                    1. Over the past week, have there been any hospital visits?
+                  </h3>
+                  <div className="mb-4">
+                    <div className="flex items-center space-x-3 p-3 bg-white border border-slate-200 rounded-lg">
+                      <div className={`w-4 h-4 rounded-full border-2 ${submittedResponses.hospitalVisits ? 'bg-healthcare-600 border-healthcare-600' : 'border-gray-300'}`}>
+                        {submittedResponses.hospitalVisits && <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5"></div>}
+                      </div>
+                      <span className="text-sm font-medium text-slate-700">
+                        {submittedResponses.hospitalVisits ? 'Yes, there were hospital visits' : 'No hospital visits'}
+                      </span>
+                    </div>
+                  </div>
+                  {submittedResponses.hospitalVisits && submittedResponses.hospitalDetails && (
+                    <div className="mt-4">
+                      <label className="text-sm font-medium text-slate-700 mb-2 block">Details provided:</label>
+                      <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                        <p className="text-sm text-slate-600">{submittedResponses.hospitalDetails}</p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Question 2: Accidents/Falls */}
+              <Card className="border-gray-200">
+                <CardContent className="p-6 bg-gray-50">
+                  <h3 className="text-lg font-medium text-slate-900 mb-4">
+                    2. Have there been any accidents or falls this week?
+                  </h3>
+                  <div className="mb-4">
+                    <div className="flex items-center space-x-3 p-3 bg-white border border-slate-200 rounded-lg">
+                      <div className={`w-4 h-4 rounded-full border-2 ${submittedResponses.accidentsFalls ? 'bg-healthcare-600 border-healthcare-600' : 'border-gray-300'}`}>
+                        {submittedResponses.accidentsFalls && <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5"></div>}
+                      </div>
+                      <span className="text-sm font-medium text-slate-700">
+                        {submittedResponses.accidentsFalls ? 'Yes, there were accidents or falls' : 'No accidents or falls'}
+                      </span>
+                    </div>
+                  </div>
+                  {submittedResponses.accidentsFalls && submittedResponses.accidentDetails && (
+                    <div className="mt-4">
+                      <label className="text-sm font-medium text-slate-700 mb-2 block">Details provided:</label>
+                      <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                        <p className="text-sm text-slate-600">{submittedResponses.accidentDetails}</p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Question 3: Mental Health */}
+              <Card className="border-gray-200">
+                <CardContent className="p-6 bg-gray-50">
+                  <h3 className="text-lg font-medium text-slate-900 mb-4">
+                    3. Have you noticed any changes in mental health or behavior?
+                  </h3>
+                  <div className="mb-4">
+                    <div className="flex items-center space-x-3 p-3 bg-white border border-slate-200 rounded-lg">
+                      <div className={`w-4 h-4 rounded-full border-2 ${submittedResponses.mentalHealth ? 'bg-healthcare-600 border-healthcare-600' : 'border-gray-300'}`}>
+                        {submittedResponses.mentalHealth && <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5"></div>}
+                      </div>
+                      <span className="text-sm font-medium text-slate-700">
+                        {submittedResponses.mentalHealth ? 'Yes, there were changes' : 'No significant changes'}
+                      </span>
+                    </div>
+                  </div>
+                  {submittedResponses.mentalHealth && submittedResponses.mentalHealthDetails && (
+                    <div className="mt-4">
+                      <label className="text-sm font-medium text-slate-700 mb-2 block">Details provided:</label>
+                      <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                        <p className="text-sm text-slate-600">{submittedResponses.mentalHealthDetails}</p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Question 4: Physical Health */}
+              <Card className="border-gray-200">
+                <CardContent className="p-6 bg-gray-50">
+                  <h3 className="text-lg font-medium text-slate-900 mb-4">
+                    4. Are there any new physical health concerns?
+                  </h3>
+                  <div className="mb-4">
+                    <div className="flex items-center space-x-3 p-3 bg-white border border-slate-200 rounded-lg">
+                      <div className={`w-4 h-4 rounded-full border-2 ${submittedResponses.physicalHealth ? 'bg-healthcare-600 border-healthcare-600' : 'border-gray-300'}`}>
+                        {submittedResponses.physicalHealth && <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5"></div>}
+                      </div>
+                      <span className="text-sm font-medium text-slate-700">
+                        {submittedResponses.physicalHealth ? 'Yes, there are new concerns' : 'No new physical health concerns'}
+                      </span>
+                    </div>
+                  </div>
+                  {submittedResponses.physicalHealth && submittedResponses.physicalHealthDetails && (
+                    <div className="mt-4">
+                      <label className="text-sm font-medium text-slate-700 mb-2 block">Details provided:</label>
+                      <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                        <p className="text-sm text-slate-600">{submittedResponses.physicalHealthDetails}</p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Question 5: Contact Changes */}
+              <Card className="border-gray-200">
+                <CardContent className="p-6 bg-gray-50">
+                  <h3 className="text-lg font-medium text-slate-900 mb-4">
+                    5. Have there been any changes to emergency contacts or care team?
+                  </h3>
+                  <div className="mb-4">
+                    <div className="flex items-center space-x-3 p-3 bg-white border border-slate-200 rounded-lg">
+                      <div className={`w-4 h-4 rounded-full border-2 ${submittedResponses.contactChanges ? 'bg-healthcare-600 border-healthcare-600' : 'border-gray-300'}`}>
+                        {submittedResponses.contactChanges && <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5"></div>}
+                      </div>
+                      <span className="text-sm font-medium text-slate-700">
+                        {submittedResponses.contactChanges ? 'Yes, there were changes' : 'No changes to contacts or care team'}
+                      </span>
+                    </div>
+                  </div>
+                  {submittedResponses.contactChanges && submittedResponses.contactDetails && (
+                    <div className="mt-4">
+                      <label className="text-sm font-medium text-slate-700 mb-2 block">Details provided:</label>
+                      <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                        <p className="text-sm text-slate-600">{submittedResponses.contactDetails}</p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Additional Comments */}
+              {submittedResponses.additionalComments && (
+                <Card className="border-gray-200">
+                  <CardContent className="p-6 bg-gray-50">
+                    <h3 className="text-lg font-medium text-slate-900 mb-4">
+                      Additional Comments
+                    </h3>
+                    <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                      <p className="text-sm text-slate-600">{submittedResponses.additionalComments}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Close Button */}
+              <div className="text-center">
+                <Button onClick={() => window.close()} variant="outline" className="px-8">
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
