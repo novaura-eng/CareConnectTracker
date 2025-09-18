@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -39,7 +40,7 @@ export default function Caregivers() {
     email: "",
     address: "",
     emergencyContact: "",
-    state: "default",
+    state: "",
     isActive: true,
   });
 
@@ -62,7 +63,7 @@ export default function Caregivers() {
       email: "",
       address: "",
       emergencyContact: "",
-      state: "default",
+      state: "",
       isActive: true,
     });
     setFormErrors({});
@@ -78,6 +79,8 @@ export default function Caregivers() {
     } else if (digits.length !== 10) {
       errors.phone = "Please enter a valid 10-digit phone number";
     }
+    
+    if (!formData.state.trim()) errors.state = "State is required";
     
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -253,6 +256,71 @@ export default function Caregivers() {
                     </div>
                     
                     <div className="space-y-2">
+                      <Label htmlFor="state">State</Label>
+                      <Select
+                        value={formData.state}
+                        onValueChange={(value) => setFormData({ ...formData, state: value })}
+                      >
+                        <SelectTrigger className={formErrors.state ? "border-red-500" : ""}>
+                          <SelectValue placeholder="Select a state" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Alabama">Alabama</SelectItem>
+                          <SelectItem value="Alaska">Alaska</SelectItem>
+                          <SelectItem value="Arizona">Arizona</SelectItem>
+                          <SelectItem value="Arkansas">Arkansas</SelectItem>
+                          <SelectItem value="California">California</SelectItem>
+                          <SelectItem value="Colorado">Colorado</SelectItem>
+                          <SelectItem value="Connecticut">Connecticut</SelectItem>
+                          <SelectItem value="Delaware">Delaware</SelectItem>
+                          <SelectItem value="Florida">Florida</SelectItem>
+                          <SelectItem value="Georgia">Georgia</SelectItem>
+                          <SelectItem value="Hawaii">Hawaii</SelectItem>
+                          <SelectItem value="Idaho">Idaho</SelectItem>
+                          <SelectItem value="Illinois">Illinois</SelectItem>
+                          <SelectItem value="Indiana">Indiana</SelectItem>
+                          <SelectItem value="Iowa">Iowa</SelectItem>
+                          <SelectItem value="Kansas">Kansas</SelectItem>
+                          <SelectItem value="Kentucky">Kentucky</SelectItem>
+                          <SelectItem value="Louisiana">Louisiana</SelectItem>
+                          <SelectItem value="Maine">Maine</SelectItem>
+                          <SelectItem value="Maryland">Maryland</SelectItem>
+                          <SelectItem value="Massachusetts">Massachusetts</SelectItem>
+                          <SelectItem value="Michigan">Michigan</SelectItem>
+                          <SelectItem value="Minnesota">Minnesota</SelectItem>
+                          <SelectItem value="Mississippi">Mississippi</SelectItem>
+                          <SelectItem value="Missouri">Missouri</SelectItem>
+                          <SelectItem value="Montana">Montana</SelectItem>
+                          <SelectItem value="Nebraska">Nebraska</SelectItem>
+                          <SelectItem value="Nevada">Nevada</SelectItem>
+                          <SelectItem value="New Hampshire">New Hampshire</SelectItem>
+                          <SelectItem value="New Jersey">New Jersey</SelectItem>
+                          <SelectItem value="New Mexico">New Mexico</SelectItem>
+                          <SelectItem value="New York">New York</SelectItem>
+                          <SelectItem value="North Carolina">North Carolina</SelectItem>
+                          <SelectItem value="North Dakota">North Dakota</SelectItem>
+                          <SelectItem value="Ohio">Ohio</SelectItem>
+                          <SelectItem value="Oklahoma">Oklahoma</SelectItem>
+                          <SelectItem value="Oregon">Oregon</SelectItem>
+                          <SelectItem value="Pennsylvania">Pennsylvania</SelectItem>
+                          <SelectItem value="Rhode Island">Rhode Island</SelectItem>
+                          <SelectItem value="South Carolina">South Carolina</SelectItem>
+                          <SelectItem value="South Dakota">South Dakota</SelectItem>
+                          <SelectItem value="Tennessee">Tennessee</SelectItem>
+                          <SelectItem value="Texas">Texas</SelectItem>
+                          <SelectItem value="Utah">Utah</SelectItem>
+                          <SelectItem value="Vermont">Vermont</SelectItem>
+                          <SelectItem value="Virginia">Virginia</SelectItem>
+                          <SelectItem value="Washington">Washington</SelectItem>
+                          <SelectItem value="West Virginia">West Virginia</SelectItem>
+                          <SelectItem value="Wisconsin">Wisconsin</SelectItem>
+                          <SelectItem value="Wyoming">Wyoming</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {formErrors.state && <p className="text-sm text-red-500">{formErrors.state}</p>}
+                    </div>
+                    
+                    <div className="space-y-2">
                       <Label htmlFor="email">Email (Optional)</Label>
                       <Input
                         id="email"
@@ -347,6 +415,71 @@ export default function Caregivers() {
                     className={formErrors.phone ? "border-red-500" : ""}
                   />
                   {formErrors.phone && <p className="text-sm text-red-500">{formErrors.phone}</p>}
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="mobile-state">State</Label>
+                  <Select
+                    value={formData.state}
+                    onValueChange={(value) => setFormData({ ...formData, state: value })}
+                  >
+                    <SelectTrigger className={formErrors.state ? "border-red-500" : ""}>
+                      <SelectValue placeholder="Select a state" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Alabama">Alabama</SelectItem>
+                      <SelectItem value="Alaska">Alaska</SelectItem>
+                      <SelectItem value="Arizona">Arizona</SelectItem>
+                      <SelectItem value="Arkansas">Arkansas</SelectItem>
+                      <SelectItem value="California">California</SelectItem>
+                      <SelectItem value="Colorado">Colorado</SelectItem>
+                      <SelectItem value="Connecticut">Connecticut</SelectItem>
+                      <SelectItem value="Delaware">Delaware</SelectItem>
+                      <SelectItem value="Florida">Florida</SelectItem>
+                      <SelectItem value="Georgia">Georgia</SelectItem>
+                      <SelectItem value="Hawaii">Hawaii</SelectItem>
+                      <SelectItem value="Idaho">Idaho</SelectItem>
+                      <SelectItem value="Illinois">Illinois</SelectItem>
+                      <SelectItem value="Indiana">Indiana</SelectItem>
+                      <SelectItem value="Iowa">Iowa</SelectItem>
+                      <SelectItem value="Kansas">Kansas</SelectItem>
+                      <SelectItem value="Kentucky">Kentucky</SelectItem>
+                      <SelectItem value="Louisiana">Louisiana</SelectItem>
+                      <SelectItem value="Maine">Maine</SelectItem>
+                      <SelectItem value="Maryland">Maryland</SelectItem>
+                      <SelectItem value="Massachusetts">Massachusetts</SelectItem>
+                      <SelectItem value="Michigan">Michigan</SelectItem>
+                      <SelectItem value="Minnesota">Minnesota</SelectItem>
+                      <SelectItem value="Mississippi">Mississippi</SelectItem>
+                      <SelectItem value="Missouri">Missouri</SelectItem>
+                      <SelectItem value="Montana">Montana</SelectItem>
+                      <SelectItem value="Nebraska">Nebraska</SelectItem>
+                      <SelectItem value="Nevada">Nevada</SelectItem>
+                      <SelectItem value="New Hampshire">New Hampshire</SelectItem>
+                      <SelectItem value="New Jersey">New Jersey</SelectItem>
+                      <SelectItem value="New Mexico">New Mexico</SelectItem>
+                      <SelectItem value="New York">New York</SelectItem>
+                      <SelectItem value="North Carolina">North Carolina</SelectItem>
+                      <SelectItem value="North Dakota">North Dakota</SelectItem>
+                      <SelectItem value="Ohio">Ohio</SelectItem>
+                      <SelectItem value="Oklahoma">Oklahoma</SelectItem>
+                      <SelectItem value="Oregon">Oregon</SelectItem>
+                      <SelectItem value="Pennsylvania">Pennsylvania</SelectItem>
+                      <SelectItem value="Rhode Island">Rhode Island</SelectItem>
+                      <SelectItem value="South Carolina">South Carolina</SelectItem>
+                      <SelectItem value="South Dakota">South Dakota</SelectItem>
+                      <SelectItem value="Tennessee">Tennessee</SelectItem>
+                      <SelectItem value="Texas">Texas</SelectItem>
+                      <SelectItem value="Utah">Utah</SelectItem>
+                      <SelectItem value="Vermont">Vermont</SelectItem>
+                      <SelectItem value="Virginia">Virginia</SelectItem>
+                      <SelectItem value="Washington">Washington</SelectItem>
+                      <SelectItem value="West Virginia">West Virginia</SelectItem>
+                      <SelectItem value="Wisconsin">Wisconsin</SelectItem>
+                      <SelectItem value="Wyoming">Wyoming</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {formErrors.state && <p className="text-sm text-red-500">{formErrors.state}</p>}
                 </div>
                 
                 <div className="space-y-2">
