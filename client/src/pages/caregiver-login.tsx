@@ -8,46 +8,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import InputMask from "react-input-mask";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { HeartHandshake, Phone, Lock, ArrowLeft, CheckCircle, UserPlus, Home } from "lucide-react";
 
 const loginSchema = z.object({
-  phone: z.string().min(1, "Phone number is required"),
+  phone: z.string().regex(/^\d{3}-\d{3}-\d{4}$/, "Enter a valid phone number"),
   password: z.string().min(1, "Password is required"),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
-// Function to format phone number with hyphens
-const formatPhoneNumber = (value: string, previousValue: string = '') => {
-  // Remove all non-digits
-  const phoneNumber = value.replace(/\D/g, '');
-  
-  // Limit to 10 digits
-  const limitedPhoneNumber = phoneNumber.substring(0, 10);
-  
-  // If the new value has fewer digits than before, don't auto-format immediately
-  // This allows proper deletion/backspacing
-  const previousDigits = previousValue.replace(/\D/g, '');
-  const isDeleting = limitedPhoneNumber.length < previousDigits.length;
-  
-  // Apply formatting: XXX-XXX-XXXX, but be more careful with deletion
-  if (limitedPhoneNumber.length >= 6 && !isDeleting) {
-    return `${limitedPhoneNumber.substring(0, 3)}-${limitedPhoneNumber.substring(3, 6)}-${limitedPhoneNumber.substring(6)}`;
-  } else if (limitedPhoneNumber.length > 6) {
-    // When deleting, still format if we have more than 6 digits
-    return `${limitedPhoneNumber.substring(0, 3)}-${limitedPhoneNumber.substring(3, 6)}-${limitedPhoneNumber.substring(6)}`;
-  } else if (limitedPhoneNumber.length >= 3 && !isDeleting) {
-    return `${limitedPhoneNumber.substring(0, 3)}-${limitedPhoneNumber.substring(3)}`;
-  } else if (limitedPhoneNumber.length > 3) {
-    // When deleting, still format if we have more than 3 digits
-    return `${limitedPhoneNumber.substring(0, 3)}-${limitedPhoneNumber.substring(3)}`;
-  }
-  
-  return limitedPhoneNumber;
-};
 
 export default function CaregiverLogin() {
   const [, setLocation] = useLocation();
@@ -147,15 +120,24 @@ export default function CaregiverLogin() {
                           Phone Number
                         </FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder="203-555-1234"
-                            className="h-12"
-                            {...field}
-                            onChange={(e) => {
-                              const formattedValue = formatPhoneNumber(e.target.value, field.value);
-                              field.onChange(formattedValue);
-                            }}
-                          />
+                          <InputMask
+                            mask="999-999-9999"
+                            maskChar=""
+                            value={field.value}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            inputRef={field.ref}
+                          >
+                            {(inputProps: any) => (
+                              <Input
+                                {...inputProps}
+                                name={field.name}
+                                placeholder="203-555-1234"
+                                className="h-12"
+                                type="tel"
+                              />
+                            )}
+                          </InputMask>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
