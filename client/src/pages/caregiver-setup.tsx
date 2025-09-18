@@ -202,6 +202,7 @@ export default function CaregiverSetup() {
                 <Label htmlFor="phone">Phone Number</Label>
                 <InputMask
                   mask="999-999-9999"
+                  maskChar=""
                   value={formData.phone}
                   disabled={eligible && eligibilityChecked}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -211,7 +212,7 @@ export default function CaregiverSetup() {
                       {...inputProps}
                       id="phone"
                       type="tel"
-                      placeholder="___-___-____"
+                      placeholder="203-555-1234"
                       className={formErrors.phone ? "border-red-500" : ""}
                     />
                   )}
