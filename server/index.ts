@@ -37,7 +37,15 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Improved environment detection
+  const nodeEnv = process.env.NODE_ENV || "development";
+  const isProduction = nodeEnv === "production";
+  
+  log(`🚀 Starting server in ${nodeEnv} mode`);
+  log(`📝 Environment detection: NODE_ENV=${nodeEnv}, isProduction=${isProduction}`);
+  
   const server = await registerRoutes(app);
+  log(`✅ Routes registered successfully`);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -47,13 +55,22 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
+  // Setup development or production mode
+  if (!isProduction) {
+    log(`🔧 Setting up Vite development server`);
     await setupVite(app, server);
   } else {
-    serveStatic(app);
+    log(`📦 Setting up production static file serving`);
+    try {
+      serveStatic(app);
+      log(`✅ Production static files configured`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      log(`❌ Production static file setup failed: ${errorMessage}`);
+      log(`💡 This might indicate the app wasn't properly built for production`);
+      log(`🔍 Run 'npm run build' to create production assets`);
+      throw error;
+    }
   }
 
   // ALWAYS serve the app on port 5000
