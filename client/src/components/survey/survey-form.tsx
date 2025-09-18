@@ -102,18 +102,21 @@ export default function SurveyForm({ checkInDetails, patientId }: SurveyFormProp
 
   const handleCopyFromPrevious = () => {
     if (previousResponse) {
+      // Extract the responses from the correct nested structure
+      const previousResponses = previousResponse.meta?.responses || {};
+      
       form.reset({
-        hospitalVisits: previousResponse.hospitalVisits || false,
-        hospitalDetails: previousResponse.hospitalDetails || "",
-        accidentsFalls: previousResponse.accidentsFalls || false,
-        accidentDetails: previousResponse.accidentDetails || "",
-        mentalHealth: previousResponse.mentalHealth || false,
-        mentalHealthDetails: previousResponse.mentalHealthDetails || "",
-        physicalHealth: previousResponse.physicalHealth || false,
-        physicalHealthDetails: previousResponse.physicalHealthDetails || "",
-        contactChanges: previousResponse.contactChanges || false,
-        contactDetails: previousResponse.contactDetails || "",
-        additionalComments: previousResponse.additionalComments || "",
+        hospitalVisits: previousResponses.hospitalVisits || false,
+        hospitalDetails: previousResponses.hospitalDetails || "",
+        accidentsFalls: previousResponses.accidentsFalls || false,
+        accidentDetails: previousResponses.accidentDetails || "",
+        mentalHealth: previousResponses.mentalHealth || false,
+        mentalHealthDetails: previousResponses.mentalHealthDetails || "",
+        physicalHealth: previousResponses.physicalHealth || false,
+        physicalHealthDetails: previousResponses.physicalHealthDetails || "",
+        contactChanges: previousResponses.contactChanges || false,
+        contactDetails: previousResponses.contactDetails || "",
+        additionalComments: previousResponses.additionalComments || "",
       });
       setCopiedFromPrevious(true);
       toast({
