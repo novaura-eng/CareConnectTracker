@@ -523,14 +523,14 @@ export default function SurveyForm({ checkInDetails, patientId }: SurveyFormProp
                             className="space-y-2"
                           >
                             <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="false" id="hospital-no" className="h-3 w-3 rounded-sm" />
-                              <label htmlFor="hospital-no" className="text-sm font-medium text-slate-700 cursor-pointer">
+                              <RadioGroupItem value="false" id="hospital-no" className="h-3 w-3 min-h-3 min-w-3 max-h-3 max-w-3 rounded-sm flex-shrink-0" />
+                              <label htmlFor="hospital-no" className="text-sm font-medium text-slate-700 cursor-pointer leading-none">
                                 No hospital visits
                               </label>
                             </div>
                             <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="true" id="hospital-yes" className="h-3 w-3 rounded-sm" />
-                              <label htmlFor="hospital-yes" className="text-sm font-medium text-slate-700 cursor-pointer">
+                              <RadioGroupItem value="true" id="hospital-yes" className="h-3 w-3 min-h-3 min-w-3 max-h-3 max-w-3 rounded-sm flex-shrink-0" />
+                              <label htmlFor="hospital-yes" className="text-sm font-medium text-slate-700 cursor-pointer leading-none">
                                 Yes, there were hospital visits
                               </label>
                             </div>
@@ -585,14 +585,14 @@ export default function SurveyForm({ checkInDetails, patientId }: SurveyFormProp
                             className="space-y-2"
                           >
                             <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="false" id="accidents-no" className="h-3 w-3 rounded-sm" />
-                              <label htmlFor="accidents-no" className="text-sm font-medium text-slate-700 cursor-pointer">
+                              <RadioGroupItem value="false" id="accidents-no" className="h-3 w-3 min-h-3 min-w-3 max-h-3 max-w-3 rounded-sm flex-shrink-0" />
+                              <label htmlFor="accidents-no" className="text-sm font-medium text-slate-700 cursor-pointer leading-none">
                                 No accidents or falls
                               </label>
                             </div>
                             <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="true" id="accidents-yes" className="h-3 w-3 rounded-sm" />
-                              <label htmlFor="accidents-yes" className="text-sm font-medium text-slate-700 cursor-pointer">
+                              <RadioGroupItem value="true" id="accidents-yes" className="h-3 w-3 min-h-3 min-w-3 max-h-3 max-w-3 rounded-sm flex-shrink-0" />
+                              <label htmlFor="accidents-yes" className="text-sm font-medium text-slate-700 cursor-pointer leading-none">
                                 Yes, there were accidents or falls
                               </label>
                             </div>
@@ -647,14 +647,14 @@ export default function SurveyForm({ checkInDetails, patientId }: SurveyFormProp
                             className="space-y-2"
                           >
                             <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="false" id="mental-no" className="h-3 w-3 rounded-sm" />
-                              <label htmlFor="mental-no" className="text-sm font-medium text-slate-700 cursor-pointer">
+                              <RadioGroupItem value="false" id="mental-no" className="h-3 w-3 min-h-3 min-w-3 max-h-3 max-w-3 rounded-sm flex-shrink-0" />
+                              <label htmlFor="mental-no" className="text-sm font-medium text-slate-700 cursor-pointer leading-none">
                                 No changes in mental health
                               </label>
                             </div>
                             <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="true" id="mental-yes" className="h-3 w-3 rounded-sm" />
-                              <label htmlFor="mental-yes" className="text-sm font-medium text-slate-700 cursor-pointer">
+                              <RadioGroupItem value="true" id="mental-yes" className="h-3 w-3 min-h-3 min-w-3 max-h-3 max-w-3 rounded-sm flex-shrink-0" />
+                              <label htmlFor="mental-yes" className="text-sm font-medium text-slate-700 cursor-pointer leading-none">
                                 Yes, there have been changes
                               </label>
                             </div>
@@ -709,14 +709,14 @@ export default function SurveyForm({ checkInDetails, patientId }: SurveyFormProp
                             className="space-y-2"
                           >
                             <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="false" id="physical-no" className="h-3 w-3 rounded-sm" />
-                              <label htmlFor="physical-no" className="text-sm font-medium text-slate-700 cursor-pointer">
+                              <RadioGroupItem value="false" id="physical-no" className="h-3 w-3 min-h-3 min-w-3 max-h-3 max-w-3 rounded-sm flex-shrink-0" />
+                              <label htmlFor="physical-no" className="text-sm font-medium text-slate-700 cursor-pointer leading-none">
                                 No changes in physical health
                               </label>
                             </div>
                             <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="true" id="physical-yes" className="h-3 w-3 rounded-sm" />
-                              <label htmlFor="physical-yes" className="text-sm font-medium text-slate-700 cursor-pointer">
+                              <RadioGroupItem value="true" id="physical-yes" className="h-3 w-3 min-h-3 min-w-3 max-h-3 max-w-3 rounded-sm flex-shrink-0" />
+                              <label htmlFor="physical-yes" className="text-sm font-medium text-slate-700 cursor-pointer leading-none">
                                 Yes, there have been changes
                               </label>
                             </div>
@@ -771,14 +771,14 @@ export default function SurveyForm({ checkInDetails, patientId }: SurveyFormProp
                             className="space-y-2"
                           >
                             <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="false" id="contact-no" className="h-3 w-3 rounded-sm" />
-                              <label htmlFor="contact-no" className="text-sm font-medium text-slate-700 cursor-pointer">
+                              <RadioGroupItem value="false" id="contact-no" className="h-3 w-3 min-h-3 min-w-3 max-h-3 max-w-3 rounded-sm flex-shrink-0" />
+                              <label htmlFor="contact-no" className="text-sm font-medium text-slate-700 cursor-pointer leading-none">
                                 No changes to contact information
                               </label>
                             </div>
                             <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="true" id="contact-yes" className="h-3 w-3 rounded-sm" />
-                              <label htmlFor="contact-yes" className="text-sm font-medium text-slate-700 cursor-pointer">
+                              <RadioGroupItem value="true" id="contact-yes" className="h-3 w-3 min-h-3 min-w-3 max-h-3 max-w-3 rounded-sm flex-shrink-0" />
+                              <label htmlFor="contact-yes" className="text-sm font-medium text-slate-700 cursor-pointer leading-none">
                                 Yes, there have been changes
                               </label>
                             </div>
