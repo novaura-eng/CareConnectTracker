@@ -12,32 +12,22 @@ export default function CaregiverSurvey() {
   const [, setLocation] = useLocation();
   const { isAuthenticated } = useCaregiverAuth();
 
-  // Mock check-in data for now - in real app, you'd create a new check-in or fetch existing one
+  // Extract checkInId from URL parameters
+  const urlParams = new URLSearchParams(window.location.search);
+  const checkInId = urlParams.get('checkInId');
+
   const { data: checkInDetails, isLoading, error } = useQuery({
-    queryKey: [`/api/caregiver/mock-checkin/${patientId}`],
-    enabled: !!patientId && isAuthenticated,
+    queryKey: [`/api/survey/${checkInId}`],
+    enabled: !!patientId && !!checkInId && isAuthenticated,
     queryFn: async () => {
-      // For now, we'll create a mock check-in structure
-      // In a real app, you'd have an endpoint to create/get current week's check-in
-      const patients = await fetch("/api/caregiver/patients").then(r => r.json());
-      const patient = patients.find((p: any) => p.id === parseInt(patientId!));
+      if (!checkInId) throw new Error("No checkIn ID provided");
       
-      if (!patient) throw new Error("Patient not found");
-      
-      // Mock check-in structure matching the expected format
-      return {
-        checkIn: {
-          id: Date.now(), // Mock ID
-          weekStartDate: new Date().toISOString(),
-          weekEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          isCompleted: false,
-        },
-        patient: patient,
-        caregiver: {
-          name: "Current Caregiver", // This would come from session
-        },
-        response: null,
-      };
+      // Fetch actual check-in details from the backend
+      const response = await fetch(`/api/survey/${checkInId}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch check-in details");
+      }
+      return response.json();
     },
   });
 
