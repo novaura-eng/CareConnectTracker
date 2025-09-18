@@ -520,17 +520,17 @@ export default function SurveyForm({ checkInDetails, patientId }: SurveyFormProp
                           <RadioGroup
                             onValueChange={(value) => field.onChange(value === "true")}
                             value={field.value?.toString()}
-                            className="space-y-3"
+                            className="space-y-2"
                           >
-                            <div className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
+                            <div className="flex items-center space-x-2">
                               <RadioGroupItem value="false" id="hospital-no" />
-                              <label htmlFor="hospital-no" className="text-sm font-medium text-slate-700 cursor-pointer flex-1">
+                              <label htmlFor="hospital-no" className="text-sm font-medium text-slate-700 cursor-pointer">
                                 No hospital visits
                               </label>
                             </div>
-                            <div className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
+                            <div className="flex items-center space-x-2">
                               <RadioGroupItem value="true" id="hospital-yes" />
-                              <label htmlFor="hospital-yes" className="text-sm font-medium text-slate-700 cursor-pointer flex-1">
+                              <label htmlFor="hospital-yes" className="text-sm font-medium text-slate-700 cursor-pointer">
                                 Yes, there were hospital visits
                               </label>
                             </div>
@@ -582,17 +582,17 @@ export default function SurveyForm({ checkInDetails, patientId }: SurveyFormProp
                           <RadioGroup
                             onValueChange={(value) => field.onChange(value === "true")}
                             value={field.value?.toString()}
-                            className="space-y-3"
+                            className="space-y-2"
                           >
-                            <div className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
+                            <div className="flex items-center space-x-2">
                               <RadioGroupItem value="false" id="accidents-no" />
-                              <label htmlFor="accidents-no" className="text-sm font-medium text-slate-700 cursor-pointer flex-1">
+                              <label htmlFor="accidents-no" className="text-sm font-medium text-slate-700 cursor-pointer">
                                 No accidents or falls
                               </label>
                             </div>
-                            <div className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
+                            <div className="flex items-center space-x-2">
                               <RadioGroupItem value="true" id="accidents-yes" />
-                              <label htmlFor="accidents-yes" className="text-sm font-medium text-slate-700 cursor-pointer flex-1">
+                              <label htmlFor="accidents-yes" className="text-sm font-medium text-slate-700 cursor-pointer">
                                 Yes, there were accidents or falls
                               </label>
                             </div>
@@ -644,17 +644,17 @@ export default function SurveyForm({ checkInDetails, patientId }: SurveyFormProp
                           <RadioGroup
                             onValueChange={(value) => field.onChange(value === "true")}
                             value={field.value?.toString()}
-                            className="space-y-3"
+                            className="space-y-2"
                           >
-                            <div className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
+                            <div className="flex items-center space-x-2">
                               <RadioGroupItem value="false" id="mental-no" />
-                              <label htmlFor="mental-no" className="text-sm font-medium text-slate-700 cursor-pointer flex-1">
+                              <label htmlFor="mental-no" className="text-sm font-medium text-slate-700 cursor-pointer">
                                 No changes in mental health
                               </label>
                             </div>
-                            <div className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
+                            <div className="flex items-center space-x-2">
                               <RadioGroupItem value="true" id="mental-yes" />
-                              <label htmlFor="mental-yes" className="text-sm font-medium text-slate-700 cursor-pointer flex-1">
+                              <label htmlFor="mental-yes" className="text-sm font-medium text-slate-700 cursor-pointer">
                                 Yes, there have been changes
                               </label>
                             </div>
@@ -706,17 +706,17 @@ export default function SurveyForm({ checkInDetails, patientId }: SurveyFormProp
                           <RadioGroup
                             onValueChange={(value) => field.onChange(value === "true")}
                             value={field.value?.toString()}
-                            className="space-y-3"
+                            className="space-y-2"
                           >
-                            <div className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
+                            <div className="flex items-center space-x-2">
                               <RadioGroupItem value="false" id="physical-no" />
-                              <label htmlFor="physical-no" className="text-sm font-medium text-slate-700 cursor-pointer flex-1">
+                              <label htmlFor="physical-no" className="text-sm font-medium text-slate-700 cursor-pointer">
                                 No changes in physical health
                               </label>
                             </div>
-                            <div className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
+                            <div className="flex items-center space-x-2">
                               <RadioGroupItem value="true" id="physical-yes" />
-                              <label htmlFor="physical-yes" className="text-sm font-medium text-slate-700 cursor-pointer flex-1">
+                              <label htmlFor="physical-yes" className="text-sm font-medium text-slate-700 cursor-pointer">
                                 Yes, there have been changes
                               </label>
                             </div>
@@ -768,17 +768,17 @@ export default function SurveyForm({ checkInDetails, patientId }: SurveyFormProp
                           <RadioGroup
                             onValueChange={(value) => field.onChange(value === "true")}
                             value={field.value?.toString()}
-                            className="space-y-3"
+                            className="space-y-2"
                           >
-                            <div className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
+                            <div className="flex items-center space-x-2">
                               <RadioGroupItem value="false" id="contact-no" />
-                              <label htmlFor="contact-no" className="text-sm font-medium text-slate-700 cursor-pointer flex-1">
+                              <label htmlFor="contact-no" className="text-sm font-medium text-slate-700 cursor-pointer">
                                 No changes to contact information
                               </label>
                             </div>
-                            <div className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
+                            <div className="flex items-center space-x-2">
                               <RadioGroupItem value="true" id="contact-yes" />
-                              <label htmlFor="contact-yes" className="text-sm font-medium text-slate-700 cursor-pointer flex-1">
+                              <label htmlFor="contact-yes" className="text-sm font-medium text-slate-700 cursor-pointer">
                                 Yes, there have been changes
                               </label>
                             </div>
