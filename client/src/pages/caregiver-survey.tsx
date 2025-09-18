@@ -10,7 +10,7 @@ import CaregiverLayout from "@/components/caregiver/CaregiverLayout";
 export default function CaregiverSurvey() {
   const { patientId } = useParams<{ patientId: string }>();
   const [, setLocation] = useLocation();
-  const { isAuthenticated } = useCaregiverAuth();
+  const { isAuthenticated, isLoading: authLoading } = useCaregiverAuth();
 
   // Extract checkInId from URL parameters
   const urlParams = new URLSearchParams(window.location.search);
@@ -31,10 +31,25 @@ export default function CaregiverSurvey() {
     },
   });
 
-  // Redirect if not authenticated
-  if (!isAuthenticated) {
+  // Redirect if not authenticated (but wait for auth loading to complete)
+  if (!authLoading && !isAuthenticated) {
     setLocation("/caregiver");
     return null;
+  }
+
+  // Show loading while authentication is being checked
+  if (authLoading) {
+    return (
+      <CaregiverLayout>
+        <div className="px-4 py-8 sm:px-6 lg:px-8">
+          <div className="max-w-2xl mx-auto space-y-6">
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-96 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+        </div>
+      </CaregiverLayout>
+    );
   }
 
   if (isLoading) {
