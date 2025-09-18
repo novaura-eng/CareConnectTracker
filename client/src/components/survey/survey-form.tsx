@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useCaregiverAuth } from "@/hooks/useCaregiverAuth";
 import { apiRequest } from "@/lib/queryClient";
-import { HeartHandshake, Send, Copy, CheckCircle } from "lucide-react";
+import { HeartHandshake, Send, Copy, CheckCircle, X } from "lucide-react";
 
 const surveySchema = z.object({
   hospitalVisits: z.boolean({ required_error: "Please select an option" }),
@@ -412,11 +412,22 @@ export default function SurveyForm({ checkInDetails, patientId }: SurveyFormProp
           {/* Nothing Changed - Quick Copy Card - Always show for caregivers */}
           {isCaregiverAuth && !copiedFromPrevious && (
             <Card className={`mb-8 border-2 shadow-lg ${previousResponse ? 'border-blue-300 bg-gradient-to-r from-blue-50 to-indigo-50' : 'border-gray-300 bg-gradient-to-r from-gray-50 to-gray-100'}`}>
-              <CardHeader className="pb-3">
-                <CardTitle className={`flex items-center gap-2 text-xl ${previousResponse ? 'text-blue-900' : 'text-gray-600'}`}>
+              <CardHeader className="pb-3 relative">
+                <CardTitle className={`flex items-center gap-2 text-xl pr-8 ${previousResponse ? 'text-blue-900' : 'text-gray-600'}`}>
                   <Copy className="h-6 w-6" />
                   Nothing Changed This Week?
                 </CardTitle>
+                {!previousResponse && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setCopiedFromPrevious(true)}
+                    className="absolute top-2 right-2 h-8 w-8 p-0 text-gray-400 hover:text-gray-600"
+                    data-testid="button-close-card"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
               </CardHeader>
               <CardContent>
                 <p className={`mb-4 text-base ${previousResponse ? 'text-blue-800' : 'text-gray-600'}`}>
@@ -439,14 +450,16 @@ export default function SurveyForm({ checkInDetails, patientId }: SurveyFormProp
                     <Copy className="mr-2 h-5 w-5" />
                     Use Last Week's Answers
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    className={`${previousResponse ? 'border-blue-300 text-blue-700 hover:bg-blue-100' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
-                    onClick={() => setCopiedFromPrevious(true)}
-                    data-testid="button-start-fresh"
-                  >
-                    Start Fresh
-                  </Button>
+                  {previousResponse && (
+                    <Button 
+                      variant="outline" 
+                      className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                      onClick={() => setCopiedFromPrevious(true)}
+                      data-testid="button-start-fresh"
+                    >
+                      Start Fresh
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
