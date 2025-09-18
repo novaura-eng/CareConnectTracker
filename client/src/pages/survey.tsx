@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import SurveyForm from "@/components/survey/survey-form";
+import CaregiverLayout from "@/components/caregiver/CaregiverLayout";
 
 export default function Survey() {
   const { checkInId } = useParams();
@@ -15,7 +16,7 @@ export default function Survey() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50">
+      <CaregiverLayout>
         <div className="px-4 py-8 sm:px-6 lg:px-8">
           <div className="max-w-2xl mx-auto space-y-6">
             <Skeleton className="h-20 w-full" />
@@ -23,24 +24,30 @@ export default function Survey() {
             <Skeleton className="h-32 w-full" />
           </div>
         </div>
-      </div>
+      </CaregiverLayout>
     );
   }
 
   if (error || !checkInDetails) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="max-w-md mx-4">
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Survey not found or has expired. Please contact your care coordinator for assistance.
-            </AlertDescription>
-          </Alert>
+      <CaregiverLayout>
+        <div className="flex items-center justify-center py-12">
+          <div className="max-w-md mx-4">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Survey not found or has expired. Please contact your care coordinator for assistance.
+              </AlertDescription>
+            </Alert>
+          </div>
         </div>
-      </div>
+      </CaregiverLayout>
     );
   }
 
-  return <SurveyForm checkInDetails={checkInDetails} />;
+  return (
+    <CaregiverLayout>
+      <SurveyForm checkInDetails={checkInDetails} />
+    </CaregiverLayout>
+  );
 }
