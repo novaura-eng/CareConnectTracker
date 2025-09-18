@@ -36,7 +36,7 @@ export function getCaregiverSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
       maxAge: sessionTtl,
     },
   });
@@ -72,5 +72,6 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 export function setupCaregiverAuth(app: Express) {
+  app.set("trust proxy", 1);
   app.use("/api/caregiver", getCaregiverSession());
 }
