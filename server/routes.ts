@@ -891,7 +891,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json({ message: "Survey submitted successfully", response });
       }
     } catch (error) {
-      console.error("Survey submission error:", error.message);
+      console.error("Survey submission error:", error instanceof Error ? error.message : error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
