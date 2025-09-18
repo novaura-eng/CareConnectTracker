@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import InputMask from "react-input-mask";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -245,13 +246,22 @@ export default function Caregivers() {
                     
                     <div className="space-y-2">
                       <Label htmlFor="phone">Phone Number</Label>
-                      <Input
-                        id="phone"
-                        placeholder="(555) 123-4567"
+                      <InputMask
+                        mask="999-999-9999"
+                        maskChar=""
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        className={formErrors.phone ? "border-red-500" : ""}
-                      />
+                      >
+                        {(inputProps: any) => (
+                          <Input
+                            {...inputProps}
+                            id="phone"
+                            type="tel"
+                            placeholder="203-555-1234"
+                            className={formErrors.phone ? "border-red-500" : ""}
+                          />
+                        )}
+                      </InputMask>
                       {formErrors.phone && <p className="text-sm text-red-500">{formErrors.phone}</p>}
                     </div>
                     
@@ -407,13 +417,22 @@ export default function Caregivers() {
                 
                 <div className="space-y-2">
                   <Label htmlFor="mobile-phone">Phone Number</Label>
-                  <Input
-                    id="mobile-phone"
-                    placeholder="(555) 123-4567"
+                  <InputMask
+                    mask="999-999-9999"
+                    maskChar=""
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className={formErrors.phone ? "border-red-500" : ""}
-                  />
+                  >
+                    {(inputProps: any) => (
+                      <Input
+                        {...inputProps}
+                        id="mobile-phone"
+                        type="tel"
+                        placeholder="203-555-1234"
+                        className={formErrors.phone ? "border-red-500" : ""}
+                      />
+                    )}
+                  </InputMask>
                   {formErrors.phone && <p className="text-sm text-red-500">{formErrors.phone}</p>}
                 </div>
                 
