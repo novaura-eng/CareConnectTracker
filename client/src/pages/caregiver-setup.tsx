@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import InputMask from "react-input-mask";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Key, CheckCircle, AlertCircle } from "lucide-react";
@@ -33,38 +34,6 @@ export default function CaregiverSetup() {
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  // Function to format phone number with hyphens
-  const formatPhoneNumber = (value: string, previousValue: string = '') => {
-    // Remove all non-digits
-    const phoneNumber = value.replace(/\D/g, '');
-    
-    // Limit to 10 digits
-    const limitedPhoneNumber = phoneNumber.substring(0, 10);
-    
-    // If the new value has fewer digits than before, don't auto-format immediately
-    // This allows proper deletion/backspacing
-    const previousDigits = previousValue.replace(/\D/g, '');
-    const isDeleting = limitedPhoneNumber.length < previousDigits.length;
-    
-    // Also check if the current input is shorter than the previous (including hyphens)
-    // This helps detect when user is trying to delete hyphens specifically
-    const isShorterInput = value.length < previousValue.length;
-    
-    // Apply formatting: XXX-XXX-XXXX, but be more careful with deletion
-    if (limitedPhoneNumber.length >= 6 && !isDeleting && !isShorterInput) {
-      return `${limitedPhoneNumber.substring(0, 3)}-${limitedPhoneNumber.substring(3, 6)}-${limitedPhoneNumber.substring(6)}`;
-    } else if (limitedPhoneNumber.length > 6 && !isShorterInput) {
-      // When deleting, still format if we have more than 6 digits and not actively deleting
-      return `${limitedPhoneNumber.substring(0, 3)}-${limitedPhoneNumber.substring(3, 6)}-${limitedPhoneNumber.substring(6)}`;
-    } else if (limitedPhoneNumber.length >= 3 && !isDeleting && !isShorterInput) {
-      return `${limitedPhoneNumber.substring(0, 3)}-${limitedPhoneNumber.substring(3)}`;
-    } else if (limitedPhoneNumber.length > 3 && !isShorterInput) {
-      // When deleting, be more permissive - only format if not actively deleting
-      return `${limitedPhoneNumber.substring(0, 3)}-${limitedPhoneNumber.substring(3)}`;
-    }
-    
-    return limitedPhoneNumber;
-  };
 
   // Form validation
   const validateForm = () => {
@@ -231,18 +200,22 @@ export default function CaregiverSetup() {
               {/* Phone Number */}
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="203-555-1234"
-                  disabled={eligible && eligibilityChecked}
+                <InputMask
+                  mask="999-999-9999"
                   value={formData.phone}
-                  onChange={(e) => {
-                    const formattedValue = formatPhoneNumber(e.target.value, formData.phone);
-                    setFormData({ ...formData, phone: formattedValue });
-                  }}
-                  className={formErrors.phone ? "border-red-500" : ""}
-                />
+                  disabled={eligible && eligibilityChecked}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                >
+                  {(inputProps: any) => (
+                    <Input
+                      {...inputProps}
+                      id="phone"
+                      type="tel"
+                      placeholder="___-___-____"
+                      className={formErrors.phone ? "border-red-500" : ""}
+                    />
+                  )}
+                </InputMask>
                 {formErrors.phone && (
                   <p className="text-sm text-red-600">{formErrors.phone}</p>
                 )}
