@@ -21,17 +21,28 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 
 // Function to format phone number with hyphens
-const formatPhoneNumber = (value: string) => {
+const formatPhoneNumber = (value: string, previousValue: string = '') => {
   // Remove all non-digits
   const phoneNumber = value.replace(/\D/g, '');
   
   // Limit to 10 digits
   const limitedPhoneNumber = phoneNumber.substring(0, 10);
   
-  // Apply formatting: XXX-XXX-XXXX
-  if (limitedPhoneNumber.length >= 6) {
+  // If the new value has fewer digits than before, don't auto-format immediately
+  // This allows proper deletion/backspacing
+  const previousDigits = previousValue.replace(/\D/g, '');
+  const isDeleting = limitedPhoneNumber.length < previousDigits.length;
+  
+  // Apply formatting: XXX-XXX-XXXX, but be more careful with deletion
+  if (limitedPhoneNumber.length >= 6 && !isDeleting) {
     return `${limitedPhoneNumber.substring(0, 3)}-${limitedPhoneNumber.substring(3, 6)}-${limitedPhoneNumber.substring(6)}`;
-  } else if (limitedPhoneNumber.length >= 3) {
+  } else if (limitedPhoneNumber.length > 6) {
+    // When deleting, still format if we have more than 6 digits
+    return `${limitedPhoneNumber.substring(0, 3)}-${limitedPhoneNumber.substring(3, 6)}-${limitedPhoneNumber.substring(6)}`;
+  } else if (limitedPhoneNumber.length >= 3 && !isDeleting) {
+    return `${limitedPhoneNumber.substring(0, 3)}-${limitedPhoneNumber.substring(3)}`;
+  } else if (limitedPhoneNumber.length > 3) {
+    // When deleting, still format if we have more than 3 digits
     return `${limitedPhoneNumber.substring(0, 3)}-${limitedPhoneNumber.substring(3)}`;
   }
   
@@ -141,7 +152,7 @@ export default function CaregiverLogin() {
                             className="h-12"
                             {...field}
                             onChange={(e) => {
-                              const formattedValue = formatPhoneNumber(e.target.value);
+                              const formattedValue = formatPhoneNumber(e.target.value, field.value);
                               field.onChange(formattedValue);
                             }}
                           />
