@@ -1,6 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { setupVite, log } from "./vite";
 
 const app = express();
 app.use(express.json());
@@ -77,8 +77,7 @@ app.use((req, res, next) => {
     } catch (dbError) {
       healthChecks.status = 'degraded';
       healthChecks.checks.database = { 
-        status: 'error' as const, 
-        message: dbError instanceof Error ? dbError.message : String(dbError) 
+        status: 'error' as const
       };
       console.error('🩺 Health check database error:', dbError);
     }
@@ -130,8 +129,8 @@ app.use((req, res, next) => {
     const fs = await import("fs");
     const { fileURLToPath } = await import("url");
     const currentDir = path.dirname(fileURLToPath(import.meta.url));
-    const distPath = path.resolve(currentDir, "dist", "public");
-    const serverBundle = path.resolve(currentDir, "dist", "index.js");
+    const distPath = path.resolve(currentDir, "..", "dist", "public");
+    const serverBundle = path.resolve(currentDir, "..", "dist", "index.js");
     
     log(`🔍 Checking build artifacts:`);
     log(`   - Client build: ${distPath}`);
@@ -151,7 +150,14 @@ app.use((req, res, next) => {
     }
     
     try {
-      serveStatic(app);
+      // Serve static files directly using the verified distPath
+      app.use(express.static(distPath));
+      
+      // Fall back to index.html for client-side routing
+      app.use("*", (_req, res) => {
+        res.sendFile(path.resolve(distPath, "index.html"));
+      });
+      
       log(`✅ Production static files configured successfully`);
       log(`🌐 API endpoints available under /api/`);
       log(`📱 Frontend served from: ${distPath}`);
