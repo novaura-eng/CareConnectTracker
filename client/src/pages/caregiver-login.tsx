@@ -20,6 +20,24 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
+// Function to format phone number with hyphens
+const formatPhoneNumber = (value: string) => {
+  // Remove all non-digits
+  const phoneNumber = value.replace(/\D/g, '');
+  
+  // Limit to 10 digits
+  const limitedPhoneNumber = phoneNumber.substring(0, 10);
+  
+  // Apply formatting: XXX-XXX-XXXX
+  if (limitedPhoneNumber.length >= 6) {
+    return `${limitedPhoneNumber.substring(0, 3)}-${limitedPhoneNumber.substring(3, 6)}-${limitedPhoneNumber.substring(6)}`;
+  } else if (limitedPhoneNumber.length >= 3) {
+    return `${limitedPhoneNumber.substring(0, 3)}-${limitedPhoneNumber.substring(3)}`;
+  }
+  
+  return limitedPhoneNumber;
+};
+
 export default function CaregiverLogin() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -119,9 +137,13 @@ export default function CaregiverLogin() {
                         </FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Enter your phone number"
+                            placeholder="203-555-1234"
                             className="h-12"
                             {...field}
+                            onChange={(e) => {
+                              const formattedValue = formatPhoneNumber(e.target.value);
+                              field.onChange(formattedValue);
+                            }}
                           />
                         </FormControl>
                         <FormMessage />
