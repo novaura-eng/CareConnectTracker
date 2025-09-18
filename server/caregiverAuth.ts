@@ -26,9 +26,14 @@ export function getCaregiverSession() {
   
   const sessionStore = new pgStore({
     conString: connectionString,
-    createTableIfMissing: false,
+    createTableIfMissing: true, // Allow table creation for production reliability  
     ttl: sessionTtl,
     tableName: "sessions", // Same table as regular auth but different session name
+  });
+  
+  // Add session store validation
+  sessionStore.on('error', (err) => {
+    console.error('🚨 Caregiver session store error:', err);
   });
   
   const sessionConfig = {

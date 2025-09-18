@@ -47,9 +47,51 @@ app.use((req, res, next) => {
   const server = await registerRoutes(app);
   log(`✅ Routes registered successfully`);
   
+  // Add deployment health check endpoint with real connectivity tests
+  app.get('/api/health', async (req, res) => {
+    const healthChecks = {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      version: '1.0.0',
+      checks: {
+        database: { status: 'unknown' },
+        session: { status: 'unknown' },
+        services: {
+          twilio: process.env.TWILIO_ACCOUNT_SID ? 'configured' : 'disabled',
+          sendgrid: process.env.SENDGRID_API_KEY ? 'configured' : 'disabled'
+        }
+      }
+    };
+
+    try {
+      // Test database connectivity
+      const { pool } = await import("./db");
+      await pool.query('SELECT 1');
+      healthChecks.checks.database = { status: 'connected' };
+      
+      // Test session store connectivity
+      await pool.query('SELECT COUNT(*) FROM sessions');
+      healthChecks.checks.session = { status: 'table_accessible' };
+      
+    } catch (dbError) {
+      healthChecks.status = 'degraded';
+      healthChecks.checks.database = { 
+        status: 'error' as const, 
+        message: dbError instanceof Error ? dbError.message : String(dbError) 
+      };
+      console.error('🩺 Health check database error:', dbError);
+    }
+
+    const statusCode = healthChecks.status === 'healthy' ? 200 : 503;
+    res.status(statusCode).json(healthChecks);
+  });
+  log(`🩺 Health check endpoint added at /api/health`);
+  
   // Add route verification for debugging
   log(`🔍 Verifying critical API endpoints are registered:`);
   const criticalRoutes = [
+    'GET /api/health',
     'POST /api/caregiver/login',
     'POST /api/caregiver/check-eligibility',
     'GET /api/caregiver/session',
@@ -61,9 +103,19 @@ app.use((req, res, next) => {
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
+    
+    // Log the error for debugging but DO NOT throw after responding
+    console.error(`🚨 Server error (${status}):`, {
+      message: err.message,
+      stack: err.stack,
+      url: _req.url,
+      method: _req.method,
+    });
 
-    res.status(status).json({ message });
-    throw err;
+    // Send error response and continue (don't crash the server)
+    if (!res.headersSent) {
+      res.status(status).json({ message });
+    }
   });
 
   // Setup development or production mode
@@ -76,8 +128,10 @@ app.use((req, res, next) => {
     // Verify build artifacts before attempting to serve static files
     const path = await import("path");
     const fs = await import("fs");
-    const distPath = path.resolve(import.meta.dirname, "dist", "public");
-    const serverBundle = path.resolve(import.meta.dirname, "dist", "index.js");
+    const { fileURLToPath } = await import("url");
+    const currentDir = path.dirname(fileURLToPath(import.meta.url));
+    const distPath = path.resolve(currentDir, "dist", "public");
+    const serverBundle = path.resolve(currentDir, "dist", "index.js");
     
     log(`🔍 Checking build artifacts:`);
     log(`   - Client build: ${distPath}`);
