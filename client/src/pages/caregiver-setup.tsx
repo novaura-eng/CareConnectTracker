@@ -46,16 +46,20 @@ export default function CaregiverSetup() {
     const previousDigits = previousValue.replace(/\D/g, '');
     const isDeleting = limitedPhoneNumber.length < previousDigits.length;
     
+    // Also check if the current input is shorter than the previous (including hyphens)
+    // This helps detect when user is trying to delete hyphens specifically
+    const isShorterInput = value.length < previousValue.length;
+    
     // Apply formatting: XXX-XXX-XXXX, but be more careful with deletion
-    if (limitedPhoneNumber.length >= 6 && !isDeleting) {
+    if (limitedPhoneNumber.length >= 6 && !isDeleting && !isShorterInput) {
       return `${limitedPhoneNumber.substring(0, 3)}-${limitedPhoneNumber.substring(3, 6)}-${limitedPhoneNumber.substring(6)}`;
-    } else if (limitedPhoneNumber.length > 6) {
-      // When deleting, still format if we have more than 6 digits
+    } else if (limitedPhoneNumber.length > 6 && !isShorterInput) {
+      // When deleting, still format if we have more than 6 digits and not actively deleting
       return `${limitedPhoneNumber.substring(0, 3)}-${limitedPhoneNumber.substring(3, 6)}-${limitedPhoneNumber.substring(6)}`;
-    } else if (limitedPhoneNumber.length >= 3 && !isDeleting) {
+    } else if (limitedPhoneNumber.length >= 3 && !isDeleting && !isShorterInput) {
       return `${limitedPhoneNumber.substring(0, 3)}-${limitedPhoneNumber.substring(3)}`;
-    } else if (limitedPhoneNumber.length > 3) {
-      // When deleting, still format if we have more than 3 digits
+    } else if (limitedPhoneNumber.length > 3 && !isShorterInput) {
+      // When deleting, be more permissive - only format if not actively deleting
       return `${limitedPhoneNumber.substring(0, 3)}-${limitedPhoneNumber.substring(3)}`;
     }
     
