@@ -213,7 +213,6 @@ export async function setupUnifiedAuth(app: Express) {
 
   app.get("/api/callback", (req, res, next) => {
     passport.authenticate(`replitauth:${req.hostname}`, {
-      successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
     })(req, res, (err: any) => {
       if (err) return next(err);
@@ -226,7 +225,8 @@ export async function setupUnifiedAuth(app: Express) {
         req.session.caregiverId = undefined;
       }
       
-      res.redirect("/");
+      // Redirect admin users to the admin dashboard
+      res.redirect("/admin");
     });
   });
 
