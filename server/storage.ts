@@ -44,6 +44,7 @@ import { eq, desc, and, gte, lte, sql, ne } from "drizzle-orm";
 export interface IStorage {
   // User operations (for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
+  getUserByCaregiverId(caregiverId: number): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   
   // Caregiver methods
@@ -157,6 +158,11 @@ export class DatabaseStorage implements IStorage {
   // User operations (for Replit Auth)
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByCaregiverId(caregiverId: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.caregiverId, caregiverId));
     return user;
   }
 

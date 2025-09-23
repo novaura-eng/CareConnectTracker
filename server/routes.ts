@@ -19,8 +19,8 @@ import {
 import { z } from "zod";
 import { smsService } from "./services/sms";
 import { sendCaregiverWeeklyEmail } from "./services/email";
-import { setupAuth, isAuthenticated } from "./replitAuth";
-import { setupCaregiverAuth, isCaregiver, hashPassword, verifyPassword } from "./caregiverAuth";
+import { setupUnifiedAuth, requireAuth, requireAdmin, requireCaregiver } from "./unifiedAuth";
+import { hashPassword, verifyPassword } from "./caregiverAuth";
 import { db } from "./db";
 import { 
   weeklyCheckIns, 
@@ -211,62 +211,10 @@ function processAnswerForStorage(answer: any, questionType: string): {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
-  setupCaregiverAuth(app);
+  // Unified Auth middleware - handles both admin and caregiver authentication
+  await setupUnifiedAuth(app);
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
-
-  // Caregiver Authentication Routes
-  app.post("/api/caregiver/login", async (req, res) => {
-    try {
-      const { phone, password, state } = req.body;
-      
-      if (!phone || !password || !state) {
-        return res.status(400).json({ message: "Phone, password, and state are required" });
-      }
-
-      const caregiver = await storage.getCaregiverByPhoneAndState(phone, state);
-      if (!caregiver || !caregiver.isActive) {
-        return res.status(401).json({ message: "Invalid credentials or inactive account" });
-      }
-
-      if (!caregiver.password) {
-        return res.status(401).json({ message: "Password not set. Please contact your administrator." });
-      }
-
-      const isValidPassword = await verifyPassword(password, caregiver.password);
-      if (!isValidPassword) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      // Set session
-      req.session.caregiverId = caregiver.id;
-      req.session.caregiverState = state;
-
-      res.json({ 
-        message: "Login successful", 
-        caregiver: { 
-          id: caregiver.id, 
-          name: caregiver.name, 
-          state: caregiver.state 
-        } 
-      });
-    } catch (error) {
-      console.error("Error during caregiver login:", error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
+  // Note: Caregiver login is now handled by unified auth in setupUnifiedAuth
 
   app.post("/api/caregiver/logout", (req, res) => {
     req.session.destroy((err) => {
@@ -278,7 +226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  app.get("/api/caregiver/session", isCaregiver, async (req, res) => {
+  app.get("/api/caregiver/session", requireCaregiver, async (req, res) => {
     try {
       const caregiver = (req as any).caregiver;
       res.json({ 
@@ -295,7 +243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get full caregiver profile (for portal)
-  app.get("/api/caregiver/me", isCaregiver, async (req, res) => {
+  app.get("/api/caregiver/me", requireCaregiver, async (req, res) => {
     try {
       const caregiver = (req as any).caregiver;
       // Return sanitized caregiver data (exclude password and sensitive fields)
@@ -315,7 +263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update caregiver profile
-  app.put("/api/caregiver/profile", isCaregiver, async (req, res) => {
+  app.put("/api/caregiver/profile", requireCaregiver, async (req, res) => {
     try {
       const caregiver = (req as any).caregiver;
       const { name, email, emergencyContact } = req.body;
@@ -342,7 +290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Change caregiver password
-  app.put("/api/caregiver/password", isCaregiver, async (req, res) => {
+  app.put("/api/caregiver/password", requireCaregiver, async (req, res) => {
     try {
       const caregiver = (req as any).caregiver;
       const { currentPassword, newPassword } = req.body;
@@ -373,7 +321,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get pending check-ins for caregiver
-  app.get("/api/caregiver/checkins/pending", isCaregiver, async (req, res) => {
+  app.get("/api/caregiver/checkins/pending", requireCaregiver, async (req, res) => {
     try {
       const caregiver = (req as any).caregiver;
       const checkIns = await storage.getPendingCheckInsByCaregiver(caregiver.id);
@@ -385,7 +333,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get completed check-ins for caregiver
-  app.get("/api/caregiver/checkins/completed", isCaregiver, async (req, res) => {
+  app.get("/api/caregiver/checkins/completed", requireCaregiver, async (req, res) => {
     try {
       const caregiver = (req as any).caregiver;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
@@ -397,7 +345,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/caregiver/patients", isCaregiver, async (req, res) => {
+  app.get("/api/caregiver/patients", requireCaregiver, async (req, res) => {
     try {
       const caregiver = (req as any).caregiver;
       const patients = await storage.getPatientsByCaregiver(caregiver.id);
@@ -409,7 +357,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Enhanced patients endpoint with survey status data
-  app.get("/api/caregiver/patients/enhanced", isCaregiver, async (req, res) => {
+  app.get("/api/caregiver/patients/enhanced", requireCaregiver, async (req, res) => {
     try {
       const caregiver = (req as any).caregiver;
       const patientsWithStatus = await storage.getPatientsWithSurveyStatusByCaregiver(caregiver.id);
@@ -421,7 +369,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get survey history for a specific patient
-  app.get("/api/caregiver/patient/:id/survey-history", isCaregiver, async (req, res) => {
+  app.get("/api/caregiver/patient/:id/survey-history", requireCaregiver, async (req, res) => {
     try {
       const caregiver = (req as any).caregiver;
       const patientId = parseInt(req.params.id);
@@ -443,7 +391,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get prior response for reuse in recurring surveys
-  app.get("/api/caregiver/surveys/:assignmentId/prior-response", isCaregiver, async (req, res) => {
+  app.get("/api/caregiver/surveys/:assignmentId/prior-response", requireCaregiver, async (req, res) => {
     try {
       const caregiver = (req as any).caregiver;
       const assignmentId = parseInt(req.params.assignmentId);
@@ -491,7 +439,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/caregiver/previous-response/:patientId", isCaregiver, async (req, res) => {
+  app.get("/api/caregiver/previous-response/:patientId", requireCaregiver, async (req, res) => {
     try {
       const caregiver = (req as any).caregiver;
       const patientId = parseInt(req.params.patientId);
@@ -507,7 +455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===== CAREGIVER SURVEY ACCESS ROUTES =====
   
   // Get pending surveys for a caregiver
-  app.get("/api/caregiver/surveys/pending", isCaregiver, async (req, res) => {
+  app.get("/api/caregiver/surveys/pending", requireCaregiver, async (req, res) => {
     try {
       const caregiver = (req as any).caregiver;
       const pendingSurveys = await storage.getPendingSurveysByCaregiver(caregiver.id);
@@ -519,7 +467,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get unified assignments (check-ins + surveys) for caregiver dashboard
-  app.get("/api/caregiver/assignments/unified", isCaregiver, async (req, res) => {
+  app.get("/api/caregiver/assignments/unified", requireCaregiver, async (req, res) => {
     try {
       const caregiver = (req as any).caregiver;
       const includeCompleted = req.query.includeCompleted === 'true';
@@ -539,7 +487,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get survey details for assignment
-  app.get("/api/caregiver/surveys/:assignmentId", isCaregiver, async (req, res) => {
+  app.get("/api/caregiver/surveys/:assignmentId", requireCaregiver, async (req, res) => {
     try {
       const caregiver = (req as any).caregiver;
       const assignmentId = parseInt(req.params.assignmentId);
@@ -574,7 +522,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Bulk assign survey to all caregivers in specified states
-  app.post("/api/surveys/:surveyId/assign-to-states", isAuthenticated, async (req, res) => {
+  app.post("/api/surveys/:surveyId/assign-to-states", requireAdmin, async (req, res) => {
     try {
       const surveyId = parseInt(req.params.surveyId);
       const { states, dueAt } = req.body;
@@ -626,7 +574,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Submit survey response
-  app.post("/api/caregiver/surveys/:assignmentId/submit", isCaregiver, async (req, res) => {
+  app.post("/api/caregiver/surveys/:assignmentId/submit", requireCaregiver, async (req, res) => {
     try {
       const caregiver = (req as any).caregiver;
       const assignmentId = parseInt(req.params.assignmentId);
@@ -897,7 +845,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get dashboard stats (protected)
-  app.get("/api/admin/stats", isAuthenticated, async (req, res) => {
+  app.get("/api/admin/stats", requireAdmin, async (req, res) => {
     try {
       const stats = await storage.getDashboardStats();
       res.json(stats);
@@ -908,7 +856,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get recent responses (protected)
-  app.get("/api/admin/responses", isAuthenticated, async (req, res) => {
+  app.get("/api/admin/responses", requireAdmin, async (req, res) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
       const responses = await storage.getRecentResponses(limit);
@@ -920,7 +868,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all caregivers (protected)
-  app.get("/api/caregivers", isAuthenticated, async (req, res) => {
+  app.get("/api/caregivers", requireAdmin, async (req, res) => {
     try {
       const caregivers = await storage.getAllCaregivers();
       res.json(caregivers);
@@ -931,7 +879,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all patients (protected)
-  app.get("/api/patients", isAuthenticated, async (req, res) => {
+  app.get("/api/patients", requireAdmin, async (req, res) => {
     try {
       const patients = await storage.getAllPatients();
       res.json(patients);
@@ -944,7 +892,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===== ADMIN SURVEY MANAGEMENT ROUTES =====
   
   // Survey CRUD Operations
-  app.get("/api/admin/surveys", isAuthenticated, async (req, res) => {
+  app.get("/api/admin/surveys", requireAdmin, async (req, res) => {
     try {
       // Check if pagination parameters are provided
       const page = parseInt(req.query.page as string) || 1;
@@ -976,7 +924,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/surveys/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/admin/surveys/:id", requireAdmin, async (req, res) => {
     try {
       const surveyId = parseInt(req.params.id);
       const survey = await storage.getSurveyWithQuestions(surveyId);
@@ -995,7 +943,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/surveys", isAuthenticated, async (req, res) => {
+  app.post("/api/admin/surveys", requireAdmin, async (req, res) => {
     try {
       const userId = (req as any).user.claims.sub;
       const { states, ...surveyData } = req.body;
@@ -1027,7 +975,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/surveys/:id", isAuthenticated, async (req, res) => {
+  app.patch("/api/admin/surveys/:id", requireAdmin, async (req, res) => {
     try {
       const surveyId = parseInt(req.params.id);
       const { states, ...updates } = req.body;
@@ -1057,7 +1005,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/surveys/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/admin/surveys/:id", requireAdmin, async (req, res) => {
     try {
       const surveyId = parseInt(req.params.id);
       await storage.deleteSurvey(surveyId);
@@ -1069,7 +1017,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Bulk delete surveys
-  app.post("/api/admin/surveys/bulk-delete", isAuthenticated, async (req, res) => {
+  app.post("/api/admin/surveys/bulk-delete", requireAdmin, async (req, res) => {
     try {
       const { surveyIds } = req.body;
       
@@ -1127,7 +1075,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Survey State Management
-  app.patch("/api/admin/surveys/:id/states", isAuthenticated, async (req, res) => {
+  app.patch("/api/admin/surveys/:id/states", requireAdmin, async (req, res) => {
     try {
       const surveyId = parseInt(req.params.id);
       const { states } = req.body;
@@ -1150,7 +1098,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===== SURVEY SCHEDULE MANAGEMENT ROUTES =====
   
   // Create schedule for a survey
-  app.post("/api/admin/surveys/:surveyId/schedules", isAuthenticated, async (req, res) => {
+  app.post("/api/admin/surveys/:surveyId/schedules", requireAdmin, async (req, res) => {
     try {
       const surveyId = parseInt(req.params.surveyId);
       const scheduleData = req.body;
@@ -1181,7 +1129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get schedules for a specific survey
-  app.get("/api/admin/surveys/:surveyId/schedules", isAuthenticated, async (req, res) => {
+  app.get("/api/admin/surveys/:surveyId/schedules", requireAdmin, async (req, res) => {
     try {
       const surveyId = parseInt(req.params.surveyId);
       const schedules = await storage.getSurveySchedules(surveyId);
@@ -1193,7 +1141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all schedules (admin overview)
-  app.get("/api/admin/schedules", isAuthenticated, async (req, res) => {
+  app.get("/api/admin/schedules", requireAdmin, async (req, res) => {
     try {
       const activeOnly = req.query.active === 'true';
       const schedules = activeOnly 
@@ -1207,7 +1155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get specific schedule
-  app.get("/api/admin/schedules/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/admin/schedules/:id", requireAdmin, async (req, res) => {
     try {
       const scheduleId = parseInt(req.params.id);
       const schedule = await storage.getSurveySchedule(scheduleId);
@@ -1224,7 +1172,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update schedule
-  app.patch("/api/admin/schedules/:id", isAuthenticated, async (req, res) => {
+  app.patch("/api/admin/schedules/:id", requireAdmin, async (req, res) => {
     try {
       const scheduleId = parseInt(req.params.id);
       const updates = req.body;
@@ -1260,7 +1208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete schedule
-  app.delete("/api/admin/schedules/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/admin/schedules/:id", requireAdmin, async (req, res) => {
     try {
       const scheduleId = parseInt(req.params.id);
       await storage.deleteSurveySchedule(scheduleId);
@@ -1272,7 +1220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Toggle schedule active status
-  app.post("/api/admin/schedules/:id/toggle", isAuthenticated, async (req, res) => {
+  app.post("/api/admin/schedules/:id/toggle", requireAdmin, async (req, res) => {
     try {
       const scheduleId = parseInt(req.params.id);
       const { isActive } = req.body;
@@ -1302,7 +1250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Survey Status Management
-  app.post("/api/admin/surveys/:id/publish", isAuthenticated, async (req, res) => {
+  app.post("/api/admin/surveys/:id/publish", requireAdmin, async (req, res) => {
     try {
       const surveyId = parseInt(req.params.id);
       await storage.publishSurvey(surveyId);
@@ -1313,7 +1261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/surveys/:id/archive", isAuthenticated, async (req, res) => {
+  app.post("/api/admin/surveys/:id/archive", requireAdmin, async (req, res) => {
     try {
       const surveyId = parseInt(req.params.id);
       await storage.archiveSurvey(surveyId);
@@ -1325,7 +1273,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Survey Question CRUD Operations
-  app.get("/api/admin/surveys/:id/questions", isAuthenticated, async (req, res) => {
+  app.get("/api/admin/surveys/:id/questions", requireAdmin, async (req, res) => {
     try {
       const surveyId = parseInt(req.params.id);
       const questions = await storage.getSurveyQuestions(surveyId);
@@ -1336,7 +1284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/surveys/:id/questions", isAuthenticated, async (req, res) => {
+  app.post("/api/admin/surveys/:id/questions", requireAdmin, async (req, res) => {
     try {
       const surveyId = parseInt(req.params.id);
       const validatedData = insertSurveyQuestionSchema.parse({
@@ -1353,7 +1301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Bulk create/update questions for a survey
-  app.post("/api/admin/surveys/:id/questions/bulk", isAuthenticated, async (req, res) => {
+  app.post("/api/admin/surveys/:id/questions/bulk", requireAdmin, async (req, res) => {
     try {
       const surveyId = parseInt(req.params.id);
       const { questions } = req.body;
@@ -1405,7 +1353,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/questions/:id", isAuthenticated, async (req, res) => {
+  app.patch("/api/admin/questions/:id", requireAdmin, async (req, res) => {
     try {
       const questionId = parseInt(req.params.id);
       const updates = req.body;
@@ -1422,7 +1370,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/questions/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/admin/questions/:id", requireAdmin, async (req, res) => {
     try {
       const questionId = parseInt(req.params.id);
       await storage.deleteSurveyQuestion(questionId);
@@ -1434,7 +1382,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Question Reordering
-  app.post("/api/admin/questions/reorder", isAuthenticated, async (req, res) => {
+  app.post("/api/admin/questions/reorder", requireAdmin, async (req, res) => {
     try {
       const { questionIds } = req.body;
       
@@ -1451,7 +1399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Survey Option CRUD Operations
-  app.get("/api/admin/questions/:id/options", isAuthenticated, async (req, res) => {
+  app.get("/api/admin/questions/:id/options", requireAdmin, async (req, res) => {
     try {
       const questionId = parseInt(req.params.id);
       const options = await storage.getSurveyOptions(questionId);
@@ -1462,7 +1410,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/questions/:id/options", isAuthenticated, async (req, res) => {
+  app.post("/api/admin/questions/:id/options", requireAdmin, async (req, res) => {
     try {
       const questionId = parseInt(req.params.id);
       const validatedData = insertSurveyOptionSchema.parse({
@@ -1478,7 +1426,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/options/:id", isAuthenticated, async (req, res) => {
+  app.patch("/api/admin/options/:id", requireAdmin, async (req, res) => {
     try {
       const optionId = parseInt(req.params.id);
       const updates = req.body;
@@ -1495,7 +1443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/options/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/admin/options/:id", requireAdmin, async (req, res) => {
     try {
       const optionId = parseInt(req.params.id);
       await storage.deleteSurveyOption(optionId);
@@ -1507,7 +1455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Survey Assignment Operations - Bulk Assignment
-  app.post("/api/admin/surveys/:id/assign", isAuthenticated, async (req, res) => {
+  app.post("/api/admin/surveys/:id/assign", requireAdmin, async (req, res) => {
     try {
       const surveyId = parseInt(req.params.id);
       const { assignments } = req.body;
@@ -1550,7 +1498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete caregiver (protected)
-  app.delete("/api/caregivers/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/caregivers/:id", requireAdmin, async (req, res) => {
     try {
       const caregiverId = parseInt(req.params.id);
       await storage.deleteCaregiver(caregiverId);
@@ -1563,7 +1511,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create patient (protected)
-  app.post("/api/patients", isAuthenticated, async (req, res) => {
+  app.post("/api/patients", requireAdmin, async (req, res) => {
     try {
       const validatedData = insertPatientSchema.parse(req.body);
       const patient = await storage.createPatient(validatedData);
@@ -1575,7 +1523,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get patients by caregiver (protected)
-  app.get("/api/patients/:caregiverId", isAuthenticated, async (req, res) => {
+  app.get("/api/patients/:caregiverId", requireAdmin, async (req, res) => {
     try {
       const caregiverId = parseInt(req.params.caregiverId);
       const patients = await storage.getPatientsByCaregiver(caregiverId);
@@ -1587,7 +1535,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create weekly check-in (protected)
-  app.post("/api/check-ins", isAuthenticated, async (req, res) => {
+  app.post("/api/check-ins", requireAdmin, async (req, res) => {
     try {
       const validatedData = insertWeeklyCheckInSchema.parse(req.body);
       const checkIn = await storage.createWeeklyCheckIn(validatedData);
@@ -1599,7 +1547,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create new caregiver (protected)
-  app.post("/api/caregivers", isAuthenticated, async (req, res) => {
+  app.post("/api/caregivers", requireAdmin, async (req, res) => {
     try {
       console.log("Creating caregiver with data:", req.body);
       
@@ -1618,7 +1566,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create new patient (protected)
-  app.post("/api/patients", isAuthenticated, async (req, res) => {
+  app.post("/api/patients", requireAdmin, async (req, res) => {
     try {
       console.log("Creating patient with data:", req.body);
       

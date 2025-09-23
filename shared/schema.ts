@@ -35,6 +35,8 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  userType: varchar("user_type").notNull().default("admin"), // admin or caregiver
+  caregiverId: integer("caregiver_id").references(() => caregivers.id), // for caregiver users
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -47,10 +49,12 @@ export const caregivers = pgTable("caregivers", {
   address: text("address"),
   emergencyContact: text("emergency_contact"),
   state: text("state").notNull(),
-  password: text("password"),
+  password: text("password"), // deprecated - will be removed once migration is complete
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  unique("unique_phone_state").on(table.phone, table.state),
+]);
 
 export const patients = pgTable("patients", {
   id: serial("id").primaryKey(),
