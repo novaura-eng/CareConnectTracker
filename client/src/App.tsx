@@ -46,7 +46,9 @@ function UnauthenticatedRouter() {
       <Route path="/caregiver/patients" component={CaregiverPatients} />
       <Route path="/caregiver/profile" component={CaregiverProfile} />
       <Route path="/caregiver/checkins" component={CaregiverCheckIns} />
-      <Route path="/caregiver/surveys" component={() => <CaregiverSurveyDashboard filterType="survey" />} />
+      <Route path="/caregiver/surveys">
+        <CaregiverSurveyDashboard filterType="survey" />
+      </Route>
       <Route path="/caregiver/survey/:assignmentId" component={CaregiverDynamicSurvey} />
       <Route path="/caregiver/patient/:id" component={CaregiverPatientDetail} />
       <Route path="/caregiver/patient-survey/:patientId" component={CaregiverSurvey} />
