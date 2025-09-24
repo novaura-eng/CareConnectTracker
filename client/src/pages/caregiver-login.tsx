@@ -16,6 +16,7 @@ import { HeartHandshake, Phone, Lock, ArrowLeft, CheckCircle, UserPlus, Home } f
 
 const loginSchema = z.object({
   phone: z.string().regex(/^\d{3}-\d{3}-\d{4}$/, "Enter a valid phone number"),
+  password: z.string().min(1, "Password is required"),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -44,6 +45,7 @@ export default function CaregiverLogin() {
     resolver: zodResolver(loginSchema),
     defaultValues: {
       phone: "",
+      password: "",
     },
   });
 
@@ -104,7 +106,7 @@ export default function CaregiverLogin() {
             <CardHeader className="text-center pb-4">
               <CardTitle className="text-xl">Welcome Back</CardTitle>
               <CardDescription>
-                Enter your phone number to access your patient care dashboard
+                Enter your phone number and password to access your patient care dashboard
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -144,6 +146,28 @@ export default function CaregiverLogin() {
                     )}
                   />
 
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <Lock className="h-4 w-4" />
+                          Password
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type="password"
+                            placeholder="Enter your password"
+                            className="h-12"
+                            data-testid="input-password"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                   {!state && (
                     <Alert variant="destructive">
