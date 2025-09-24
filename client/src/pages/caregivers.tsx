@@ -15,8 +15,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Phone, Mail, MapPin, User, AlertCircle, Trash2, Key, Download, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import Sidebar from "@/components/layout/sidebar";
-
 export default function Caregivers() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -333,17 +331,10 @@ export default function Caregivers() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="flex">
-        {/* Desktop Sidebar */}
-        <div className="hidden lg:block">
-          <Sidebar />
-        </div>
-        
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Header - Hidden on mobile to avoid duplication with mobile nav */}
-          <header className="hidden lg:block bg-white shadow-sm border-b border-slate-200">
+    <>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <header className="bg-white shadow-sm border-b border-slate-200">
             <div className="px-4 py-6 sm:px-6 lg:px-8">
               <div className="flex items-center justify-between">
                 <div>
@@ -560,83 +551,17 @@ export default function Caregivers() {
             </div>
           </header>
 
-          {/* Mobile Header and Navigation */}
-          <div className="lg:hidden">
-            <Sidebar />
-          </div>
-
-          {/* Mobile Import and Add Caregiver Buttons - Only visible on mobile */}
-          <div className="lg:hidden px-4 pt-4 pb-2 space-y-3">
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                onClick={downloadTemplate}
-                className="flex-1"
-                data-testid="button-download-template-mobile"
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Download Template
-              </Button>
-              
-              <div className="flex-1">
-                <input
-                  type="file"
-                  id="csv-upload-mobile"
-                  accept=".csv"
-                  onChange={handleCsvFileChange}
-                  className="hidden"
-                  data-testid="input-csv-file-mobile"
-                />
-                <Button 
-                  variant="outline" 
-                  onClick={() => document.getElementById('csv-upload-mobile')?.click()}
-                  className="w-full"
-                  data-testid="button-select-csv-mobile"
-                >
-                  <Upload className="mr-2 h-4 w-4" />
-                  {csvFile ? 'File Selected' : 'Select CSV'}
-                </Button>
-              </div>
-            </div>
-            
-            {csvFile && (
-              <Button 
-                onClick={handleCsvImport}
-                disabled={isImporting}
-                className="w-full"
-                data-testid="button-import-csv-mobile"
-              >
-                {isImporting ? 'Importing...' : `Import ${csvFile.name}`}
-              </Button>
-            )}
-            
-            <Dialog open={isDialogOpen} onOpenChange={(open) => {
-              setIsDialogOpen(open);
-              if (!open) setSelectedCaregiver(null);
-            }}>
-              <DialogTrigger asChild>
-                <Button 
-                  onClick={() => setSelectedCaregiver(null)}
-                  className="w-full"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Caregiver
-                </Button>
-              </DialogTrigger>
-            </Dialog>
-          </div>
-
-          {/* Main Content */}
-          <main className="flex-1 overflow-auto bg-slate-50">
-            <div className="px-4 py-6 sm:px-6 lg:px-8">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <User className="mr-2 h-5 w-5" />
-                    Caregivers
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto bg-slate-50">
+        <div className="px-4 py-6 sm:px-6 lg:px-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <User className="mr-2 h-5 w-5" />
+                Caregivers
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
                   {isLoading ? (
                     <div className="space-y-4">
                       {[...Array(3)].map((_, i) => (
@@ -777,11 +702,10 @@ export default function Caregivers() {
                       </Table>
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            </div>
-          </main>
+            </CardContent>
+          </Card>
         </div>
+      </main>
       </div>
 
       {/* Patients View Dialog */}
@@ -891,6 +815,6 @@ export default function Caregivers() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }
