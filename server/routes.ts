@@ -878,6 +878,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Set caregiver password (admin only)
+  app.post("/api/admin/caregivers/:id/set-password", requireAdmin, async (req, res) => {
+    try {
+      const caregiverId = parseInt(req.params.id);
+      const { password } = req.body;
+
+      if (!password || password.trim().length === 0) {
+        return res.status(400).json({ message: "Password is required" });
+      }
+
+      if (password.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters long" });
+      }
+
+      // Check if caregiver exists
+      const caregiver = await storage.getCaregiver(caregiverId);
+      if (!caregiver) {
+        return res.status(404).json({ message: "Caregiver not found" });
+      }
+
+      // Hash the password and set it
+      const hashedPassword = await hashPassword(password);
+      await storage.setCaregiverPassword(caregiverId, hashedPassword);
+
+      res.json({ message: "Password set successfully" });
+    } catch (error) {
+      console.error("Error setting caregiver password:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get all patients (protected)
   app.get("/api/patients", requireAdmin, async (req, res) => {
     try {

@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Phone, Mail, MapPin, User, AlertCircle, Trash2 } from "lucide-react";
+import { Plus, Phone, Mail, MapPin, User, AlertCircle, Trash2, Key } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import Sidebar from "@/components/layout/sidebar";
@@ -24,6 +24,9 @@ export default function Caregivers() {
   const [showPatients, setShowPatients] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [caregiverToDelete, setCaregiverToDelete] = useState<Caregiver | null>(null);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [selectedCaregiverForPassword, setSelectedCaregiverForPassword] = useState<Caregiver | null>(null);
+  const [newPassword, setNewPassword] = useState("");
 
   const { data: caregivers, isLoading } = useQuery<Caregiver[]>({
     queryKey: ["/api/caregivers"],
@@ -167,6 +170,44 @@ export default function Caregivers() {
       });
     },
   });
+
+  const setPasswordMutation = useMutation({
+    mutationFn: async ({ caregiverId, password }: { caregiverId: number; password: string }) => {
+      return apiRequest("POST", `/api/admin/caregivers/${caregiverId}/set-password`, { password });
+    },
+    onSuccess: () => {
+      setPasswordDialogOpen(false);
+      setSelectedCaregiverForPassword(null);
+      setNewPassword("");
+      toast({
+        title: "Password Set",
+        description: "Caregiver password has been successfully set.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to set password. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSetPassword = () => {
+    if (!selectedCaregiverForPassword || !newPassword.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a password.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setPasswordMutation.mutate({
+      caregiverId: selectedCaregiverForPassword.id,
+      password: newPassword,
+    });
+  };
 
   // Reset form when dialog state changes
   React.useEffect(() => {
@@ -719,6 +760,18 @@ export default function Caregivers() {
                                     variant="ghost" 
                                     size="sm"
                                     onClick={() => {
+                                      setSelectedCaregiverForPassword(caregiver);
+                                      setPasswordDialogOpen(true);
+                                    }}
+                                    className="text-blue-600 hover:text-blue-700"
+                                  >
+                                    <Key className="h-4 w-4 mr-1" />
+                                    Set Password
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => {
                                       setSelectedCaregiver(caregiver);
                                       setShowPatients(true);
                                     }}
@@ -816,6 +869,51 @@ export default function Caregivers() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Set Password Dialog */}
+      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Set Password for {selectedCaregiverForPassword?.name}</DialogTitle>
+            <DialogDescription>
+              Enter a temporary password for this caregiver. They can use this to log in.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">New Password</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                placeholder="Enter new password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSetPassword()}
+                data-testid="input-new-password"
+              />
+            </div>
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setPasswordDialogOpen(false);
+                  setSelectedCaregiverForPassword(null);
+                  setNewPassword("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSetPassword}
+                disabled={setPasswordMutation.isPending || !newPassword.trim()}
+              >
+                {setPasswordMutation.isPending ? "Setting..." : "Set Password"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
