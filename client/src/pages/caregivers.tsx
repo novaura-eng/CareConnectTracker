@@ -434,17 +434,10 @@ export default function Caregivers() {
               {isImporting ? 'Importing...' : `Import ${csvFile.name}`}
             </Button>
           )}
+        </div>
 
-          <Dialog open={isDialogOpen} onOpenChange={(open) => {
-                  setIsDialogOpen(open);
-                  if (!open) setSelectedCaregiver(null);
-                }}>
-                  <DialogTrigger asChild>
-                    <Button onClick={() => setSelectedCaregiver(null)} data-testid="button-add-caregiver">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Caregiver
-                    </Button>
-                  </DialogTrigger>
+        {/* Main Content */}
+        <main className="flex-1 overflow-auto bg-slate-50">
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
                     <DialogTitle>{selectedCaregiver ? "Edit Caregiver" : "Add New Caregiver"}</DialogTitle>
