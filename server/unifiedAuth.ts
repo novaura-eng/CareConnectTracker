@@ -5,6 +5,7 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
+import bcrypt from "bcrypt";
 import { storage } from "./storage";
 
 if (!process.env.REPLIT_DOMAINS) {
@@ -136,8 +137,8 @@ export const requireCaregiver: RequestHandler = async (req, res, next) => {
   }
 };
 
-// Caregiver phone verification login
-export async function loginCaregiverWithPhone(phone: string, state: string): Promise<{ success: boolean; user?: any; caregiver?: any; message: string }> {
+// Caregiver phone and password login
+export async function loginCaregiverWithPhone(phone: string, state: string, password: string): Promise<{ success: boolean; user?: any; caregiver?: any; message: string }> {
   try {
     // Check if caregiver exists and is active
     const caregiver = await storage.getCaregiverByPhoneAndState(phone, state);
@@ -151,6 +152,31 @@ export async function loginCaregiverWithPhone(phone: string, state: string): Pro
         };
       }
       return { success: false, message: "No active caregiver found with this phone number and state" };
+    }
+
+    // Check if password has been set
+    const passwordSet = await storage.checkPasswordSet(caregiver.id);
+    if (!passwordSet) {
+      return { 
+        success: false, 
+        message: "Password not set. Please contact your administrator to set up your password." 
+      };
+    }
+
+    // Verify password
+    if (!caregiver.passwordHash) {
+      return { 
+        success: false, 
+        message: "Password not configured. Please contact your administrator." 
+      };
+    }
+
+    const passwordValid = await bcrypt.compare(password, caregiver.passwordHash);
+    if (!passwordValid) {
+      return { 
+        success: false, 
+        message: "Invalid password. Please check your credentials and try again." 
+      };
     }
 
     // Check if user account already exists for this caregiver
@@ -251,16 +277,16 @@ export async function setupUnifiedAuth(app: Express) {
     });
   });
 
-  // Caregiver phone login
+  // Caregiver phone and password login
   app.post("/api/caregiver/login", async (req, res) => {
     try {
-      const { phone, state } = req.body;
+      const { phone, state, password } = req.body;
       
-      if (!phone || !state) {
-        return res.status(400).json({ message: "Phone and state are required" });
+      if (!phone || !state || !password) {
+        return res.status(400).json({ message: "Phone, state, and password are required" });
       }
 
-      const result = await loginCaregiverWithPhone(phone, state);
+      const result = await loginCaregiverWithPhone(phone, state, password);
       
       if (!result.success) {
         return res.status(401).json({ message: result.message });
