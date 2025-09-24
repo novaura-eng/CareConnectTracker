@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import InputMask from "react-input-mask";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { HeartHandshake, Phone, Lock, ArrowLeft, CheckCircle, UserPlus, Home } from "lucide-react";
 
 const loginSchema = z.object({
@@ -55,6 +55,8 @@ export default function CaregiverLogin() {
       });
     },
     onSuccess: () => {
+      // CRITICAL: Clear cached data before new caregiver session to prevent data leakage
+      queryClient.clear();
       toast({
         title: "Login Successful",
         description: "Welcome back! Redirecting to your dashboard...",

@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useCaregiverAuth } from "@/hooks/useCaregiverAuth";
 import { 
   Breadcrumb,
@@ -74,6 +74,8 @@ export default function CaregiverLayout({ children }: CaregiverLayoutProps) {
   const logoutMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/caregiver/logout", {}),
     onSuccess: () => {
+      // CRITICAL: Clear all cached data to prevent data leakage between caregivers
+      queryClient.clear();
       toast({
         title: "Logged Out",
         description: "You have been successfully logged out.",
