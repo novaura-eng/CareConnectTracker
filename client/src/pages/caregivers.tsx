@@ -278,8 +278,8 @@ export default function Caregivers() {
       if (fileInput) fileInput.value = '';
 
       toast({
-        title: "Import Completed",
-        description: `Successfully imported ${result.imported} caregivers. ${result.skipped > 0 ? `Skipped ${result.skipped} duplicates.` : ''} ${result.errors > 0 ? `${result.errors} errors encountered.` : ''}`,
+        title: "Import Completed", 
+        description: `Successfully imported ${result.imported} caregivers. ${result.skipped > 0 ? `Skipped ${result.skipped} duplicates.` : ''} ${result.errors && result.errors.length > 0 ? `${result.errors.length} errors encountered.` : ''}`,
       });
     } catch (error: any) {
       console.error("Import error:", error);
