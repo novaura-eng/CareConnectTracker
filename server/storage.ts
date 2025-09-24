@@ -3,6 +3,7 @@ import {
   caregivers, 
   patients, 
   weeklyCheckIns, 
+  passwordResetTokens,
   surveyResponses,
   surveys,
   surveyQuestions,
@@ -36,6 +37,8 @@ import {
   type InsertSurveyStateTag,
   type SurveySchedule,
   type InsertSurveySchedule,
+  type PasswordResetToken,
+  type InsertPasswordResetToken,
   type StateCode
 } from "@shared/schema";
 import { db } from "./db";
@@ -58,6 +61,12 @@ export interface IStorage {
   checkPasswordSet(id: number): Promise<boolean>; // check if password is set
   getAllCaregivers(): Promise<Caregiver[]>;
   deleteCaregiver(id: number): Promise<void>;
+  
+  // Password reset methods
+  createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken>;
+  getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
+  markTokenAsUsed(token: string): Promise<void>;
+  cleanupExpiredTokens(): Promise<void>;
   
   // Patient methods
   getPatient(id: number): Promise<Patient | undefined>;
@@ -290,6 +299,36 @@ export class DatabaseStorage implements IStorage {
     }
     
     await db.delete(caregivers).where(eq(caregivers.id, id));
+  }
+
+  // Password reset token methods
+  async createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken> {
+    const [resetToken] = await db
+      .insert(passwordResetTokens)
+      .values(token)
+      .returning();
+    return resetToken;
+  }
+
+  async getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> {
+    const [resetToken] = await db
+      .select()
+      .from(passwordResetTokens)
+      .where(eq(passwordResetTokens.token, token));
+    return resetToken || undefined;
+  }
+
+  async markTokenAsUsed(token: string): Promise<void> {
+    await db
+      .update(passwordResetTokens)
+      .set({ usedAt: new Date() })
+      .where(eq(passwordResetTokens.token, token));
+  }
+
+  async cleanupExpiredTokens(): Promise<void> {
+    await db
+      .delete(passwordResetTokens)
+      .where(lte(passwordResetTokens.expiresAt, new Date()));
   }
 
   async getPatient(id: number): Promise<Patient | undefined> {

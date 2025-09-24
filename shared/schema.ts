@@ -59,6 +59,15 @@ export const caregivers = pgTable("caregivers", {
   unique("unique_phone_state").on(table.phone, table.state),
 ]);
 
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: serial("id").primaryKey(),
+  caregiverId: integer("caregiver_id").references(() => caregivers.id).notNull(),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const patients = pgTable("patients", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -345,6 +354,12 @@ export const insertWeeklyCheckInSchema = createInsertSchema(weeklyCheckIns).omit
   createdAt: true,
 });
 
+export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTokens).omit({
+  id: true,
+  createdAt: true,
+  usedAt: true,
+});
+
 // Legacy surveyResponse insert schema removed - using dynamic survey schema below
 
 // Dynamic Survey Insert Schemas
@@ -420,6 +435,9 @@ export interface PatientWithSurveyStatus extends Patient {
 
 export type WeeklyCheckIn = typeof weeklyCheckIns.$inferSelect;
 export type InsertWeeklyCheckIn = z.infer<typeof insertWeeklyCheckInSchema>;
+
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;
 
 // Legacy survey response types removed - using dynamic survey types below
 

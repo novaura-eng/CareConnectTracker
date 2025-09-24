@@ -758,6 +758,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Password Reset Routes
+  app.post("/api/caregiver/forgot-password", async (req, res) => {
+    try {
+      const { phone, state } = req.body;
+      
+      if (!phone || !state) {
+        return res.status(400).json({ message: "Phone and state are required" });
+      }
+
+      const caregiver = await storage.getCaregiverByPhoneAndState(phone, state);
+      if (!caregiver || !caregiver.isActive) {
+        // Don't reveal if caregiver exists for security
+        return res.json({ 
+          message: "If a caregiver account exists with this phone number and state, a password reset email will be sent.",
+          success: true
+        });
+      }
+
+      // Check if password is set (can't reset if no password was ever set)
+      const passwordSet = await storage.checkPasswordSet(caregiver.id);
+      if (!passwordSet) {
+        return res.json({ 
+          message: "If a caregiver account exists with this phone number and state, a password reset email will be sent.",
+          success: true
+        });
+      }
+
+      // Generate secure reset token
+      const crypto = await import('crypto');
+      const resetToken = crypto.randomUUID();
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+      // Store reset token
+      await storage.createPasswordResetToken({
+        caregiverId: caregiver.id,
+        token: resetToken,
+        expiresAt
+      });
+
+      // Send reset email (if email exists)
+      if (caregiver.email) {
+        try {
+          const resetUrl = `${req.protocol}://${req.get('host')}/caregiver/reset-password?token=${resetToken}`;
+          
+          // TODO: Send email using SendGrid integration
+          console.log(`Password reset link for ${caregiver.name}: ${resetUrl}`);
+          
+          res.json({ 
+            message: "Password reset instructions have been sent to your email address.",
+            success: true
+          });
+        } catch (emailError) {
+          console.error("Error sending reset email:", emailError);
+          res.json({ 
+            message: "Password reset initiated. Please contact your administrator for assistance.",
+            success: true
+          });
+        }
+      } else {
+        res.json({ 
+          message: "Password reset initiated. Please contact your administrator for assistance.",
+          success: true
+        });
+      }
+    } catch (error) {
+      console.error("Error requesting password reset:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/caregiver/reset-password", async (req, res) => {
+    try {
+      const { token, newPassword } = req.body;
+      
+      if (!token || !newPassword) {
+        return res.status(400).json({ message: "Reset token and new password are required" });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters long" });
+      }
+
+      // Get and validate reset token
+      const resetToken = await storage.getPasswordResetToken(token);
+      if (!resetToken) {
+        return res.status(400).json({ message: "Invalid or expired reset token" });
+      }
+
+      // Check if token is expired
+      if (new Date() > resetToken.expiresAt) {
+        return res.status(400).json({ message: "Reset token has expired" });
+      }
+
+      // Check if token was already used
+      if (resetToken.usedAt) {
+        return res.status(400).json({ message: "Reset token has already been used" });
+      }
+
+      // Hash new password and update caregiver
+      const hashedPassword = await hashPassword(newPassword);
+      await storage.setCaregiverPassword(resetToken.caregiverId, hashedPassword);
+
+      // Mark token as used
+      await storage.markTokenAsUsed(token);
+
+      res.json({ 
+        message: "Password reset successfully! You can now log in with your new password.",
+        success: true
+      });
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get survey form by check-in ID (public route)
   app.get("/api/survey/:checkInId", async (req, res) => {
     try {

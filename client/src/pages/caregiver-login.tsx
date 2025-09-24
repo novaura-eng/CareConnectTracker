@@ -195,6 +195,17 @@ export default function CaregiverLogin() {
                       {loginMutation.isPending ? "Signing In..." : "Sign In"}
                     </Button>
 
+                    <div className="text-center">
+                      <button
+                        type="button"
+                        onClick={() => setLocation(`/caregiver/forgot-password?state=${state}`)}
+                        className="text-sm text-primary hover:text-primary/80 underline"
+                        data-testid="link-forgot-password"
+                      >
+                        Forgot your password?
+                      </button>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-3">
                       <Button
                         type="button"
