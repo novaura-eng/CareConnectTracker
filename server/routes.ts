@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import multer from "multer";
+import csv from "csv-parser";
 import { 
   insertCaregiverSchema, 
   insertSurveyResponseSchema, 
@@ -1721,6 +1723,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating caregiver:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ message: "Internal server error", error: errorMessage });
+    }
+  });
+
+  // CSV Import endpoint for bulk caregiver creation
+  const upload = multer({ storage: multer.memoryStorage() });
+  
+  app.post("/api/caregivers/import", requireAdmin, upload.single('csvFile'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No CSV file uploaded" });
+      }
+
+      const csvData: any[] = [];
+      const errors: string[] = [];
+      let imported = 0;
+      let skipped = 0;
+
+      // Parse CSV data
+      const csvString = req.file.buffer.toString('utf8');
+      const rows = csvString.split('\n').map(row => row.split(',').map(cell => cell.trim()));
+      
+      // Check if CSV has headers
+      if (rows.length < 2) {
+        return res.status(400).json({ message: "CSV file must contain at least one data row" });
+      }
+
+      const headers = rows[0];
+      const expectedHeaders = ['name', 'phone', 'email', 'address', 'emergencyContact', 'state', 'isActive'];
+      
+      // Validate headers
+      for (const header of expectedHeaders) {
+        if (!headers.includes(header)) {
+          return res.status(400).json({ 
+            message: `Missing required column: ${header}. Expected headers: ${expectedHeaders.join(', ')}` 
+          });
+        }
+      }
+
+      // Process each data row
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (row.length === 1 && row[0] === '') continue; // Skip empty rows
+
+        try {
+          const caregiverData: any = {};
+          
+          // Map row data to caregiver object
+          headers.forEach((header, index) => {
+            if (row[index] !== undefined) {
+              if (header === 'isActive') {
+                caregiverData[header] = row[index].toLowerCase() === 'true';
+              } else {
+                caregiverData[header] = row[index] || null;
+              }
+            }
+          });
+
+          // Validate required fields
+          if (!caregiverData.name?.trim()) {
+            errors.push(`Row ${i + 1}: Name is required`);
+            continue;
+          }
+
+          if (!caregiverData.phone?.trim()) {
+            errors.push(`Row ${i + 1}: Phone is required`);
+            continue;
+          }
+
+          if (!caregiverData.state?.trim()) {
+            errors.push(`Row ${i + 1}: State is required`);
+            continue;
+          }
+
+          // Format phone number
+          const digits = caregiverData.phone.replace(/\D/g, '');
+          if (digits.length !== 10) {
+            errors.push(`Row ${i + 1}: Phone must be 10 digits`);
+            continue;
+          }
+          caregiverData.phone = `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+
+          // Validate email if provided
+          if (caregiverData.email && !/\S+@\S+\.\S+/.test(caregiverData.email)) {
+            errors.push(`Row ${i + 1}: Invalid email format`);
+            continue;
+          }
+
+          // Validate and parse the data with schema
+          const validatedData = insertCaregiverSchema.parse(caregiverData);
+
+          // Check if caregiver already exists (by phone and state)
+          const existingCaregiver = await storage.getCaregiverByPhoneAndState(validatedData.phone, validatedData.state);
+          if (existingCaregiver) {
+            skipped++;
+            continue;
+          }
+
+          // Create the caregiver
+          await storage.createCaregiver(validatedData);
+          imported++;
+
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : "Unknown error";
+          errors.push(`Row ${i + 1}: ${errorMessage}`);
+        }
+      }
+
+      // Return results
+      const response = {
+        imported,
+        skipped,
+        errors: errors.length > 0 ? errors : undefined,
+        message: `Import completed. ${imported} caregivers imported, ${skipped} duplicates skipped.`
+      };
+
+      if (errors.length > 0) {
+        response.message += ` ${errors.length} errors encountered.`;
+      }
+
+      res.json(response);
+
+    } catch (error) {
+      console.error("Error importing caregivers:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "CSV import failed", error: errorMessage });
     }
   });
 

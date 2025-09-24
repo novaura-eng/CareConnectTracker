@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Phone, Mail, MapPin, User, AlertCircle, Trash2, Key } from "lucide-react";
+import { Plus, Phone, Mail, MapPin, User, AlertCircle, Trash2, Key, Download, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import Sidebar from "@/components/layout/sidebar";
@@ -27,6 +27,8 @@ export default function Caregivers() {
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [selectedCaregiverForPassword, setSelectedCaregiverForPassword] = useState<Caregiver | null>(null);
   const [newPassword, setNewPassword] = useState("");
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   const { data: caregivers, isLoading } = useQuery<Caregiver[]>({
     queryKey: ["/api/caregivers"],
@@ -209,6 +211,97 @@ export default function Caregivers() {
     });
   };
 
+  // CSV Template Download
+  const downloadTemplate = () => {
+    const csvHeader = "name,phone,email,address,emergencyContact,state,isActive\n";
+    const csvExample = "John Smith,203-555-1234,john@email.com,123 Main St,Jane Smith 203-555-5678,Connecticut,true\n";
+    const csvContent = csvHeader + csvExample;
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'caregiver-import-template.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Template Downloaded",
+      description: "CSV template has been downloaded to your computer.",
+    });
+  };
+
+  // CSV Import Mutation
+  const csvImportMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('csvFile', file);
+      
+      const response = await fetch('/api/caregivers/import', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Import failed');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setIsImporting(false);
+      setCsvFile(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/caregivers"] });
+      
+      toast({
+        title: "Import Successful",
+        description: `Successfully imported ${data.imported} caregivers. ${data.skipped > 0 ? `Skipped ${data.skipped} duplicates.` : ''}`,
+      });
+    },
+    onError: (error: any) => {
+      setIsImporting(false);
+      toast({
+        title: "Import Failed",
+        description: error?.message || "Failed to import caregivers. Please check your CSV format.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle CSV file selection
+  const handleCsvFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (!file.name.toLowerCase().endsWith('.csv')) {
+        toast({
+          title: "Invalid File Type",
+          description: "Please select a CSV file.",
+          variant: "destructive",
+        });
+        return;
+      }
+      setCsvFile(file);
+    }
+  };
+
+  // Handle CSV import
+  const handleCsvImport = () => {
+    if (!csvFile) {
+      toast({
+        title: "No File Selected",
+        description: "Please select a CSV file to import.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsImporting(true);
+    csvImportMutation.mutate(csvFile);
+  };
+
   // Reset form when dialog state changes
   React.useEffect(() => {
     if (selectedCaregiver && isDialogOpen) {
@@ -255,16 +348,103 @@ export default function Caregivers() {
                 <h1 className="text-2xl font-bold text-slate-900">Caregiver Management</h1>
                 <p className="mt-1 text-sm text-slate-600">Manage caregiver profiles and contact information</p>
               </div>
-              <Dialog open={isDialogOpen} onOpenChange={(open) => {
-                setIsDialogOpen(open);
-                if (!open) setSelectedCaregiver(null);
-              }}>
-                <DialogTrigger asChild>
-                  <Button onClick={() => setSelectedCaregiver(null)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Caregiver
+              <div className="flex items-center gap-3">
+                <Button 
+                  variant="outline" 
+                  onClick={downloadTemplate}
+                  data-testid="button-download-template"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Template
+                </Button>
+                
+                <div className="flex items-center gap-2">
+                  <input
+                    type="file"
+                    id="csv-upload"
+                    accept=".csv"
+                    onChange={handleCsvFileChange}
+                    className="hidden"
+                    data-testid="input-csv-file"
+                  />
+                  <Button 
+                    variant="outline" 
+                    onClick={() => document.getElementById('csv-upload')?.click()}
+                    data-testid="button-select-csv"
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    {csvFile ? csvFile.name : 'Select CSV'}
                   </Button>
-                </DialogTrigger>
+                  {csvFile && (
+                    <Button 
+                      onClick={handleCsvImport}
+                      disabled={isImporting}
+                      data-testid="button-import-csv"
+                    >
+                      {isImporting ? 'Importing...' : 'Import CSV'}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Mobile Import and Add Caregiver Buttons - Only visible on mobile */}
+        <div className="lg:hidden px-4 pt-4 pb-2 space-y-3">
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={downloadTemplate}
+              className="flex-1"
+              data-testid="button-download-template-mobile"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Download Template
+            </Button>
+            
+            <div className="flex-1">
+              <input
+                type="file"
+                id="csv-upload-mobile"
+                accept=".csv"
+                onChange={handleCsvFileChange}
+                className="hidden"
+                data-testid="input-csv-file-mobile"
+              />
+              <Button 
+                variant="outline" 
+                onClick={() => document.getElementById('csv-upload-mobile')?.click()}
+                className="w-full"
+                data-testid="button-select-csv-mobile"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                {csvFile ? 'File Selected' : 'Select CSV'}
+              </Button>
+            </div>
+          </div>
+          
+          {csvFile && (
+            <Button 
+              onClick={handleCsvImport}
+              disabled={isImporting}
+              className="w-full"
+              data-testid="button-import-csv-mobile"
+            >
+              {isImporting ? 'Importing...' : `Import ${csvFile.name}`}
+            </Button>
+          )}
+
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+                  setIsDialogOpen(open);
+                  if (!open) setSelectedCaregiver(null);
+                }}>
+                  <DialogTrigger asChild>
+                    <Button onClick={() => setSelectedCaregiver(null)} data-testid="button-add-caregiver">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Caregiver
+                    </Button>
+                  </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
                     <DialogTitle>{selectedCaregiver ? "Edit Caregiver" : "Add New Caregiver"}</DialogTitle>
@@ -424,22 +604,62 @@ export default function Caregivers() {
           </div>
         </header>
 
-        {/* Mobile Add Caregiver Button - Only visible on mobile */}
-        <div className="lg:hidden px-4 pt-4 pb-2">
-          <Dialog open={isDialogOpen} onOpenChange={(open) => {
-            setIsDialogOpen(open);
-            if (!open) setSelectedCaregiver(null);
-          }}>
-            <DialogTrigger asChild>
-              <Button onClick={() => setSelectedCaregiver(null)} className="w-full">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Caregiver
+        {/* Mobile Import and Add Caregiver Buttons - Only visible on mobile */}
+        <div className="lg:hidden px-4 pt-4 pb-2 space-y-3">
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={downloadTemplate}
+              className="flex-1"
+              data-testid="button-download-template-mobile"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Download Template
+            </Button>
+            
+            <div className="flex-1">
+              <input
+                type="file"
+                id="csv-upload-mobile"
+                accept=".csv"
+                onChange={handleCsvFileChange}
+                className="hidden"
+                data-testid="input-csv-file-mobile"
+              />
+              <Button 
+                variant="outline" 
+                onClick={() => document.getElementById('csv-upload-mobile')?.click()}
+                className="w-full"
+                data-testid="button-select-csv-mobile"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                {csvFile ? 'File Selected' : 'Select CSV'}
               </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>{selectedCaregiver ? "Edit Caregiver" : "Add New Caregiver"}</DialogTitle>
-                <DialogDescription>
+            </div>
+          </div>
+          
+          {csvFile && (
+            <Button 
+              onClick={handleCsvImport}
+              disabled={isImporting}
+              className="w-full"
+              data-testid="button-import-csv-mobile"
+            >
+              {isImporting ? 'Importing...' : `Import ${csvFile.name}`}
+            </Button>
+          )}
+        </div>
+
+        {/* Main Content */}
+        <main className="flex-1 overflow-auto bg-slate-50">
+          <div className="px-4 py-6 sm:px-6 lg:px-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Users className="mr-2 h-5 w-5" />
+                    Caregivers
+                  </div>
                   {selectedCaregiver ? "Update the caregiver's information below." : "Enter the caregiver's contact details and information."}
                 </DialogDescription>
               </DialogHeader>
