@@ -265,12 +265,10 @@ export default function Caregivers() {
 
     setIsImporting(true);
     const formData = new FormData();
-    formData.append('file', csvFile);
+    formData.append('csvFile', csvFile);
 
     try {
-      const result = await apiRequest("POST", "/api/caregivers/import", formData, {
-        'Content-Type': 'multipart/form-data',
-      });
+      const result = await apiRequest("POST", "/api/caregivers/import", formData);
 
       queryClient.invalidateQueries({ queryKey: ["/api/caregivers"] });
       setCsvFile(null);
