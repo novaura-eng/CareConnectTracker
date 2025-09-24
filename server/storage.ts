@@ -53,7 +53,10 @@ export interface IStorage {
   getCaregiverByPhoneAndState(phone: string, state: string): Promise<Caregiver | undefined>;
   getCaregiversByState(state: string): Promise<Caregiver[]>;
   createCaregiver(caregiver: InsertCaregiver): Promise<Caregiver>;
-  updateCaregiverPassword(id: number, password: string): Promise<void>;
+  updateCaregiverPassword(id: number, password: string): Promise<void>; // deprecated
+  setCaregiverPassword(id: number, passwordHash: string): Promise<void>; // new secure method
+  verifyCaregiverPassword(id: number, passwordHash: string): Promise<boolean>; // verify password
+  checkPasswordSet(id: number): Promise<boolean>; // check if password is set
   getAllCaregivers(): Promise<Caregiver[]>;
   deleteCaregiver(id: number): Promise<void>;
   
@@ -205,10 +208,40 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateCaregiverPassword(id: number, password: string): Promise<void> {
+    // Deprecated method - kept for backward compatibility
     await db
       .update(caregivers)
       .set({ password })
       .where(eq(caregivers.id, id));
+  }
+
+  async setCaregiverPassword(id: number, passwordHash: string): Promise<void> {
+    await db
+      .update(caregivers)
+      .set({ 
+        passwordHash,
+        passwordSet: true,
+        lastPasswordChange: new Date()
+      })
+      .where(eq(caregivers.id, id));
+  }
+
+  async verifyCaregiverPassword(id: number, passwordHash: string): Promise<boolean> {
+    const [caregiver] = await db
+      .select({ passwordHash: caregivers.passwordHash })
+      .from(caregivers)
+      .where(eq(caregivers.id, id));
+    
+    return caregiver?.passwordHash === passwordHash;
+  }
+
+  async checkPasswordSet(id: number): Promise<boolean> {
+    const [caregiver] = await db
+      .select({ passwordSet: caregivers.passwordSet })
+      .from(caregivers)
+      .where(eq(caregivers.id, id));
+    
+    return caregiver?.passwordSet || false;
   }
 
   async updateCaregiverProfile(id: number, data: { name: string; email?: string | null; emergencyContact?: string | null }): Promise<void> {

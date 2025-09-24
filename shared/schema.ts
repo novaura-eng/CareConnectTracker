@@ -50,6 +50,9 @@ export const caregivers = pgTable("caregivers", {
   emergencyContact: text("emergency_contact"),
   state: text("state").notNull(),
   password: text("password"), // deprecated - will be removed once migration is complete
+  passwordHash: text("password_hash"), // new secure password hash
+  passwordSet: boolean("password_set").default(false).notNull(), // tracks if password has been set
+  lastPasswordChange: timestamp("last_password_change"), // for auditing and password rotation
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
