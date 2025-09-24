@@ -53,7 +53,6 @@ export interface IStorage {
   getCaregiverByPhoneAndState(phone: string, state: string): Promise<Caregiver | undefined>;
   getCaregiversByState(state: string): Promise<Caregiver[]>;
   createCaregiver(caregiver: InsertCaregiver): Promise<Caregiver>;
-  updateCaregiverPassword(id: number, password: string): Promise<void>; // deprecated
   setCaregiverPassword(id: number, passwordHash: string): Promise<void>; // new secure method
   verifyCaregiverPassword(id: number, passwordHash: string): Promise<boolean>; // verify password
   checkPasswordSet(id: number): Promise<boolean>; // check if password is set
@@ -207,13 +206,7 @@ export class DatabaseStorage implements IStorage {
     );
   }
 
-  async updateCaregiverPassword(id: number, password: string): Promise<void> {
-    // Deprecated method - kept for backward compatibility
-    await db
-      .update(caregivers)
-      .set({ password })
-      .where(eq(caregivers.id, id));
-  }
+  // Deprecated method removed - use setCaregiverPassword instead
 
   async setCaregiverPassword(id: number, passwordHash: string): Promise<void> {
     await db
@@ -273,6 +266,9 @@ export class DatabaseStorage implements IStorage {
       emergencyContact: caregivers.emergencyContact,
       state: caregivers.state,
       password: caregivers.password,
+      passwordHash: caregivers.passwordHash,
+      passwordSet: caregivers.passwordSet,
+      lastPasswordChange: caregivers.lastPasswordChange,
       isActive: caregivers.isActive,
       createdAt: caregivers.createdAt,
     }).from(caregivers).where(eq(caregivers.isActive, true));

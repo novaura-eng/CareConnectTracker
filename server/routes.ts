@@ -304,14 +304,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify current password
-      const isValidPassword = await verifyPassword(currentPassword, caregiver.password);
+      const isValidPassword = await verifyPassword(currentPassword, caregiver.passwordHash);
       if (!isValidPassword) {
         return res.status(401).json({ message: "Current password is incorrect" });
       }
 
       // Hash new password and update
       const hashedPassword = await hashPassword(newPassword);
-      await storage.updateCaregiverPassword(caregiver.id, hashedPassword);
+      await storage.setCaregiverPassword(caregiver.id, hashedPassword);
 
       res.json({ message: "Password changed successfully" });
     } catch (error) {
@@ -738,13 +738,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "No active caregiver found with this phone number and state" });
       }
 
-      if (caregiver.password) {
+      // Check if password is already set
+      const passwordSet = await storage.checkPasswordSet(caregiver.id);
+      if (passwordSet) {
         return res.status(400).json({ message: "Password already set for this account" });
       }
 
       // Hash password and update caregiver
       const hashedPassword = await hashPassword(password);
-      await storage.updateCaregiverPassword(caregiver.id, hashedPassword);
+      await storage.setCaregiverPassword(caregiver.id, hashedPassword);
 
       res.json({ 
         message: "Password set successfully! You can now log in.",
