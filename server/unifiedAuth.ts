@@ -142,6 +142,14 @@ export async function loginCaregiverWithPhone(phone: string, state: string): Pro
     // Check if caregiver exists and is active
     const caregiver = await storage.getCaregiverByPhoneAndState(phone, state);
     if (!caregiver || !caregiver.isActive) {
+      // Provide better error message - check if caregiver exists with this phone in a different state
+      const caregiverInOtherState = await storage.getCaregiverByPhone(phone);
+      if (caregiverInOtherState && caregiverInOtherState.isActive) {
+        return { 
+          success: false, 
+          message: `Phone number found but in a different state. Please try logging in with state: ${caregiverInOtherState.state}` 
+        };
+      }
       return { success: false, message: "No active caregiver found with this phone number and state" };
     }
 
