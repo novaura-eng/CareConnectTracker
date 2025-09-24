@@ -802,8 +802,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const resetUrl = `${req.protocol}://${req.get('host')}/caregiver/reset-password?token=${resetToken}`;
           
-          // TODO: Send email using SendGrid integration
-          console.log(`Password reset link for ${caregiver.name}: ${resetUrl}`);
+          // Send email using SendGrid integration
+          const { sendPasswordResetEmail } = await import('../services/email');
+          const emailSent = await sendPasswordResetEmail(
+            caregiver.name,
+            caregiver.email,
+            resetUrl
+          );
+          
+          if (emailSent) {
+            console.log(`Password reset email sent successfully to ${caregiver.email}`);
+          } else {
+            console.log(`Password reset email failed to send to ${caregiver.email}`);
+          }
           
           res.json({ 
             message: "Password reset instructions have been sent to your email address.",
