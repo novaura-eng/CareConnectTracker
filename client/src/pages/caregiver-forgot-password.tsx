@@ -38,7 +38,7 @@ export default function CaregiverForgotPassword() {
 
   const forgotPasswordMutation = useMutation({
     mutationFn: async (data: ForgotPasswordFormData) => {
-      return await apiRequest("/api/caregiver/forgot-password", "POST", {
+      return await apiRequest("POST", "/api/caregiver/forgot-password", {
         ...data,
         state,
       });

@@ -43,7 +43,7 @@ export default function CaregiverResetPassword() {
 
   const resetPasswordMutation = useMutation({
     mutationFn: async (data: ResetPasswordFormData) => {
-      return await apiRequest("/api/caregiver/reset-password", "POST", {
+      return await apiRequest("POST", "/api/caregiver/reset-password", {
         token,
         newPassword: data.newPassword,
       });
