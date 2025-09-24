@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Phone, Mail, MapPin, User, Users, AlertCircle, Trash2, Key, Download, Upload } from "lucide-react";
+import { Plus, Phone, Mail, MapPin, User, AlertCircle, Trash2, Key, Download, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import Sidebar from "@/components/layout/sidebar";
@@ -27,6 +27,8 @@ export default function Caregivers() {
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [selectedCaregiverForPassword, setSelectedCaregiverForPassword] = useState<Caregiver | null>(null);
   const [newPassword, setNewPassword] = useState("");
+  
+  // CSV Import state - NEW FUNCTIONALITY
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
 
@@ -211,84 +213,49 @@ export default function Caregivers() {
     });
   };
 
-  // CSV Template Download
+  // CSV IMPORT FUNCTIONALITY - NEW
   const downloadTemplate = () => {
-    const csvHeader = "name,phone,email,address,emergencyContact,state,isActive\n";
-    const csvExample = "John Smith,203-555-1234,john@email.com,123 Main St,Jane Smith 203-555-5678,Connecticut,true\n";
-    const csvContent = csvHeader + csvExample;
+    const headers = ['name', 'phone', 'email', 'address', 'emergencyContact', 'state', 'isActive'];
+    const exampleData = [
+      'John Doe',
+      '2035551234',
+      'john.doe@example.com',
+      '123 Main St, Anytown, CT 06511',
+      'Jane Doe - 2035555678',
+      'Connecticut',
+      'true'
+    ];
+    
+    const csvContent = [
+      headers.join(','),
+      exampleData.join(',')
+    ].join('\n');
     
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'caregiver-import-template.csv';
+    link.setAttribute('download', 'caregiver_import_template.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
-    
-    toast({
-      title: "Template Downloaded",
-      description: "CSV template has been downloaded to your computer.",
-    });
   };
 
-  // CSV Import Mutation
-  const csvImportMutation = useMutation({
-    mutationFn: async (file: File) => {
-      const formData = new FormData();
-      formData.append('csvFile', file);
-      
-      const response = await fetch('/api/caregivers/import', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Import failed');
-      }
-      
-      return response.json();
-    },
-    onSuccess: (data) => {
-      setIsImporting(false);
-      setCsvFile(null);
-      queryClient.invalidateQueries({ queryKey: ["/api/caregivers"] });
-      
-      toast({
-        title: "Import Successful",
-        description: `Successfully imported ${data.imported} caregivers. ${data.skipped > 0 ? `Skipped ${data.skipped} duplicates.` : ''}`,
-      });
-    },
-    onError: (error: any) => {
-      setIsImporting(false);
-      toast({
-        title: "Import Failed",
-        description: error?.message || "Failed to import caregivers. Please check your CSV format.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Handle CSV file selection
   const handleCsvFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      if (!file.name.toLowerCase().endsWith('.csv')) {
-        toast({
-          title: "Invalid File Type",
-          description: "Please select a CSV file.",
-          variant: "destructive",
-        });
-        return;
-      }
+    if (file && file.type === 'text/csv') {
       setCsvFile(file);
+    } else {
+      toast({
+        title: "Invalid File",
+        description: "Please select a valid CSV file.",
+        variant: "destructive",
+      });
     }
   };
 
-  // Handle CSV import
-  const handleCsvImport = () => {
+  const handleCsvImport = async () => {
     if (!csvFile) {
       toast({
         title: "No File Selected",
@@ -297,9 +264,37 @@ export default function Caregivers() {
       });
       return;
     }
-    
+
     setIsImporting(true);
-    csvImportMutation.mutate(csvFile);
+    const formData = new FormData();
+    formData.append('file', csvFile);
+
+    try {
+      const result = await apiRequest("POST", "/api/caregivers/import", formData, {
+        'Content-Type': 'multipart/form-data',
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["/api/caregivers"] });
+      setCsvFile(null);
+      
+      // Reset file input
+      const fileInput = document.getElementById('csv-upload') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+
+      toast({
+        title: "Import Completed",
+        description: `Successfully imported ${result.imported} caregivers. ${result.skipped > 0 ? `Skipped ${result.skipped} duplicates.` : ''} ${result.errors > 0 ? `${result.errors} errors encountered.` : ''}`,
+      });
+    } catch (error: any) {
+      console.error("Import error:", error);
+      toast({
+        title: "Import Failed",
+        description: error?.message || "Failed to import caregivers. Please check your CSV format and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   // Reset form when dialog state changes
@@ -338,421 +333,456 @@ export default function Caregivers() {
   };
 
   return (
-    <>
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header - Hidden on mobile to avoid duplication with mobile nav */}
-        <header className="hidden lg:block bg-white shadow-sm border-b border-slate-200">
-          <div className="px-4 py-6 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900">Caregiver Management</h1>
-                <p className="mt-1 text-sm text-slate-600">Manage caregiver profiles and contact information</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <Button 
-                  variant="outline" 
-                  onClick={downloadTemplate}
-                  data-testid="button-download-template"
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Download Template
-                </Button>
-                
-                <div className="flex items-center gap-2">
-                  <input
-                    type="file"
-                    id="csv-upload"
-                    accept=".csv"
-                    onChange={handleCsvFileChange}
-                    className="hidden"
-                    data-testid="input-csv-file"
-                  />
+    <div className="min-h-screen bg-slate-50">
+      <div className="flex">
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:block">
+          <Sidebar />
+        </div>
+        
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Header - Hidden on mobile to avoid duplication with mobile nav */}
+          <header className="hidden lg:block bg-white shadow-sm border-b border-slate-200">
+            <div className="px-4 py-6 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold text-slate-900">Caregiver Management</h1>
+                  <p className="mt-1 text-sm text-slate-600">Manage caregiver profiles and contact information</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  {/* CSV Import Buttons - NEW FUNCTIONALITY */}
                   <Button 
                     variant="outline" 
-                    onClick={() => document.getElementById('csv-upload')?.click()}
-                    data-testid="button-select-csv"
+                    onClick={downloadTemplate}
+                    data-testid="button-download-template"
                   >
-                    <Upload className="mr-2 h-4 w-4" />
-                    {csvFile ? csvFile.name : 'Select CSV'}
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Template
                   </Button>
-                  {csvFile && (
+                  
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="file"
+                      id="csv-upload"
+                      accept=".csv"
+                      onChange={handleCsvFileChange}
+                      className="hidden"
+                      data-testid="input-csv-file"
+                    />
                     <Button 
-                      onClick={handleCsvImport}
-                      disabled={isImporting}
-                      data-testid="button-import-csv"
+                      variant="outline" 
+                      onClick={() => document.getElementById('csv-upload')?.click()}
+                      data-testid="button-select-csv"
                     >
-                      {isImporting ? 'Importing...' : 'Import CSV'}
+                      <Upload className="mr-2 h-4 w-4" />
+                      {csvFile ? 'File Selected' : 'Select CSV'}
                     </Button>
-                  )}
+                    
+                    {csvFile && (
+                      <Button 
+                        onClick={handleCsvImport}
+                        disabled={isImporting}
+                        data-testid="button-import-csv"
+                      >
+                        {isImporting ? 'Importing...' : `Import ${csvFile.name}`}
+                      </Button>
+                    )}
+                  </div>
+                  
+                  <Dialog open={isDialogOpen} onOpenChange={(open) => {
+                    setIsDialogOpen(open);
+                    if (!open) setSelectedCaregiver(null);
+                  }}>
+                    <DialogTrigger asChild>
+                      <Button onClick={() => setSelectedCaregiver(null)}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Caregiver
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>{selectedCaregiver ? "Edit Caregiver" : "Add New Caregiver"}</DialogTitle>
+                        <DialogDescription>
+                          {selectedCaregiver ? "Update the caregiver's information below." : "Enter the caregiver's contact details and information."}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <form onSubmit={handleSubmit} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="name">Full Name</Label>
+                          <Input
+                            id="name"
+                            placeholder="Enter caregiver's full name"
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            className={formErrors.name ? "border-red-500" : ""}
+                          />
+                          {formErrors.name && <p className="text-sm text-red-500">{formErrors.name}</p>}
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="phone">Phone Number</Label>
+                          <InputMask
+                            mask="999-999-9999"
+                            maskChar=""
+                            value={formData.phone}
+                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                          >
+                            {(inputProps: any) => (
+                              <Input
+                                {...inputProps}
+                                id="phone"
+                                type="tel"
+                                placeholder="203-555-1234"
+                                className={formErrors.phone ? "border-red-500" : ""}
+                              />
+                            )}
+                          </InputMask>
+                          {formErrors.phone && <p className="text-sm text-red-500">{formErrors.phone}</p>}
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="state">State</Label>
+                          <Select
+                            value={formData.state}
+                            onValueChange={(value) => setFormData({ ...formData, state: value })}
+                          >
+                            <SelectTrigger className={formErrors.state ? "border-red-500" : ""}>
+                              <SelectValue placeholder="Select a state" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Alabama">Alabama</SelectItem>
+                              <SelectItem value="Alaska">Alaska</SelectItem>
+                              <SelectItem value="Arizona">Arizona</SelectItem>
+                              <SelectItem value="Arkansas">Arkansas</SelectItem>
+                              <SelectItem value="California">California</SelectItem>
+                              <SelectItem value="Colorado">Colorado</SelectItem>
+                              <SelectItem value="Connecticut">Connecticut</SelectItem>
+                              <SelectItem value="Delaware">Delaware</SelectItem>
+                              <SelectItem value="Florida">Florida</SelectItem>
+                              <SelectItem value="Georgia">Georgia</SelectItem>
+                              <SelectItem value="Hawaii">Hawaii</SelectItem>
+                              <SelectItem value="Idaho">Idaho</SelectItem>
+                              <SelectItem value="Illinois">Illinois</SelectItem>
+                              <SelectItem value="Indiana">Indiana</SelectItem>
+                              <SelectItem value="Iowa">Iowa</SelectItem>
+                              <SelectItem value="Kansas">Kansas</SelectItem>
+                              <SelectItem value="Kentucky">Kentucky</SelectItem>
+                              <SelectItem value="Louisiana">Louisiana</SelectItem>
+                              <SelectItem value="Maine">Maine</SelectItem>
+                              <SelectItem value="Maryland">Maryland</SelectItem>
+                              <SelectItem value="Massachusetts">Massachusetts</SelectItem>
+                              <SelectItem value="Michigan">Michigan</SelectItem>
+                              <SelectItem value="Minnesota">Minnesota</SelectItem>
+                              <SelectItem value="Mississippi">Mississippi</SelectItem>
+                              <SelectItem value="Missouri">Missouri</SelectItem>
+                              <SelectItem value="Montana">Montana</SelectItem>
+                              <SelectItem value="Nebraska">Nebraska</SelectItem>
+                              <SelectItem value="Nevada">Nevada</SelectItem>
+                              <SelectItem value="New Hampshire">New Hampshire</SelectItem>
+                              <SelectItem value="New Jersey">New Jersey</SelectItem>
+                              <SelectItem value="New Mexico">New Mexico</SelectItem>
+                              <SelectItem value="New York">New York</SelectItem>
+                              <SelectItem value="North Carolina">North Carolina</SelectItem>
+                              <SelectItem value="North Dakota">North Dakota</SelectItem>
+                              <SelectItem value="Ohio">Ohio</SelectItem>
+                              <SelectItem value="Oklahoma">Oklahoma</SelectItem>
+                              <SelectItem value="Oregon">Oregon</SelectItem>
+                              <SelectItem value="Pennsylvania">Pennsylvania</SelectItem>
+                              <SelectItem value="Rhode Island">Rhode Island</SelectItem>
+                              <SelectItem value="South Carolina">South Carolina</SelectItem>
+                              <SelectItem value="South Dakota">South Dakota</SelectItem>
+                              <SelectItem value="Tennessee">Tennessee</SelectItem>
+                              <SelectItem value="Texas">Texas</SelectItem>
+                              <SelectItem value="Utah">Utah</SelectItem>
+                              <SelectItem value="Vermont">Vermont</SelectItem>
+                              <SelectItem value="Virginia">Virginia</SelectItem>
+                              <SelectItem value="Washington">Washington</SelectItem>
+                              <SelectItem value="West Virginia">West Virginia</SelectItem>
+                              <SelectItem value="Wisconsin">Wisconsin</SelectItem>
+                              <SelectItem value="Wyoming">Wyoming</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {formErrors.state && <p className="text-sm text-red-500">{formErrors.state}</p>}
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="email">Email (Optional)</Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            placeholder="caregiver@example.com"
+                            value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="address">Address (Optional)</Label>
+                          <Input
+                            id="address"
+                            placeholder="Street address"
+                            value={formData.address}
+                            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="emergencyContact">Emergency Contact (Optional)</Label>
+                          <Input
+                            id="emergencyContact"
+                            placeholder="Emergency contact information"
+                            value={formData.emergencyContact}
+                            onChange={(e) => setFormData({ ...formData, emergencyContact: e.target.value })}
+                          />
+                        </div>
+
+                        <div className="flex justify-end space-x-2 pt-4">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setIsDialogOpen(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button type="submit" disabled={createMutation.isPending}>
+                            {createMutation.isPending 
+                              ? (selectedCaregiver ? "Updating..." : "Adding...") 
+                              : (selectedCaregiver ? "Update Caregiver" : "Add Caregiver")
+                            }
+                          </Button>
+                        </div>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </div>
             </div>
-          </div>
-        </header>
+          </header>
 
-        {/* Mobile Import and Add Caregiver Buttons - Only visible on mobile */}
-        <div className="lg:hidden px-4 pt-4 pb-2 space-y-3">
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={downloadTemplate}
-              className="flex-1"
-              data-testid="button-download-template-mobile"
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Download Template
-            </Button>
-            
-            <div className="flex-1">
-              <input
-                type="file"
-                id="csv-upload-mobile"
-                accept=".csv"
-                onChange={handleCsvFileChange}
-                className="hidden"
-                data-testid="input-csv-file-mobile"
-              />
+          {/* Mobile Header and Navigation */}
+          <div className="lg:hidden">
+            <Sidebar />
+          </div>
+
+          {/* Mobile Import and Add Caregiver Buttons - Only visible on mobile */}
+          <div className="lg:hidden px-4 pt-4 pb-2 space-y-3">
+            <div className="flex gap-2">
               <Button 
                 variant="outline" 
-                onClick={() => document.getElementById('csv-upload-mobile')?.click()}
-                className="w-full"
-                data-testid="button-select-csv-mobile"
+                onClick={downloadTemplate}
+                className="flex-1"
+                data-testid="button-download-template-mobile"
               >
-                <Upload className="mr-2 h-4 w-4" />
-                {csvFile ? 'File Selected' : 'Select CSV'}
+                <Download className="mr-2 h-4 w-4" />
+                Download Template
               </Button>
+              
+              <div className="flex-1">
+                <input
+                  type="file"
+                  id="csv-upload-mobile"
+                  accept=".csv"
+                  onChange={handleCsvFileChange}
+                  className="hidden"
+                  data-testid="input-csv-file-mobile"
+                />
+                <Button 
+                  variant="outline" 
+                  onClick={() => document.getElementById('csv-upload-mobile')?.click()}
+                  className="w-full"
+                  data-testid="button-select-csv-mobile"
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  {csvFile ? 'File Selected' : 'Select CSV'}
+                </Button>
+              </div>
             </div>
+            
+            {csvFile && (
+              <Button 
+                onClick={handleCsvImport}
+                disabled={isImporting}
+                className="w-full"
+                data-testid="button-import-csv-mobile"
+              >
+                {isImporting ? 'Importing...' : `Import ${csvFile.name}`}
+              </Button>
+            )}
+            
+            <Dialog open={isDialogOpen} onOpenChange={(open) => {
+              setIsDialogOpen(open);
+              if (!open) setSelectedCaregiver(null);
+            }}>
+              <DialogTrigger asChild>
+                <Button 
+                  onClick={() => setSelectedCaregiver(null)}
+                  className="w-full"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Caregiver
+                </Button>
+              </DialogTrigger>
+            </Dialog>
           </div>
-          
-          {csvFile && (
-            <Button 
-              onClick={handleCsvImport}
-              disabled={isImporting}
-              className="w-full"
-              data-testid="button-import-csv-mobile"
-            >
-              {isImporting ? 'Importing...' : `Import ${csvFile.name}`}
-            </Button>
-          )}
-        </div>
 
-        {/* Main Content */}
-        <main className="flex-1 overflow-auto bg-slate-50">
-          <div className="px-4 py-6 sm:px-6 lg:px-8">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Users className="mr-2 h-5 w-5" />
-                  Caregivers
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="space-y-4">
-                    {[...Array(3)].map((_, i) => (
-                      <Skeleton key={i} className="h-16 w-full" />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Caregiver</TableHead>
-                          <TableHead>Contact</TableHead>
-                          <TableHead>Address</TableHead>
-                          <TableHead>Emergency Contact</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {(caregivers?.length || 0) === 0 ? (
+          {/* Main Content */}
+          <main className="flex-1 overflow-auto bg-slate-50">
+            <div className="px-4 py-6 sm:px-6 lg:px-8">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <User className="mr-2 h-5 w-5" />
+                    Caregivers
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isLoading ? (
+                    <div className="space-y-4">
+                      {[...Array(3)].map((_, i) => (
+                        <Skeleton key={i} className="h-16 w-full" />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
                           <TableRow>
-                            <TableCell colSpan={6} className="text-center py-8">
-                              <div className="text-slate-500">
-                                <User className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-                                <p className="text-lg font-medium">No caregivers found</p>
-                                <p className="text-sm">Get started by adding your first caregiver</p>
-                              </div>
-                            </TableCell>
+                            <TableHead>Caregiver</TableHead>
+                            <TableHead>Contact</TableHead>
+                            <TableHead>Address</TableHead>
+                            <TableHead>Emergency Contact</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Actions</TableHead>
                           </TableRow>
-                        ) : (
-                          caregivers?.map((caregiver) => (
-                            <TableRow key={caregiver.id} className="hover:bg-slate-50">
-                              <TableCell>
-                                <div className="flex items-center">
-                                  <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center mr-3">
-                                    <span className="text-sm font-medium text-slate-600">
-                                      {getInitials(caregiver.name)}
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <div className="text-sm font-medium text-slate-900">
-                                      {caregiver.name}
-                                    </div>
-                                    <div className="text-sm text-slate-500">
-                                      ID: #{caregiver.id}
-                                    </div>
-                                  </div>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="space-y-1">
-                                  <div className="flex items-center text-sm text-slate-900">
-                                    <Phone className="h-4 w-4 mr-2 text-slate-400" />
-                                    {formatPhone(caregiver.phone)}
-                                  </div>
-                                  {caregiver.email && (
-                                    <div className="flex items-center text-sm text-slate-600">
-                                      <Mail className="h-4 w-4 mr-2 text-slate-400" />
-                                      {caregiver.email}
-                                    </div>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                {caregiver.address ? (
-                                  <div className="flex items-center text-sm text-slate-600">
-                                    <MapPin className="h-4 w-4 mr-2 text-slate-400" />
-                                    <span className="max-w-xs truncate">{caregiver.address}</span>
-                                  </div>
-                                ) : (
-                                  <span className="text-sm text-slate-400">No address</span>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {caregiver.emergencyContact ? (
-                                  <span className="text-sm text-slate-600">{caregiver.emergencyContact}</span>
-                                ) : (
-                                  <span className="text-sm text-slate-400">Not provided</span>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant={caregiver.isActive ? "secondary" : "outline"}>
-                                  {caregiver.isActive ? "Active" : "Inactive"}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center space-x-2">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm"
-                                    onClick={() => {
-                                      setSelectedCaregiver(caregiver);
-                                      setIsDialogOpen(true);
-                                    }}
-                                  >
-                                    Edit
-                                  </Button>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm"
-                                    onClick={() => {
-                                      setSelectedCaregiverForPassword(caregiver);
-                                      setPasswordDialogOpen(true);
-                                    }}
-                                    className="text-blue-600 hover:text-blue-700"
-                                  >
-                                    <Key className="h-4 w-4 mr-1" />
-                                    Set Password
-                                  </Button>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm"
-                                    onClick={() => {
-                                      setSelectedCaregiver(caregiver);
-                                      setShowPatients(true);
-                                    }}
-                                  >
-                                    View Patients
-                                  </Button>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm"
-                                    onClick={() => {
-                                      setCaregiverToDelete(caregiver);
-                                      setDeleteConfirmOpen(true);
-                                    }}
-                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
+                        </TableHeader>
+                        <TableBody>
+                          {(caregivers?.length || 0) === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={6} className="text-center py-8">
+                                <div className="text-slate-500">
+                                  <User className="h-12 w-12 mx-auto mb-4 text-slate-300" />
+                                  <p className="text-lg font-medium">No caregivers found</p>
+                                  <p className="text-sm">Get started by adding your first caregiver</p>
                                 </div>
                               </TableCell>
                             </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </main>
+                          ) : (
+                            caregivers?.map((caregiver) => (
+                              <TableRow key={caregiver.id} className="hover:bg-slate-50">
+                                <TableCell>
+                                  <div className="flex items-center">
+                                    <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center mr-3">
+                                      <span className="text-sm font-medium text-slate-600">
+                                        {getInitials(caregiver.name)}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <div className="text-sm font-medium text-slate-900">
+                                        {caregiver.name}
+                                      </div>
+                                      <div className="text-sm text-slate-500">
+                                        ID: #{caregiver.id}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="space-y-1">
+                                    <div className="flex items-center text-sm text-slate-900">
+                                      <Phone className="h-4 w-4 mr-2 text-slate-400" />
+                                      {formatPhone(caregiver.phone)}
+                                    </div>
+                                    {caregiver.email && (
+                                      <div className="flex items-center text-sm text-slate-600">
+                                        <Mail className="h-4 w-4 mr-2 text-slate-400" />
+                                        {caregiver.email}
+                                      </div>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  {caregiver.address ? (
+                                    <div className="flex items-center text-sm text-slate-600">
+                                      <MapPin className="h-4 w-4 mr-2 text-slate-400" />
+                                      <span className="max-w-xs truncate">{caregiver.address}</span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-sm text-slate-400">No address</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {caregiver.emergencyContact ? (
+                                    <span className="text-sm text-slate-600">{caregiver.emergencyContact}</span>
+                                  ) : (
+                                    <span className="text-sm text-slate-400">Not provided</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant={caregiver.isActive ? "secondary" : "outline"}>
+                                    {caregiver.isActive ? "Active" : "Inactive"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center space-x-2">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedCaregiver(caregiver);
+                                        setIsDialogOpen(true);
+                                      }}
+                                    >
+                                      Edit
+                                    </Button>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedCaregiverForPassword(caregiver);
+                                        setPasswordDialogOpen(true);
+                                      }}
+                                      className="text-blue-600 hover:text-blue-700"
+                                    >
+                                      <Key className="h-4 w-4 mr-1" />
+                                      Set Password
+                                    </Button>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedCaregiver(caregiver);
+                                        setShowPatients(true);
+                                      }}
+                                    >
+                                      View Patients
+                                    </Button>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm"
+                                      onClick={() => {
+                                        setCaregiverToDelete(caregiver);
+                                        setDeleteConfirmOpen(true);
+                                      }}
+                                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </main>
+        </div>
       </div>
-
-      {/* Dialogs */}
-      <Dialog open={isDialogOpen} onOpenChange={(open) => {
-        setIsDialogOpen(open);
-        if (!open) setSelectedCaregiver(null);
-      }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{selectedCaregiver ? "Edit Caregiver" : "Add New Caregiver"}</DialogTitle>
-            <DialogDescription>
-              {selectedCaregiver ? "Update the caregiver's information below." : "Enter the caregiver's contact details and information."}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="dialog-name">Full Name</Label>
-              <Input
-                id="dialog-name"
-                placeholder="Enter caregiver's full name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className={formErrors.name ? "border-red-500" : ""}
-              />
-              {formErrors.name && <p className="text-sm text-red-500">{formErrors.name}</p>}
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="dialog-phone">Phone Number</Label>
-              <InputMask
-                mask="999-999-9999"
-                maskChar=""
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              >
-                {(inputProps: any) => (
-                  <Input
-                    {...inputProps}
-                    id="dialog-phone"
-                    type="tel"
-                    placeholder="203-555-1234"
-                    className={formErrors.phone ? "border-red-500" : ""}
-                  />
-                )}
-              </InputMask>
-              {formErrors.phone && <p className="text-sm text-red-500">{formErrors.phone}</p>}
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="dialog-state">State</Label>
-              <Select
-                value={formData.state}
-                onValueChange={(value) => setFormData({ ...formData, state: value })}
-              >
-                <SelectTrigger className={formErrors.state ? "border-red-500" : ""}>
-                  <SelectValue placeholder="Select a state" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Alabama">Alabama</SelectItem>
-                  <SelectItem value="Alaska">Alaska</SelectItem>
-                  <SelectItem value="Arizona">Arizona</SelectItem>
-                  <SelectItem value="Arkansas">Arkansas</SelectItem>
-                  <SelectItem value="California">California</SelectItem>
-                  <SelectItem value="Colorado">Colorado</SelectItem>
-                  <SelectItem value="Connecticut">Connecticut</SelectItem>
-                  <SelectItem value="Delaware">Delaware</SelectItem>
-                  <SelectItem value="Florida">Florida</SelectItem>
-                  <SelectItem value="Georgia">Georgia</SelectItem>
-                  <SelectItem value="Hawaii">Hawaii</SelectItem>
-                  <SelectItem value="Idaho">Idaho</SelectItem>
-                  <SelectItem value="Illinois">Illinois</SelectItem>
-                  <SelectItem value="Indiana">Indiana</SelectItem>
-                  <SelectItem value="Iowa">Iowa</SelectItem>
-                  <SelectItem value="Kansas">Kansas</SelectItem>
-                  <SelectItem value="Kentucky">Kentucky</SelectItem>
-                  <SelectItem value="Louisiana">Louisiana</SelectItem>
-                  <SelectItem value="Maine">Maine</SelectItem>
-                  <SelectItem value="Maryland">Maryland</SelectItem>
-                  <SelectItem value="Massachusetts">Massachusetts</SelectItem>
-                  <SelectItem value="Michigan">Michigan</SelectItem>
-                  <SelectItem value="Minnesota">Minnesota</SelectItem>
-                  <SelectItem value="Mississippi">Mississippi</SelectItem>
-                  <SelectItem value="Missouri">Missouri</SelectItem>
-                  <SelectItem value="Montana">Montana</SelectItem>
-                  <SelectItem value="Nebraska">Nebraska</SelectItem>
-                  <SelectItem value="Nevada">Nevada</SelectItem>
-                  <SelectItem value="New Hampshire">New Hampshire</SelectItem>
-                  <SelectItem value="New Jersey">New Jersey</SelectItem>
-                  <SelectItem value="New Mexico">New Mexico</SelectItem>
-                  <SelectItem value="New York">New York</SelectItem>
-                  <SelectItem value="North Carolina">North Carolina</SelectItem>
-                  <SelectItem value="North Dakota">North Dakota</SelectItem>
-                  <SelectItem value="Ohio">Ohio</SelectItem>
-                  <SelectItem value="Oklahoma">Oklahoma</SelectItem>
-                  <SelectItem value="Oregon">Oregon</SelectItem>
-                  <SelectItem value="Pennsylvania">Pennsylvania</SelectItem>
-                  <SelectItem value="Rhode Island">Rhode Island</SelectItem>
-                  <SelectItem value="South Carolina">South Carolina</SelectItem>
-                  <SelectItem value="South Dakota">South Dakota</SelectItem>
-                  <SelectItem value="Tennessee">Tennessee</SelectItem>
-                  <SelectItem value="Texas">Texas</SelectItem>
-                  <SelectItem value="Utah">Utah</SelectItem>
-                  <SelectItem value="Vermont">Vermont</SelectItem>
-                  <SelectItem value="Virginia">Virginia</SelectItem>
-                  <SelectItem value="Washington">Washington</SelectItem>
-                  <SelectItem value="West Virginia">West Virginia</SelectItem>
-                  <SelectItem value="Wisconsin">Wisconsin</SelectItem>
-                  <SelectItem value="Wyoming">Wyoming</SelectItem>
-                </SelectContent>
-              </Select>
-              {formErrors.state && <p className="text-sm text-red-500">{formErrors.state}</p>}
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="dialog-email">Email (Optional)</Label>
-              <Input
-                id="dialog-email"
-                type="email"
-                placeholder="caregiver@example.com"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="dialog-address">Address (Optional)</Label>
-              <Input
-                id="dialog-address"
-                placeholder="Street address"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="dialog-emergency">Emergency Contact (Optional)</Label>
-              <Input
-                id="dialog-emergency"
-                placeholder="Emergency contact information"
-                value={formData.emergencyContact}
-                onChange={(e) => setFormData({ ...formData, emergencyContact: e.target.value })}
-              />
-            </div>
-
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={createMutation.isPending}>
-                {createMutation.isPending 
-                  ? (selectedCaregiver ? "Updating..." : "Adding...") 
-                  : (selectedCaregiver ? "Update Caregiver" : "Add Caregiver")
-                }
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
 
       {/* Patients View Dialog */}
       <Dialog open={showPatients} onOpenChange={setShowPatients}>
@@ -861,6 +891,6 @@ export default function Caregivers() {
           </div>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }
