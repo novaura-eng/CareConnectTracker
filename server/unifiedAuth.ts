@@ -164,6 +164,14 @@ export async function loginCaregiverWithPhone(phone: string, state: string, pass
     }
 
     // Verify password
+    console.log("Password verification debug:", {
+      caregiverId: caregiver.id,
+      hasPasswordHash: !!caregiver.passwordHash,
+      passwordHashLength: caregiver.passwordHash?.length,
+      inputPasswordLength: password.length,
+      passwordHashPrefix: caregiver.passwordHash?.substring(0, 10)
+    });
+
     if (!caregiver.passwordHash) {
       return { 
         success: false, 
@@ -172,6 +180,8 @@ export async function loginCaregiverWithPhone(phone: string, state: string, pass
     }
 
     const passwordValid = await bcrypt.compare(password, caregiver.passwordHash);
+    console.log("Password comparison result:", passwordValid);
+    
     if (!passwordValid) {
       return { 
         success: false, 
