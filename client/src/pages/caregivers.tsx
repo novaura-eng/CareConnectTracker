@@ -36,7 +36,7 @@ export default function Caregivers() {
   const itemsPerPage = 10;
 
   // Filter state
-  const [stateFilter, setStateFilter] = useState<string>("");
+  const [stateFilter, setStateFilter] = useState<string>("ALL_STATES");
   const [searchText, setSearchText] = useState<string>("");
 
   const { data: caregivers, isLoading } = useQuery<Caregiver[]>({
@@ -54,7 +54,7 @@ export default function Caregivers() {
     
     return caregivers.filter(caregiver => {
       // State filter (primary filter)
-      if (stateFilter && caregiver.state !== stateFilter) {
+      if (stateFilter && stateFilter !== "ALL_STATES" && caregiver.state !== stateFilter) {
         return false;
       }
       
@@ -605,7 +605,7 @@ export default function Caregivers() {
                               <SelectValue placeholder="All states" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">All states</SelectItem>
+                              <SelectItem value="ALL_STATES">All states</SelectItem>
                               {Array.from(new Set(caregivers?.map(c => c.state) || [])).sort().map(state => (
                                 <SelectItem key={state} value={state}>{state}</SelectItem>
                               ))}
@@ -630,7 +630,7 @@ export default function Caregivers() {
                           <Button
                             variant="outline"
                             onClick={() => {
-                              setStateFilter("");
+                              setStateFilter("ALL_STATES");
                               setSearchText("");
                               setCurrentPage(1);
                             }}
