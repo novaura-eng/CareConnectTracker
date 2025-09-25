@@ -1856,7 +1856,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // CSV Import endpoint for bulk patient creation
   app.post("/api/patients/import", requireAdmin, upload.single('csvFile'), async (req, res) => {
     try {
+      console.log("=== Starting patient CSV import ===");
       if (!req.file) {
+        console.log("ERROR: No CSV file uploaded");
         return res.status(400).json({ message: "No CSV file uploaded" });
       }
 
@@ -1867,27 +1869,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Parse CSV data
       const csvString = req.file.buffer.toString('utf8');
+      console.log("CSV file received, size:", csvString.length, "characters");
       
       // Handle different line endings and quoted fields
       const rows = csvString.split(/\r?\n/).map(row => row.split(',').map(cell => cell.trim().replace(/^["']|["']$/g, '')));
       
       // Check if CSV has headers
       if (rows.length < 2) {
+        console.log("ERROR: CSV file must contain at least one data row. Rows found:", rows.length);
         return res.status(400).json({ message: "CSV file must contain at least one data row" });
       }
 
       const headers = rows[0];
+      console.log("CSV headers found:", headers);
       const expectedHeaders = ['name', 'medicaidId', 'address', 'phoneNumber', 'emergencyContact', 'medicalConditions', 'caregiverPhone', 'caregiverState', 'isActive'];
       
       // Validate required headers (name and medicaidId are required)
       const requiredHeaders = ['name', 'medicaidId'];
       for (const header of requiredHeaders) {
         if (!headers.includes(header)) {
+          console.log(`ERROR: Missing required column: ${header}`);
           return res.status(400).json({ 
             message: `Missing required column: ${header}. Required headers: ${requiredHeaders.join(', ')}. Optional headers: ${expectedHeaders.filter(h => !requiredHeaders.includes(h)).join(', ')}` 
           });
         }
       }
+      console.log("Headers validation passed. Processing", rows.length - 1, "data rows...");
 
       // Process each data row
       for (let i = 1; i < rows.length; i++) {
