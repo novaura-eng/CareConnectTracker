@@ -566,6 +566,7 @@ export default function Caregivers() {
                               <TableHead>Caregiver</TableHead>
                               <TableHead>Contact</TableHead>
                               <TableHead>Address</TableHead>
+                              <TableHead>State</TableHead>
                               <TableHead>Emergency Contact</TableHead>
                               <TableHead>Status</TableHead>
                               <TableHead>Actions</TableHead>
@@ -574,7 +575,7 @@ export default function Caregivers() {
                           <TableBody>
                             {(caregivers?.length || 0) === 0 ? (
                               <TableRow>
-                                <TableCell colSpan={6} className="text-center py-8">
+                                <TableCell colSpan={7} className="text-center py-8">
                                   <div className="text-slate-500">
                                     <User className="h-12 w-12 mx-auto mb-4 text-slate-300" />
                                     <p className="text-lg font-medium">No caregivers found</p>
@@ -625,6 +626,9 @@ export default function Caregivers() {
                                   ) : (
                                     <span className="text-sm text-slate-400">No address</span>
                                   )}
+                                </TableCell>
+                                <TableCell>
+                                  <span className="text-sm text-slate-600 font-medium">{caregiver.state || 'N/A'}</span>
                                 </TableCell>
                                 <TableCell>
                                   {caregiver.emergencyContact ? (
