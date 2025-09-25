@@ -344,16 +344,7 @@ export default function Caregivers() {
                   <p className="mt-1 text-sm text-slate-600">Manage caregiver profiles and contact information</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  {/* CSV Import Buttons - NEW FUNCTIONALITY */}
-                  <Button 
-                    variant="outline" 
-                    onClick={downloadTemplate}
-                    data-testid="button-download-template"
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    Download Template
-                  </Button>
-                  
+                  {/* CSV Import Button */}
                   <Button 
                     variant="outline" 
                     onClick={() => setImportModalOpen(true)}
@@ -864,8 +855,19 @@ export default function Caregivers() {
             </div>
 
             {/* Instructions */}
-            <div className="text-sm text-slate-600 space-y-2">
-              <p className="font-medium">Required CSV Format:</p>
+            <div className="text-sm text-slate-600 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="font-medium">Required CSV Format:</p>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={downloadTemplate}
+                  data-testid="button-download-template-modal"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Template
+                </Button>
+              </div>
               <p>Your CSV must include these columns: <span className="font-mono text-xs bg-slate-100 px-1 rounded">name, phone, email, address, emergencyContact, state, isActive</span></p>
               <p>• Name, phone, and state are required fields</p>
               <p>• Phone numbers should be 10 digits</p>
