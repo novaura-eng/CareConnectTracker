@@ -35,6 +35,10 @@ export default function Caregivers() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // Filter state
+  const [stateFilter, setStateFilter] = useState<string>("");
+  const [searchText, setSearchText] = useState<string>("");
+
   const { data: caregivers, isLoading } = useQuery<Caregiver[]>({
     queryKey: ["/api/caregivers"],
   });
@@ -43,6 +47,32 @@ export default function Caregivers() {
     queryKey: [`/api/patients/${selectedCaregiver?.id}`],
     enabled: !!selectedCaregiver && showPatients,
   });
+
+  // Filter caregivers based on state and search text
+  const filteredCaregivers = React.useMemo(() => {
+    if (!caregivers) return [];
+    
+    return caregivers.filter(caregiver => {
+      // State filter (primary filter)
+      if (stateFilter && caregiver.state !== stateFilter) {
+        return false;
+      }
+      
+      // Search text filter (secondary filters)
+      if (searchText) {
+        const searchLower = searchText.toLowerCase();
+        return (
+          caregiver.name.toLowerCase().includes(searchLower) ||
+          caregiver.phone.toLowerCase().includes(searchLower) ||
+          (caregiver.email && caregiver.email.toLowerCase().includes(searchLower)) ||
+          (caregiver.address && caregiver.address.toLowerCase().includes(searchLower)) ||
+          (caregiver.emergencyContact && caregiver.emergencyContact.toLowerCase().includes(searchLower))
+        );
+      }
+      
+      return true;
+    });
+  }, [caregivers, stateFilter, searchText]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -338,15 +368,20 @@ export default function Caregivers() {
   };
 
   // Pagination calculations
-  const totalItems = caregivers?.length || 0;
+  const totalItems = filteredCaregivers?.length || 0;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentItems = caregivers?.slice(startIndex, endIndex) || [];
+  const currentItems = filteredCaregivers?.slice(startIndex, endIndex) || [];
 
   const goToPage = (page: number) => {
     setCurrentPage(Math.max(1, Math.min(page, totalPages)));
   };
+
+  // Reset to first page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [stateFilter, searchText]);
 
   return (
     <>
@@ -559,6 +594,52 @@ export default function Caregivers() {
                     </div>
                   ) : (
                     <div className="space-y-6">
+                      {/* Filter Controls */}
+                      <div className="flex flex-col sm:flex-row gap-4 p-4 bg-slate-50 rounded-lg border">
+                        <div className="flex-1">
+                          <Label htmlFor="state-filter" className="text-sm font-medium mb-2 block">
+                            Filter by State (Primary)
+                          </Label>
+                          <Select value={stateFilter} onValueChange={setStateFilter}>
+                            <SelectTrigger id="state-filter" data-testid="select-state-filter">
+                              <SelectValue placeholder="All states" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">All states</SelectItem>
+                              {Array.from(new Set(caregivers?.map(c => c.state) || [])).sort().map(state => (
+                                <SelectItem key={state} value={state}>{state}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="flex-1">
+                          <Label htmlFor="search-filter" className="text-sm font-medium mb-2 block">
+                            Search (Name, Phone, Email, Address)
+                          </Label>
+                          <Input
+                            id="search-filter"
+                            placeholder="Search caregivers..."
+                            value={searchText}
+                            onChange={(e) => setSearchText(e.target.value)}
+                            data-testid="input-search-filter"
+                          />
+                        </div>
+                        
+                        <div className="flex items-end">
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setStateFilter("");
+                              setSearchText("");
+                              setCurrentPage(1);
+                            }}
+                            data-testid="button-clear-filters"
+                          >
+                            Clear Filters
+                          </Button>
+                        </div>
+                      </div>
                       <div className="overflow-x-auto">
                         <Table>
                           <TableHeader>
