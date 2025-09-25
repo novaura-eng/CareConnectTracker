@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, User, MapPin, IdCard, Heart } from "lucide-react";
+import { Plus, User, MapPin, IdCard, Heart, Upload, Download, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import Sidebar from "@/components/layout/sidebar";
@@ -21,6 +21,11 @@ import Sidebar from "@/components/layout/sidebar";
 export default function Patients() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  
+  // CSV Import state
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   const { data: patients, isLoading } = useQuery<Patient[]>({
     queryKey: ["/api/patients"],
@@ -84,6 +89,83 @@ export default function Patients() {
     createMutation.mutate(data);
   };
 
+  // CSV Import functions
+  const handleCsvImport = async () => {
+    if (!csvFile) {
+      toast({
+        title: "Error",
+        description: "Please select a CSV file first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsImporting(true);
+    const formData = new FormData();
+    formData.append('csvFile', csvFile);
+
+    try {
+      const response = await apiRequest("POST", "/api/patients/import", formData);
+      const result = await response.json();
+
+      queryClient.invalidateQueries({ queryKey: ["/api/patients"] });
+      setCsvFile(null);
+      setImportModalOpen(false);
+      
+      // Reset file inputs
+      const fileInput1 = document.getElementById('csv-upload') as HTMLInputElement;
+      const fileInput2 = document.getElementById('csv-upload-modal') as HTMLInputElement;
+      if (fileInput1) fileInput1.value = '';
+      if (fileInput2) fileInput2.value = '';
+
+      toast({
+        title: "Import Completed", 
+        description: `Successfully imported ${result.imported} patients. ${result.skipped > 0 ? `Skipped ${result.skipped} duplicates.` : ''} ${result.errors && result.errors.length > 0 ? `${result.errors.length} errors encountered.` : ''}`,
+      });
+    } catch (error: any) {
+      console.error("Import error:", error);
+      toast({
+        title: "Import Failed",
+        description: error?.message || "Failed to import CSV file",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const downloadTemplate = () => {
+    const headers = ['name', 'medicaidId', 'address', 'phoneNumber', 'emergencyContact', 'medicalConditions', 'caregiverPhone', 'caregiverState', 'isActive'];
+    const sampleData = [
+      'John Doe,MED12345,123 Main St,(555) 123-4567,Jane Doe (555) 234-5678,Diabetes,(202) 555-0001,MD,true',
+      'Mary Smith,MED67890,456 Oak Ave,,(555) 345-6789,Hypertension,(202) 555-0002,MD,true',
+      'Bob Johnson,MED11111,789 Pine Rd,(555) 456-7890,Alice Johnson (555) 567-8901,,,true'
+    ];
+    
+    const csvContent = [headers.join(','), ...sampleData].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'patient-template.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type === 'text/csv') {
+      setCsvFile(file);
+    } else {
+      toast({
+        title: "Invalid File",
+        description: "Please select a valid CSV file",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getCaregiverName = (caregiverId: number) => {
     const caregiver = caregivers?.find(c => c.id === caregiverId);
     return caregiver?.name || "Unassigned";
@@ -99,14 +181,15 @@ export default function Patients() {
               <p className="text-slate-600">Manage patient records and caregiver assignments</p>
             </div>
             
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Patient
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
+            <div className="flex gap-2">
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Patient
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle>Add New Patient</DialogTitle>
                 </DialogHeader>
@@ -251,6 +334,16 @@ export default function Patients() {
                 </Form>
               </DialogContent>
             </Dialog>
+
+              <Button
+                variant="outline"
+                onClick={() => setImportModalOpen(true)}
+                data-testid="button-open-import-modal"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Import CSV
+              </Button>
+            </div>
           </div>
 
           {/* Mobile Add Patient Button - Only visible on mobile */}
@@ -533,5 +626,116 @@ export default function Patients() {
           </Card>
         </div>
       </main>
+
+      {/* Import CSV Modal */}
+      <Dialog open={importModalOpen} onOpenChange={setImportModalOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Import Patients from CSV</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* File Upload Area */}
+            <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center">
+              <input
+                type="file"
+                id="csv-upload-modal"
+                accept=".csv"
+                onChange={handleFileChange}
+                className="hidden"
+                data-testid="input-csv-file-modal"
+              />
+              <label 
+                htmlFor="csv-upload-modal" 
+                className="cursor-pointer block"
+                data-testid="label-csv-file-modal"
+              >
+                <Upload className="h-12 w-12 mx-auto mb-4 text-slate-400" />
+                <p className="text-lg font-medium text-slate-700 mb-2">
+                  Select CSV File
+                </p>
+                <p className="text-sm text-slate-500 mb-4">
+                  Upload a CSV file with patient data to import multiple patients at once
+                </p>
+                <Button type="button" variant="outline">
+                  Choose File
+                </Button>
+              </label>
+              
+              {csvFile && (
+                <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <IdCard className="h-5 w-5 text-green-600" />
+                      <span className="font-medium text-green-800">{csvFile.name}</span>
+                      <span className="text-sm text-green-600">
+                        ({(csvFile.size / 1024).toFixed(1)} KB)
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setCsvFile(null)}
+                      className="text-green-600 hover:text-green-800"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* CSV Format Instructions */}
+            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <h4 className="font-medium text-slate-900 mb-3">CSV Format Requirements</h4>
+              <div className="text-sm text-slate-600 space-y-2">
+                <p><strong>Required columns:</strong> name, medicaidId</p>
+                <p><strong>Optional columns:</strong> address, phoneNumber, emergencyContact, medicalConditions, caregiverPhone, caregiverState, isActive</p>
+                <p><strong>Notes:</strong></p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li>Use caregiverPhone + caregiverState to assign patients to existing caregivers</li>
+                  <li>Phone numbers should be 10 digits (formatting will be applied automatically)</li>
+                  <li>isActive should be "true" or "false" (defaults to true if not provided)</li>
+                  <li>Patients with duplicate Medicaid IDs will be skipped</li>
+                </ul>
+              </div>
+
+              <div className="mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={downloadTemplate}
+                  data-testid="button-download-template-modal"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download CSV Template
+                </Button>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setImportModalOpen(false);
+                  setCsvFile(null);
+                }}
+                disabled={isImporting}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCsvImport}
+                disabled={!csvFile || isImporting}
+                data-testid="button-import-patients"
+              >
+                {isImporting ? "Importing..." : "Import Patients"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
