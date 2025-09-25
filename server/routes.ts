@@ -1904,7 +1904,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 patientData[header] = row[index].toLowerCase() === 'true';
               } else if (header === 'caregiverPhone' || header === 'caregiverState') {
                 // Skip these - they're used for caregiver lookup, not patient data
-                return;
+                // Don't add to patientData, just continue to next header
               } else {
                 patientData[header] = row[index] || null;
               }
