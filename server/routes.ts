@@ -1742,12 +1742,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Parse CSV data
       const csvString = req.file.buffer.toString('utf8');
-      console.log("Raw CSV content:", csvString.substring(0, 200) + "...");
       
-      // Handle different line endings
+      // Handle different line endings and quoted fields
       const rows = csvString.split(/\r?\n/).map(row => row.split(',').map(cell => cell.trim().replace(/^["']|["']$/g, '')));
-      console.log("Parsed rows:", rows.length);
-      console.log("First few rows:", rows.slice(0, 3));
       
       // Check if CSV has headers
       if (rows.length < 2) {
@@ -1755,14 +1752,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const headers = rows[0];
-      console.log("Headers found:", headers);
       const expectedHeaders = ['name', 'phone', 'email', 'address', 'emergencyContact', 'state', 'isActive'];
-      console.log("Expected headers:", expectedHeaders);
       
       // Validate headers
       for (const header of expectedHeaders) {
         if (!headers.includes(header)) {
-          console.log(`Missing header: ${header}`);
           return res.status(400).json({ 
             message: `Missing required column: ${header}. Expected headers: ${expectedHeaders.join(', ')}` 
           });
