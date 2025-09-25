@@ -26,6 +26,7 @@ export default function Patients() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const { data: patients, isLoading } = useQuery<Patient[]>({
     queryKey: ["/api/patients"],
@@ -153,9 +154,8 @@ export default function Patients() {
     document.body.removeChild(link);
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && file.type === 'text/csv') {
+  const validateAndSetFile = (file: File) => {
+    if (file && (file.type === 'text/csv' || file.name.endsWith('.csv'))) {
       setCsvFile(file);
     } else {
       toast({
@@ -163,6 +163,33 @@ export default function Patients() {
         description: "Please select a valid CSV file",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      validateAndSetFile(file);
+    }
+  };
+
+  const handleDragOver = (event: React.DragEvent) => {
+    event.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (event: React.DragEvent) => {
+    event.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (event: React.DragEvent) => {
+    event.preventDefault();
+    setIsDragOver(false);
+    
+    const files = event.dataTransfer.files;
+    if (files.length > 0) {
+      validateAndSetFile(files[0]);
     }
   };
 
@@ -637,7 +664,16 @@ export default function Patients() {
           
           <div className="space-y-6">
             {/* File Upload Area */}
-            <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center">
+            <div 
+              className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                isDragOver 
+                  ? 'border-blue-400 bg-blue-50' 
+                  : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50'
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
               <input
                 type="file"
                 id="csv-upload-modal"
@@ -651,16 +687,27 @@ export default function Patients() {
                 className="cursor-pointer block"
                 data-testid="label-csv-file-modal"
               >
-                <Upload className="h-12 w-12 mx-auto mb-4 text-slate-400" />
-                <p className="text-lg font-medium text-slate-700 mb-2">
-                  Select CSV File
+                <Upload className={`h-12 w-12 mx-auto mb-4 ${
+                  isDragOver ? 'text-blue-500' : 'text-slate-400'
+                }`} />
+                <p className={`text-lg font-medium mb-2 ${
+                  isDragOver ? 'text-blue-700' : 'text-slate-700'
+                }`}>
+                  {isDragOver ? 'Drop CSV file here' : 'Select or drag CSV file'}
                 </p>
-                <p className="text-sm text-slate-500 mb-4">
-                  Upload a CSV file with patient data to import multiple patients at once
+                <p className={`text-sm mb-4 ${
+                  isDragOver ? 'text-blue-600' : 'text-slate-500'
+                }`}>
+                  {isDragOver 
+                    ? 'Release to upload patient data'
+                    : 'Upload a CSV file with patient data to import multiple patients at once'
+                  }
                 </p>
-                <Button type="button" variant="outline">
-                  Choose File
-                </Button>
+                {!isDragOver && (
+                  <Button type="button" variant="outline">
+                    Choose File
+                  </Button>
+                )}
               </label>
               
               {csvFile && (
