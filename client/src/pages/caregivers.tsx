@@ -558,31 +558,32 @@ export default function Caregivers() {
                       ))}
                     </div>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Caregiver</TableHead>
-                            <TableHead>Contact</TableHead>
-                            <TableHead>Address</TableHead>
-                            <TableHead>Emergency Contact</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {(caregivers?.length || 0) === 0 ? (
+                    <div className="space-y-6">
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
                             <TableRow>
-                              <TableCell colSpan={6} className="text-center py-8">
-                                <div className="text-slate-500">
-                                  <User className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-                                  <p className="text-lg font-medium">No caregivers found</p>
-                                  <p className="text-sm">Get started by adding your first caregiver</p>
-                                </div>
-                              </TableCell>
+                              <TableHead>Caregiver</TableHead>
+                              <TableHead>Contact</TableHead>
+                              <TableHead>Address</TableHead>
+                              <TableHead>Emergency Contact</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Actions</TableHead>
                             </TableRow>
-                          ) : (
-                            currentItems?.map((caregiver, index) => (
+                          </TableHeader>
+                          <TableBody>
+                            {(caregivers?.length || 0) === 0 ? (
+                              <TableRow>
+                                <TableCell colSpan={6} className="text-center py-8">
+                                  <div className="text-slate-500">
+                                    <User className="h-12 w-12 mx-auto mb-4 text-slate-300" />
+                                    <p className="text-lg font-medium">No caregivers found</p>
+                                    <p className="text-sm">Get started by adding your first caregiver</p>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ) : (
+                              currentItems?.map((caregiver, index) => (
                               <TableRow key={caregiver.id} className="hover:bg-slate-50">
                                 <TableCell>
                                   <div className="flex items-center">
@@ -687,12 +688,12 @@ export default function Caregivers() {
                               </TableRow>
                             ))
                           )}
-                        </TableBody>
-                      </Table>
-                    </div>
+                          </TableBody>
+                        </Table>
+                      </div>
 
-                    {/* Pagination Controls */}
-                    {totalPages > 1 && (
+                      {/* Pagination Controls */}
+                      {totalPages > 1 && (
                       <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-200">
                         <div className="flex items-center text-sm text-slate-600">
                           Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of {totalItems} caregivers
@@ -749,7 +750,9 @@ export default function Caregivers() {
                           </Button>
                         </div>
                       </div>
-                    )}
+                      )}
+                    </div>
+                  )}
             </CardContent>
           </Card>
         </div>
