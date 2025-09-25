@@ -172,6 +172,7 @@ export default function Patients() {
   };
 
   return (
+    <>
     <main className="flex-1 overflow-auto">
         <div className="p-4 lg:p-6">
           {/* Header - Hidden on mobile to avoid duplication with mobile nav */}
@@ -736,6 +737,6 @@ export default function Patients() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }
