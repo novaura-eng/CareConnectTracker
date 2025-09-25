@@ -1853,6 +1853,169 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // CSV Import endpoint for bulk patient creation
+  app.post("/api/patients/import", requireAdmin, upload.single('csvFile'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No CSV file uploaded" });
+      }
+
+      const csvData: any[] = [];
+      const errors: string[] = [];
+      let imported = 0;
+      let skipped = 0;
+
+      // Parse CSV data
+      const csvString = req.file.buffer.toString('utf8');
+      
+      // Handle different line endings and quoted fields
+      const rows = csvString.split(/\r?\n/).map(row => row.split(',').map(cell => cell.trim().replace(/^["']|["']$/g, '')));
+      
+      // Check if CSV has headers
+      if (rows.length < 2) {
+        return res.status(400).json({ message: "CSV file must contain at least one data row" });
+      }
+
+      const headers = rows[0];
+      const expectedHeaders = ['name', 'medicaidId', 'address', 'phoneNumber', 'emergencyContact', 'medicalConditions', 'caregiverPhone', 'caregiverState', 'isActive'];
+      
+      // Validate required headers (name and medicaidId are required)
+      const requiredHeaders = ['name', 'medicaidId'];
+      for (const header of requiredHeaders) {
+        if (!headers.includes(header)) {
+          return res.status(400).json({ 
+            message: `Missing required column: ${header}. Required headers: ${requiredHeaders.join(', ')}. Optional headers: ${expectedHeaders.filter(h => !requiredHeaders.includes(h)).join(', ')}` 
+          });
+        }
+      }
+
+      // Process each data row
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (row.length === 1 && row[0] === '') continue; // Skip empty rows
+
+        try {
+          const patientData: any = {};
+          
+          // Map row data to patient object
+          headers.forEach((header, index) => {
+            if (row[index] !== undefined) {
+              if (header === 'isActive') {
+                patientData[header] = row[index].toLowerCase() === 'true';
+              } else if (header === 'caregiverPhone' || header === 'caregiverState') {
+                // Skip these - they're used for caregiver lookup, not patient data
+                return;
+              } else {
+                patientData[header] = row[index] || null;
+              }
+            }
+          });
+
+          // Validate required fields
+          if (!patientData.name?.trim()) {
+            errors.push(`Row ${i + 1}: Name is required`);
+            continue;
+          }
+
+          if (!patientData.medicaidId?.trim()) {
+            errors.push(`Row ${i + 1}: Medicaid ID is required`);
+            continue;
+          }
+
+          // Format phone number if provided
+          if (patientData.phoneNumber) {
+            const digits = patientData.phoneNumber.replace(/\D/g, '');
+            if (digits.length !== 10) {
+              errors.push(`Row ${i + 1}: Phone number must be 10 digits`);
+              continue;
+            }
+            patientData.phoneNumber = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+          }
+
+          // Validate email format if provided
+          if (patientData.email && !patientData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+            errors.push(`Row ${i + 1}: Invalid email format`);
+            continue;
+          }
+
+          // Look up caregiver if phone and state are provided
+          let caregiverId = null;
+          const caregiverPhoneIndex = headers.indexOf('caregiverPhone');
+          const caregiverStateIndex = headers.indexOf('caregiverState');
+          
+          if (caregiverPhoneIndex !== -1 && caregiverStateIndex !== -1 && 
+              row[caregiverPhoneIndex] && row[caregiverStateIndex]) {
+            const caregiverPhone = row[caregiverPhoneIndex].trim();
+            const caregiverState = row[caregiverStateIndex].trim();
+            
+            if (caregiverPhone && caregiverState) {
+              // Format caregiver phone for lookup
+              const caregiverDigits = caregiverPhone.replace(/\D/g, '');
+              if (caregiverDigits.length === 10) {
+                const formattedCaregiverPhone = `(${caregiverDigits.slice(0, 3)}) ${caregiverDigits.slice(3, 6)}-${caregiverDigits.slice(6)}`;
+                
+                try {
+                  const caregiver = await storage.getCaregiverByPhoneAndState(formattedCaregiverPhone, caregiverState);
+                  if (caregiver) {
+                    caregiverId = caregiver.id;
+                  } else {
+                    errors.push(`Row ${i + 1}: No caregiver found with phone ${formattedCaregiverPhone} and state ${caregiverState}`);
+                    continue;
+                  }
+                } catch (error) {
+                  errors.push(`Row ${i + 1}: Error looking up caregiver: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                  continue;
+                }
+              } else {
+                errors.push(`Row ${i + 1}: Caregiver phone number must be 10 digits`);
+                continue;
+              }
+            }
+          }
+
+          patientData.caregiverId = caregiverId;
+
+          // Check for existing patient with same Medicaid ID
+          const existingPatient = await storage.getPatientByMedicaidId(patientData.medicaidId);
+          if (existingPatient) {
+            skipped++;
+            continue;
+          }
+
+          // Validate the complete patient data
+          const validatedData = insertPatientSchema.parse(patientData);
+          
+          // Create the patient
+          await storage.createPatient(validatedData);
+          imported++;
+
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : "Unknown error";
+          errors.push(`Row ${i + 1}: ${errorMessage}`);
+        }
+      }
+
+      // Return results
+      const response = {
+        imported,
+        skipped,
+        errors: errors.length > 0 ? errors : undefined,
+        message: `Import completed. ${imported} patients imported, ${skipped} duplicates skipped.`
+      };
+
+      if (errors.length > 0) {
+        response.message += ` ${errors.length} errors encountered.`;
+      }
+
+      res.json(response);
+
+    } catch (error) {
+      console.error("Error importing patients:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: "CSV import failed", error: errorMessage });
+    }
+  });
+
   // Create new patient (protected)
   app.post("/api/patients", requireAdmin, async (req, res) => {
     try {
