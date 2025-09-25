@@ -29,6 +29,7 @@ export default function Caregivers() {
   // CSV Import state - NEW FUNCTIONALITY
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   const { data: caregivers, isLoading } = useQuery<Caregiver[]>({
     queryKey: ["/api/caregivers"],
@@ -272,10 +273,13 @@ export default function Caregivers() {
 
       queryClient.invalidateQueries({ queryKey: ["/api/caregivers"] });
       setCsvFile(null);
+      setImportModalOpen(false);
       
-      // Reset file input
-      const fileInput = document.getElementById('csv-upload') as HTMLInputElement;
-      if (fileInput) fileInput.value = '';
+      // Reset file inputs
+      const fileInput1 = document.getElementById('csv-upload') as HTMLInputElement;
+      const fileInput2 = document.getElementById('csv-upload-modal') as HTMLInputElement;
+      if (fileInput1) fileInput1.value = '';
+      if (fileInput2) fileInput2.value = '';
 
       toast({
         title: "Import Completed", 
@@ -350,34 +354,14 @@ export default function Caregivers() {
                     Download Template
                   </Button>
                   
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="file"
-                      id="csv-upload"
-                      accept=".csv"
-                      onChange={handleCsvFileChange}
-                      className="hidden"
-                      data-testid="input-csv-file"
-                    />
-                    <Button 
-                      variant="outline" 
-                      onClick={() => document.getElementById('csv-upload')?.click()}
-                      data-testid="button-select-csv"
-                    >
-                      <Upload className="mr-2 h-4 w-4" />
-                      {csvFile ? 'File Selected' : 'Select CSV'}
-                    </Button>
-                    
-                    {csvFile && (
-                      <Button 
-                        onClick={handleCsvImport}
-                        disabled={isImporting}
-                        data-testid="button-import-csv"
-                      >
-                        {isImporting ? 'Importing...' : `Import ${csvFile.name}`}
-                      </Button>
-                    )}
-                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setImportModalOpen(true)}
+                    data-testid="button-open-import-modal"
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Import CSV
+                  </Button>
                   
                   <Dialog open={isDialogOpen} onOpenChange={(open) => {
                     setIsDialogOpen(open);
@@ -808,6 +792,106 @@ export default function Caregivers() {
                 disabled={setPasswordMutation.isPending || !newPassword.trim()}
               >
                 {setPasswordMutation.isPending ? "Setting..." : "Set Password"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* CSV Import Modal - NEW FUNCTIONALITY */}
+      <Dialog open={importModalOpen} onOpenChange={setImportModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Import Caregivers from CSV</DialogTitle>
+            <DialogDescription>
+              Upload a CSV file to bulk import caregivers. Make sure your file includes all required fields.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* File Upload Area */}
+            <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center">
+              <input
+                type="file"
+                id="csv-upload-modal"
+                accept=".csv"
+                onChange={handleCsvFileChange}
+                className="hidden"
+                data-testid="input-csv-file-modal"
+              />
+              
+              {!csvFile ? (
+                <div>
+                  <Upload className="mx-auto h-12 w-12 text-slate-400 mb-4" />
+                  <div className="space-y-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => document.getElementById('csv-upload-modal')?.click()}
+                      data-testid="button-select-csv-modal"
+                    >
+                      Select CSV File
+                    </Button>
+                    <p className="text-sm text-slate-500">
+                      Choose a CSV file from your computer
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-center space-x-2">
+                    <svg className="h-8 w-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <div>
+                      <p className="font-medium text-slate-900">{csvFile.name}</p>
+                      <p className="text-sm text-slate-500">{(csvFile.size / 1024).toFixed(1)} KB</p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      setCsvFile(null);
+                      const fileInput = document.getElementById('csv-upload-modal') as HTMLInputElement;
+                      if (fileInput) fileInput.value = '';
+                    }}
+                    data-testid="button-remove-csv"
+                  >
+                    Remove File
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Instructions */}
+            <div className="text-sm text-slate-600 space-y-2">
+              <p className="font-medium">Required CSV Format:</p>
+              <p>Your CSV must include these columns: <span className="font-mono text-xs bg-slate-100 px-1 rounded">name, phone, email, address, emergencyContact, state, isActive</span></p>
+              <p>• Name, phone, and state are required fields</p>
+              <p>• Phone numbers should be 10 digits</p>
+              <p>• isActive should be "true" or "false"</p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setImportModalOpen(false);
+                  setCsvFile(null);
+                  const fileInput = document.getElementById('csv-upload-modal') as HTMLInputElement;
+                  if (fileInput) fileInput.value = '';
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCsvImport}
+                disabled={!csvFile || isImporting}
+                data-testid="button-import-csv-modal"
+              >
+                {isImporting ? 'Importing...' : 'Import Caregivers'}
               </Button>
             </div>
           </div>
