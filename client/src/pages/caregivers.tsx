@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Phone, Mail, MapPin, User, AlertCircle, Trash2, Key, Download, Upload } from "lucide-react";
+import { Plus, Phone, Mail, MapPin, User, AlertCircle, Trash2, Key, Download, Upload, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 export default function Caregivers() {
@@ -30,6 +30,10 @@ export default function Caregivers() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const { data: caregivers, isLoading } = useQuery<Caregiver[]>({
     queryKey: ["/api/caregivers"],
@@ -269,7 +273,8 @@ export default function Caregivers() {
     formData.append('csvFile', csvFile);
 
     try {
-      const result = await apiRequest("POST", "/api/caregivers/import", formData);
+      const response = await apiRequest("POST", "/api/caregivers/import", formData);
+      const result = await response.json();
 
       queryClient.invalidateQueries({ queryKey: ["/api/caregivers"] });
       setCsvFile(null);
@@ -330,6 +335,17 @@ export default function Caregivers() {
       return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
     }
     return phone;
+  };
+
+  // Pagination calculations
+  const totalItems = caregivers?.length || 0;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentItems = caregivers?.slice(startIndex, endIndex) || [];
+
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
   };
 
   return (
@@ -566,7 +582,7 @@ export default function Caregivers() {
                               </TableCell>
                             </TableRow>
                           ) : (
-                            caregivers?.map((caregiver) => (
+                            currentItems?.map((caregiver, index) => (
                               <TableRow key={caregiver.id} className="hover:bg-slate-50">
                                 <TableCell>
                                   <div className="flex items-center">
@@ -674,7 +690,66 @@ export default function Caregivers() {
                         </TableBody>
                       </Table>
                     </div>
-                  )}
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-200">
+                        <div className="flex items-center text-sm text-slate-600">
+                          Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of {totalItems} caregivers
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => goToPage(currentPage - 1)}
+                            disabled={currentPage === 1}
+                            data-testid="button-prev-page"
+                          >
+                            <ChevronLeft className="h-4 w-4 mr-1" />
+                            Previous
+                          </Button>
+                          
+                          <div className="flex items-center space-x-1">
+                            {Array.from({ length: totalPages }, (_, i) => i + 1)
+                              .filter(page => {
+                                if (totalPages <= 7) return true;
+                                if (page === 1 || page === totalPages) return true;
+                                if (page >= currentPage - 1 && page <= currentPage + 1) return true;
+                                return false;
+                              })
+                              .map((page, index, array) => (
+                                <div key={page} className="flex items-center">
+                                  {index > 0 && array[index - 1] !== page - 1 && (
+                                    <span className="px-2 text-slate-400">...</span>
+                                  )}
+                                  <Button
+                                    variant={currentPage === page ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => goToPage(page)}
+                                    className="min-w-[40px]"
+                                    data-testid={`button-page-${page}`}
+                                  >
+                                    {page}
+                                  </Button>
+                                </div>
+                              ))
+                            }
+                          </div>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => goToPage(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                            data-testid="button-next-page"
+                          >
+                            Next
+                            <ChevronRight className="h-4 w-4 ml-1" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
             </CardContent>
           </Card>
         </div>
