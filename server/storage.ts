@@ -42,7 +42,7 @@ import {
   type StateCode
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, gte, lte, sql, ne } from "drizzle-orm";
+import { eq, desc, and, gte, lte, sql, ne, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (for Replit Auth)
@@ -76,6 +76,9 @@ export interface IStorage {
   getSurveyHistoryByPatient(caregiverId: number, patientId: number): Promise<any[]>;
   getAllPatients(): Promise<Patient[]>;
   createPatient(patient: InsertPatient): Promise<Patient>;
+  updatePatient(id: number, patient: Partial<InsertPatient>): Promise<Patient>;
+  deletePatient(id: number): Promise<void>;
+  bulkDeletePatients(patientIds: number[]): Promise<{ deleted: number; notFound: number }>;
   
   // Weekly check-in methods
   getWeeklyCheckIn(id: number): Promise<WeeklyCheckIn | undefined>;
@@ -619,6 +622,31 @@ export class DatabaseStorage implements IStorage {
 
   async deletePatient(id: number): Promise<void> {
     await db.delete(patients).where(eq(patients.id, id));
+  }
+
+  async bulkDeletePatients(patientIds: number[]): Promise<{ deleted: number; notFound: number }> {
+    if (patientIds.length === 0) {
+      return { deleted: 0, notFound: 0 };
+    }
+
+    // First, get existing patients to count how many we'll actually delete
+    const existingPatients = await db
+      .select({ id: patients.id })
+      .from(patients)
+      .where(inArray(patients.id, patientIds));
+
+    const existingIds = existingPatients.map(p => p.id);
+    const notFoundIds = patientIds.filter(id => !existingIds.includes(id));
+
+    // Perform the bulk deletion
+    if (existingIds.length > 0) {
+      await db.delete(patients).where(inArray(patients.id, existingIds));
+    }
+
+    return {
+      deleted: existingIds.length,
+      notFound: notFoundIds.length
+    };
   }
 
   async getWeeklyCheckIn(id: number): Promise<WeeklyCheckIn | undefined> {

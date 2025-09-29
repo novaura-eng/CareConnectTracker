@@ -1095,6 +1095,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk delete patients (protected)
+  app.delete("/api/patients/bulk", requireAdmin, async (req, res) => {
+    try {
+      const { patientIds } = req.body;
+      
+      if (!Array.isArray(patientIds) || patientIds.length === 0) {
+        return res.status(400).json({ message: "Patient IDs array is required and cannot be empty" });
+      }
+
+      // Validate all IDs are numbers
+      const validIds = patientIds.filter(id => Number.isInteger(id) && id > 0);
+      if (validIds.length !== patientIds.length) {
+        return res.status(400).json({ message: "All patient IDs must be valid positive integers" });
+      }
+
+      const result = await storage.bulkDeletePatients(validIds);
+      res.json({ 
+        message: "Bulk delete completed", 
+        deleted: result.deleted,
+        notFound: result.notFound 
+      });
+    } catch (error) {
+      console.error("Error bulk deleting patients:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // ===== ADMIN SURVEY MANAGEMENT ROUTES =====
   
   // Survey CRUD Operations
