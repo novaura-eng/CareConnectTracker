@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Users, Phone, MapPin, Heart, Calendar, Search, ArrowUpDown, Eye, FileText, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { Users, Phone, MapPin, Heart, Calendar, Search, ArrowUpDown, Eye, FileText, CheckCircle, Clock, AlertCircle, Edit } from "lucide-react";
 import CaregiverLayout from "@/components/caregiver/CaregiverLayout";
 import type { PatientWithSurveyStatus } from "@shared/schema";
 
@@ -215,6 +215,15 @@ export default function CaregiverPatients() {
                           >
                             <Eye className="h-4 w-4 mr-1" />
                             <span className="hidden sm:inline">View</span>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handlePatientSelect(patient.id)}
+                            data-testid={`edit-patient-${patient.id}`}
+                          >
+                            <Edit className="h-4 w-4 mr-1" />
+                            <span className="hidden sm:inline">Edit</span>
                           </Button>
                           {patient.availableSurveys > 0 ? (
                             <Button
