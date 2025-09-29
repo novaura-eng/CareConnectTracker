@@ -203,6 +203,32 @@ export default function Patients() {
     },
   });
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (patientIds: number[]) => {
+      return apiRequest("DELETE", "/api/patients/bulk", { patientIds });
+    },
+    onSuccess: (result: { deleted: number; notFound: number }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/patients"] });
+      clearSelection();
+      setBulkDeleteConfirmOpen(false);
+      
+      const message = `Successfully deleted ${result.deleted} patient${result.deleted !== 1 ? 's' : ''}${result.notFound > 0 ? `. ${result.notFound} patient${result.notFound !== 1 ? 's' : ''} were not found.` : '.'}`;
+      
+      toast({
+        title: "Bulk Delete Completed",
+        description: message,
+      });
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.message || "Failed to delete patients. Please try again.";
+      toast({
+        title: "Bulk Delete Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: InsertPatient) => {
     createMutation.mutate(data);
   };
@@ -1118,6 +1144,32 @@ export default function Patients() {
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <AlertDialog open={bulkDeleteConfirmOpen} onOpenChange={setBulkDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bulk Delete Patients</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{selectedPatients.size} patient{selectedPatients.size !== 1 ? 's' : ''}</strong>? 
+              This action cannot be undone. All associated data including check-ins and survey responses may be affected.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const patientIds = Array.from(selectedPatients);
+                bulkDeleteMutation.mutate(patientIds);
+              }}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={bulkDeleteMutation.isPending}
+            >
+              {bulkDeleteMutation.isPending ? "Deleting..." : `Delete ${selectedPatients.size}`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
