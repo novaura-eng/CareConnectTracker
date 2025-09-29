@@ -1955,18 +1955,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (caregiverPhone && caregiverState) {
               // Format caregiver phone for lookup (must match database format: 203-927-5573)
               const caregiverDigits = caregiverPhone.replace(/\D/g, '');
+              console.log(`Row ${i + 1}: Looking up caregiver with phone digits: ${caregiverDigits}`);
               if (caregiverDigits.length === 10) {
                 const formattedCaregiverPhone = `${caregiverDigits.slice(0, 3)}-${caregiverDigits.slice(3, 6)}-${caregiverDigits.slice(6)}`;
+                console.log(`Row ${i + 1}: Formatted caregiver phone: ${formattedCaregiverPhone}, state: ${caregiverState}`);
                 
                 try {
                   const caregiver = await storage.getCaregiverByPhoneAndState(formattedCaregiverPhone, caregiverState);
                   if (caregiver) {
+                    console.log(`Row ${i + 1}: Found caregiver: ${caregiver.name} (ID: ${caregiver.id})`);
                     caregiverId = caregiver.id;
                   } else {
+                    console.log(`Row ${i + 1}: No caregiver found with phone ${formattedCaregiverPhone} and state ${caregiverState}`);
                     errors.push(`Row ${i + 1}: No caregiver found with phone ${formattedCaregiverPhone} and state ${caregiverState}`);
                     continue;
                   }
                 } catch (error) {
+                  console.log(`Row ${i + 1}: Error during caregiver lookup:`, error);
                   errors.push(`Row ${i + 1}: Error looking up caregiver: ${error instanceof Error ? error.message : 'Unknown error'}`);
                   continue;
                 }
