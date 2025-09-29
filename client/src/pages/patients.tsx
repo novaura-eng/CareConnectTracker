@@ -965,7 +965,8 @@ export default function Patients() {
                           checked={paginatedPatients && paginatedPatients.length > 0 && paginatedPatients.every(p => selectedPatients.has(p.id))}
                           onCheckedChange={toggleAllPatients}
                           data-testid="checkbox-select-all-patients"
-                          className="!h-4 !w-4 aspect-square rounded-sm border-2 border-slate-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                          className="rounded-sm border-2 border-slate-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                          style={{ width: '16px', height: '16px', minWidth: '16px', minHeight: '16px', maxWidth: '16px', maxHeight: '16px' }}
                         />
                       </TableHead>
                       <TableHead>Patient Name</TableHead>
@@ -986,7 +987,8 @@ export default function Patients() {
                               checked={selectedPatients.has(patient.id)}
                               onCheckedChange={() => togglePatientSelection(patient.id)}
                               data-testid={`checkbox-select-patient-${patient.id}`}
-                              className="!h-4 !w-4 aspect-square rounded-sm border-2 border-slate-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                              className="rounded-sm border-2 border-slate-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                              style={{ width: '16px', height: '16px', minWidth: '16px', minHeight: '16px', maxWidth: '16px', maxHeight: '16px' }}
                             />
                           </TableCell>
                           <TableCell className="font-medium">{patient.name}</TableCell>
