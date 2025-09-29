@@ -138,9 +138,9 @@ export default function Patients() {
   const downloadTemplate = () => {
     const headers = ['name', 'medicaidId', 'address', 'phoneNumber', 'emergencyContact', 'medicalConditions', 'caregiverPhone', 'caregiverState', 'isActive'];
     const sampleData = [
-      'John Doe,MED12345,123 Main St,(555) 123-4567,Jane Doe (555) 234-5678,Diabetes,(202) 555-0001,MD,true',
-      'Mary Smith,,456 Oak Ave,,(555) 345-6789,Hypertension,(202) 555-0002,MD,true',
-      'Bob Johnson,MED11111,789 Pine Rd,(555) 456-7890,Alice Johnson (555) 567-8901,,,true'
+      'John Doe,MED12345,123 Main St,555-123-4567,Jane Doe 555-234-5678,Diabetes,202-555-0001,MD,true',
+      'Mary Smith,,456 Oak Ave,,555-345-6789,Hypertension,202-555-0002,MD,true',
+      'Bob Johnson,MED11111,789 Pine Rd,555-456-7890,Alice Johnson 555-567-8901,,,true'
     ];
     
     const csvContent = [headers.join(','), ...sampleData].join('\n');

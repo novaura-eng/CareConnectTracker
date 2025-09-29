@@ -1926,14 +1926,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Medicaid ID is now optional - no validation needed
 
-          // Format phone number if provided
+          // Format phone number if provided (using hyphen format to match database: 203-111-3333)
           if (patientData.phoneNumber) {
             const digits = patientData.phoneNumber.replace(/\D/g, '');
             if (digits.length !== 10) {
               errors.push(`Row ${i + 1}: Phone number must be 10 digits`);
               continue;
             }
-            patientData.phoneNumber = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+            patientData.phoneNumber = `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
           }
 
           // Validate email format if provided
@@ -1955,23 +1955,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (caregiverPhone && caregiverState) {
               // Format caregiver phone for lookup (must match database format: 203-927-5573)
               const caregiverDigits = caregiverPhone.replace(/\D/g, '');
-              console.log(`Row ${i + 1}: Looking up caregiver with phone digits: ${caregiverDigits}`);
               if (caregiverDigits.length === 10) {
                 const formattedCaregiverPhone = `${caregiverDigits.slice(0, 3)}-${caregiverDigits.slice(3, 6)}-${caregiverDigits.slice(6)}`;
-                console.log(`Row ${i + 1}: Formatted caregiver phone: ${formattedCaregiverPhone}, state: ${caregiverState}`);
                 
                 try {
                   const caregiver = await storage.getCaregiverByPhoneAndState(formattedCaregiverPhone, caregiverState);
                   if (caregiver) {
-                    console.log(`Row ${i + 1}: Found caregiver: ${caregiver.name} (ID: ${caregiver.id})`);
                     caregiverId = caregiver.id;
                   } else {
-                    console.log(`Row ${i + 1}: No caregiver found with phone ${formattedCaregiverPhone} and state ${caregiverState}`);
                     errors.push(`Row ${i + 1}: No caregiver found with phone ${formattedCaregiverPhone} and state ${caregiverState}`);
                     continue;
                   }
                 } catch (error) {
-                  console.log(`Row ${i + 1}: Error during caregiver lookup:`, error);
                   errors.push(`Row ${i + 1}: Error looking up caregiver: ${error instanceof Error ? error.message : 'Unknown error'}`);
                   continue;
                 }
