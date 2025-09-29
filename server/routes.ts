@@ -417,28 +417,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (emergencyContact !== undefined) updateData.emergencyContact = emergencyContact?.trim() || null;
       if (medicalConditions !== undefined) updateData.medicalConditions = medicalConditions?.trim() || null;
       
-      // Handle name - only allow direct update if current value is empty/null
+      // Handle name - only require email if current value exists AND new value is different
       if (name !== undefined) {
-        if (patient.name && patient.name.trim()) {
+        const newName = name?.trim() || null;
+        const currentName = patient.name?.trim() || null;
+        
+        // Only require email if current value exists AND the new value is different
+        if (currentName && newName !== currentName) {
           return res.status(400).json({ 
             message: "Name cannot be changed directly as it already has a value. Please submit an email request to update the name.",
             requiresEmail: true,
             field: "name"
           });
         }
-        updateData.name = name.trim();
+        updateData.name = newName;
       }
       
-      // Handle medicaid ID - only allow direct update if current value is empty/null
+      // Handle medicaid ID - only require email if current value exists AND new value is different
       if (medicaidId !== undefined) {
-        if (patient.medicaidId && patient.medicaidId.trim()) {
+        const newMedicaidId = medicaidId?.trim() || null;
+        const currentMedicaidId = patient.medicaidId?.trim() || null;
+        
+        // Only require email if current value exists AND the new value is different
+        if (currentMedicaidId && newMedicaidId !== currentMedicaidId) {
           return res.status(400).json({ 
             message: "Medicaid ID cannot be changed directly as it already has a value. Please submit an email request to update the Medicaid ID.",
             requiresEmail: true,
             field: "medicaidId"
           });
         }
-        updateData.medicaidId = medicaidId.trim();
+        updateData.medicaidId = newMedicaidId;
       }
 
       // Perform the update
