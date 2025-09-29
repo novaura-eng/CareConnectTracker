@@ -336,42 +336,38 @@ export default function CaregiverPatientDetail() {
                       </div>
                     </div>
 
-                    {patient.phoneNumber && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-slate-500" />
-                        <span className="text-sm font-medium text-slate-600">Phone:</span>
-                        <span>{patient.phoneNumber}</span>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-slate-500" />
+                      <span className="text-sm font-medium text-slate-600">Phone:</span>
+                      <span>{patient.phoneNumber || "-"}</span>
+                    </div>
 
-                    {patient.address && (
-                      <div className="flex items-start gap-2">
-                        <MapPin className="h-4 w-4 text-slate-500 mt-0.5" />
-                        <div>
-                          <span className="text-sm font-medium text-slate-600">Address:</span>
-                          <p className="text-sm">{patient.address}</p>
-                        </div>
+                    <div className="flex items-start gap-2">
+                      <MapPin className="h-4 w-4 text-slate-500 mt-0.5" />
+                      <div className="flex-1">
+                        <span className="text-sm font-medium text-slate-600">Address:</span>
+                        <p className="text-sm">{patient.address || "-"}</p>
                       </div>
-                    )}
+                    </div>
 
-                    {patient.emergencyContact && (
-                      <div>
-                        <span className="text-sm font-medium text-slate-600">Emergency Contact:</span>
-                        <p className="text-sm">{patient.emergencyContact}</p>
-                      </div>
-                    )}
+                    <div>
+                      <span className="text-sm font-medium text-slate-600">Emergency Contact:</span>
+                      <p className="text-sm">{patient.emergencyContact || "-"}</p>
+                    </div>
 
-                    {patient.medicalConditions && (
-                      <div className="flex items-start gap-2">
-                        <Heart className="h-4 w-4 text-red-500 mt-0.5" />
-                        <div>
-                          <span className="text-sm font-medium text-slate-600">Medical Conditions:</span>
+                    <div className="flex items-start gap-2">
+                      <Heart className="h-4 w-4 text-red-500 mt-0.5" />
+                      <div className="flex-1">
+                        <span className="text-sm font-medium text-slate-600">Medical Conditions:</span>
+                        {patient.medicalConditions ? (
                           <Badge variant="secondary" className="ml-2">
                             {patient.medicalConditions}
                           </Badge>
-                        </div>
+                        ) : (
+                          <span className="text-sm text-slate-500 ml-2">-</span>
+                        )}
                       </div>
-                    )}
+                    </div>
 
                     <Separator />
 
