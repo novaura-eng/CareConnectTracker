@@ -61,6 +61,7 @@ export default function CaregiverProfile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/caregiver/me"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/caregiver/session"] });
       setIsEditing(false);
       toast({
         title: "Profile Updated",
