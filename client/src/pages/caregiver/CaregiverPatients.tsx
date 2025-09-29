@@ -1,14 +1,19 @@
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Users, Phone, MapPin, Heart, Calendar, Search, ArrowUpDown, Eye, FileText, CheckCircle, Clock, AlertCircle, Edit } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Users, Phone, MapPin, Heart, Calendar, Search, ArrowUpDown, Eye, FileText, CheckCircle, Clock, AlertCircle, Edit, Save, Mail, X } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import CaregiverLayout from "@/components/caregiver/CaregiverLayout";
 import type { PatientWithSurveyStatus } from "@shared/schema";
 
@@ -17,9 +22,88 @@ export default function CaregiverPatients() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<keyof PatientWithSurveyStatus>("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<PatientWithSurveyStatus | null>(null);
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [restrictedFieldRequest, setRestrictedFieldRequest] = useState<{ field: string; value: string } | null>(null);
+  const { toast } = useToast();
+
+  const [formData, setFormData] = useState({
+    name: "",
+    medicaidId: "",
+    address: "",
+    phoneNumber: "",
+    emergencyContact: "",
+    medicalConditions: "",
+  });
+
+  const [emailRequestData, setEmailRequestData] = useState({
+    reason: "",
+  });
 
   const { data: patients, isLoading } = useQuery<PatientWithSurveyStatus[]>({
     queryKey: ["/api/caregiver/patients/enhanced"],
+  });
+
+  // Update patient mutation
+  const updatePatientMutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (!selectedPatient) throw new Error("No patient selected");
+      const response = await apiRequest("PUT", `/api/caregiver/patient/${selectedPatient.id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/caregiver/patients/enhanced"] });
+      setIsEditModalOpen(false);
+      setSelectedPatient(null);
+      toast({
+        title: "Patient Updated",
+        description: "Patient information has been successfully updated.",
+      });
+    },
+    onError: async (error: any) => {
+      const errorData = await error.response?.json();
+      if (errorData?.requiresEmail) {
+        setRestrictedFieldRequest({
+          field: errorData.field,
+          value: formData[errorData.field as keyof typeof formData]
+        });
+        setIsEditModalOpen(false);
+        setIsRequestModalOpen(true);
+      } else {
+        toast({
+          title: "Update Failed",
+          description: errorData?.message || "Failed to update patient information. Please try again.",
+          variant: "destructive",
+        });
+      }
+    },
+  });
+
+  // Email request mutation
+  const submitRequestMutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (!selectedPatient) throw new Error("No patient selected");
+      const response = await apiRequest("POST", `/api/caregiver/patient/${selectedPatient.id}/request-change`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      setIsRequestModalOpen(false);
+      setRestrictedFieldRequest(null);
+      setEmailRequestData({ reason: "" });
+      setSelectedPatient(null);
+      toast({
+        title: "Request Submitted",
+        description: "Your change request has been submitted. A care coordinator will review it and contact you.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Request Failed",
+        description: error.message || "Failed to submit change request. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
   // Filter and sort patients
@@ -63,6 +147,50 @@ export default function CaregiverPatients() {
     e.stopPropagation();
     // Navigate to the caregiver dashboard to show available surveys
     setLocation(`/caregiver/dashboard`);
+  };
+
+  const handleEditPatient = (patient: PatientWithSurveyStatus, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedPatient(patient);
+    setFormData({
+      name: patient.name || "",
+      medicaidId: patient.medicaidId || "",
+      address: patient.address || "",
+      phoneNumber: patient.phoneNumber || "",
+      emergencyContact: patient.emergencyContact || "",
+      medicalConditions: patient.medicalConditions || "",
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setSelectedPatient(null);
+  };
+
+  const handleSavePatient = () => {
+    updatePatientMutation.mutate(formData);
+  };
+
+  const handleSubmitRequest = () => {
+    if (!restrictedFieldRequest || !emailRequestData.reason.trim()) {
+      toast({
+        title: "Error",
+        description: "Please provide a reason for this change request.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    submitRequestMutation.mutate({
+      field: restrictedFieldRequest.field,
+      newValue: restrictedFieldRequest.value,
+      reason: emailRequestData.reason,
+    });
+  };
+
+  const hasValue = (value: string | null | undefined) => {
+    return value !== null && value !== undefined && value.trim() !== "";
   };
 
   return (
@@ -219,7 +347,7 @@ export default function CaregiverPatients() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handlePatientSelect(patient.id)}
+                            onClick={(e) => handleEditPatient(patient, e)}
                             data-testid={`edit-patient-${patient.id}`}
                           >
                             <Edit className="h-4 w-4 mr-1" />
@@ -283,6 +411,197 @@ export default function CaregiverPatients() {
           </Alert>
         )}
       </div>
+
+      {/* Edit Patient Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5 text-primary" />
+              Edit Patient Information
+            </DialogTitle>
+            <DialogDescription>
+              Update patient details. Some fields may require approval to change.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedPatient && (
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-name">Full Name</Label>
+                  <Input
+                    id="edit-name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    disabled={hasValue(selectedPatient.name)}
+                    data-testid="input-edit-patient-name"
+                  />
+                  {hasValue(selectedPatient.name) && (
+                    <p className="text-xs text-slate-500 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      Name is locked. Submit email request to change.
+                    </p>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="edit-medicaidId">Medicaid ID</Label>
+                  <Input
+                    id="edit-medicaidId"
+                    value={formData.medicaidId}
+                    onChange={(e) => setFormData({ ...formData, medicaidId: e.target.value })}
+                    disabled={hasValue(selectedPatient.medicaidId)}
+                    data-testid="input-edit-patient-medicaid"
+                  />
+                  {hasValue(selectedPatient.medicaidId) && (
+                    <p className="text-xs text-slate-500 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      Medicaid ID is locked. Submit email request to change.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-phoneNumber">Phone Number</Label>
+                <Input
+                  id="edit-phoneNumber"
+                  value={formData.phoneNumber}
+                  onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                  placeholder="203-111-3333"
+                  data-testid="input-edit-patient-phone"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-address">Address</Label>
+                <Textarea
+                  id="edit-address"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  placeholder="Full address"
+                  rows={2}
+                  data-testid="input-edit-patient-address"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-emergencyContact">Emergency Contact</Label>
+                <Input
+                  id="edit-emergencyContact"
+                  value={formData.emergencyContact}
+                  onChange={(e) => setFormData({ ...formData, emergencyContact: e.target.value })}
+                  placeholder="Name and phone number"
+                  data-testid="input-edit-patient-emergency"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-medicalConditions">Medical Conditions</Label>
+                <Textarea
+                  id="edit-medicalConditions"
+                  value={formData.medicalConditions}
+                  onChange={(e) => setFormData({ ...formData, medicalConditions: e.target.value })}
+                  placeholder="List any medical conditions"
+                  rows={3}
+                  data-testid="input-edit-patient-conditions"
+                />
+              </div>
+
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  If name or Medicaid ID already have values, you'll need to submit an email request to change them.
+                </AlertDescription>
+              </Alert>
+
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={handleCloseEditModal}
+                  disabled={updatePatientMutation.isPending}
+                  data-testid="cancel-edit-modal"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSavePatient}
+                  disabled={updatePatientMutation.isPending}
+                  data-testid="save-edit-modal"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {updatePatientMutation.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Request Modal for Restricted Fields */}
+      <Dialog open={isRequestModalOpen} onOpenChange={setIsRequestModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" />
+              Request Field Change
+            </DialogTitle>
+            <DialogDescription>
+              This field requires approval to change. Submit your request with a reason.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {restrictedFieldRequest && (
+            <div className="space-y-4">
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  You are requesting to change <strong>{restrictedFieldRequest.field === 'name' ? 'Name' : 'Medicaid ID'}</strong> to: <strong>{restrictedFieldRequest.value}</strong>
+                </AlertDescription>
+              </Alert>
+
+              <div className="space-y-2">
+                <Label htmlFor="change-reason">Reason for Change</Label>
+                <Textarea
+                  id="change-reason"
+                  value={emailRequestData.reason}
+                  onChange={(e) => setEmailRequestData({ reason: e.target.value })}
+                  placeholder="Please explain why this change is needed..."
+                  rows={4}
+                  data-testid="textarea-change-reason"
+                />
+                <p className="text-xs text-slate-500">
+                  A care coordinator will review your request and contact you.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsRequestModalOpen(false);
+                    setRestrictedFieldRequest(null);
+                    setEmailRequestData({ reason: "" });
+                  }}
+                  disabled={submitRequestMutation.isPending}
+                  data-testid="cancel-request-button"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSubmitRequest}
+                  disabled={submitRequestMutation.isPending || !emailRequestData.reason.trim()}
+                  data-testid="submit-request-button"
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  {submitRequestMutation.isPending ? "Submitting..." : "Submit Request"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </CaregiverLayout>
   );
 }
