@@ -139,7 +139,7 @@ export default function Patients() {
     const headers = ['name', 'medicaidId', 'address', 'phoneNumber', 'emergencyContact', 'medicalConditions', 'caregiverPhone', 'caregiverState', 'isActive'];
     const sampleData = [
       'John Doe,MED12345,123 Main St,(555) 123-4567,Jane Doe (555) 234-5678,Diabetes,(202) 555-0001,MD,true',
-      'Mary Smith,MED67890,456 Oak Ave,,(555) 345-6789,Hypertension,(202) 555-0002,MD,true',
+      'Mary Smith,,456 Oak Ave,,(555) 345-6789,Hypertension,(202) 555-0002,MD,true',
       'Bob Johnson,MED11111,789 Pine Rd,(555) 456-7890,Alice Johnson (555) 567-8901,,,true'
     ];
     
@@ -242,9 +242,9 @@ export default function Patients() {
                       name="medicaidId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Medicaid ID *</FormLabel>
+                          <FormLabel>Medicaid ID</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter Medicaid ID" {...field} />
+                            <Input placeholder="Enter Medicaid ID" {...field} value={field.value || ""} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -408,9 +408,9 @@ export default function Patients() {
                       name="medicaidId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Medicaid ID *</FormLabel>
+                          <FormLabel>Medicaid ID</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter Medicaid ID" {...field} />
+                            <Input placeholder="Enter Medicaid ID" {...field} value={field.value || ""} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -737,14 +737,14 @@ export default function Patients() {
             <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
               <h4 className="font-medium text-slate-900 mb-3">CSV Format Requirements</h4>
               <div className="text-sm text-slate-600 space-y-2">
-                <p><strong>Required columns:</strong> name, medicaidId</p>
-                <p><strong>Optional columns:</strong> address, phoneNumber, emergencyContact, medicalConditions, caregiverPhone, caregiverState, isActive</p>
+                <p><strong>Required columns:</strong> name</p>
+                <p><strong>Optional columns:</strong> medicaidId, address, phoneNumber, emergencyContact, medicalConditions, caregiverPhone, caregiverState, isActive</p>
                 <p><strong>Notes:</strong></p>
                 <ul className="list-disc list-inside space-y-1 ml-2">
                   <li>Use caregiverPhone + caregiverState to assign patients to existing caregivers</li>
                   <li>Phone numbers should be 10 digits (formatting will be applied automatically)</li>
                   <li>isActive should be "true" or "false" (defaults to true if not provided)</li>
-                  <li>Patients with duplicate Medicaid IDs will be skipped</li>
+                  <li>Patients with duplicate Medicaid IDs will be skipped (if Medicaid ID is provided)</li>
                 </ul>
               </div>
 

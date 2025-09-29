@@ -1884,8 +1884,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("CSV headers found:", headers);
       const expectedHeaders = ['name', 'medicaidId', 'address', 'phoneNumber', 'emergencyContact', 'medicalConditions', 'caregiverPhone', 'caregiverState', 'isActive'];
       
-      // Validate required headers (name and medicaidId are required)
-      const requiredHeaders = ['name', 'medicaidId'];
+      // Validate required headers (only name is required now)
+      const requiredHeaders = ['name'];
       for (const header of requiredHeaders) {
         if (!headers.includes(header)) {
           console.log(`ERROR: Missing required column: ${header}`);
@@ -1924,10 +1924,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             continue;
           }
 
-          if (!patientData.medicaidId?.trim()) {
-            errors.push(`Row ${i + 1}: Medicaid ID is required`);
-            continue;
-          }
+          // Medicaid ID is now optional - no validation needed
 
           // Format phone number if provided
           if (patientData.phoneNumber) {
@@ -1982,11 +1979,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           patientData.caregiverId = caregiverId;
 
-          // Check for existing patient with same Medicaid ID
-          const existingPatient = await storage.getPatientByMedicaidId(patientData.medicaidId);
-          if (existingPatient) {
-            skipped++;
-            continue;
+          // Check for existing patient with same Medicaid ID (only if Medicaid ID is provided)
+          if (patientData.medicaidId?.trim()) {
+            const existingPatient = await storage.getPatientByMedicaidId(patientData.medicaidId);
+            if (existingPatient) {
+              skipped++;
+              continue;
+            }
           }
 
           // Validate the complete patient data

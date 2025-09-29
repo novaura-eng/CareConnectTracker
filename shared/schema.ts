@@ -71,7 +71,7 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
 export const patients = pgTable("patients", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  medicaidId: text("medicaid_id").notNull(),
+  medicaidId: text("medicaid_id"), // Made nullable
   address: text("address"),
   phoneNumber: text("phone_number"),
   emergencyContact: text("emergency_contact"),
