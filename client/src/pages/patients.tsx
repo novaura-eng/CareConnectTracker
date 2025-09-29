@@ -86,17 +86,16 @@ export default function Patients() {
     });
   }, [patients, searchText, statusFilter, caregiverFilter]);
 
-  // Paginate the filtered results
-  const paginatedPatients = React.useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return filteredPatients.slice(startIndex, endIndex);
-  }, [filteredPatients, currentPage, itemsPerPage]);
+  // Pagination calculations (matching caregivers table)
+  const totalItems = filteredPatients?.length || 0;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedPatients = filteredPatients?.slice(startIndex, endIndex) || [];
 
-  // Calculate pagination info
-  const totalPages = Math.ceil(filteredPatients.length / itemsPerPage);
-  const hasNextPage = currentPage < totalPages;
-  const hasPrevPage = currentPage > 1;
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
 
   // Reset to page 1 when filters change
   React.useEffect(() => {
@@ -859,34 +858,61 @@ export default function Patients() {
                 </Table>
               )}
 
-              {/* Pagination Controls */}
-              {filteredPatients.length > itemsPerPage && (
-                <div className="flex items-center justify-between mt-6 pt-4 border-t">
-                  <div className="text-sm text-slate-600">
-                    Page {currentPage} of {totalPages}
+              {/* Pagination Controls (matching caregivers table) */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-200">
+                  <div className="flex items-center text-sm text-slate-600">
+                    Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of {totalItems} patients
                   </div>
                   
                   <div className="flex items-center space-x-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setCurrentPage(currentPage - 1)}
-                      disabled={!hasPrevPage}
+                      onClick={() => goToPage(currentPage - 1)}
+                      disabled={currentPage === 1}
                       data-testid="button-prev-page"
                     >
-                      <ChevronLeft className="h-4 w-4" />
+                      <ChevronLeft className="h-4 w-4 mr-1" />
                       Previous
                     </Button>
+                    
+                    <div className="flex items-center space-x-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter(page => {
+                          if (totalPages <= 7) return true;
+                          if (page === 1 || page === totalPages) return true;
+                          if (page >= currentPage - 1 && page <= currentPage + 1) return true;
+                          return false;
+                        })
+                        .map((page, index, array) => (
+                          <div key={page} className="flex items-center">
+                            {index > 0 && array[index - 1] !== page - 1 && (
+                              <span className="px-2 text-slate-400">...</span>
+                            )}
+                            <Button
+                              variant={currentPage === page ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => goToPage(page)}
+                              className="min-w-[40px]"
+                              data-testid={`button-page-${page}`}
+                            >
+                              {page}
+                            </Button>
+                          </div>
+                        ))
+                      }
+                    </div>
                     
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setCurrentPage(currentPage + 1)}
-                      disabled={!hasNextPage}
+                      onClick={() => goToPage(currentPage + 1)}
+                      disabled={currentPage === totalPages}
                       data-testid="button-next-page"
                     >
                       Next
-                      <ChevronRight className="h-4 w-4" />
+                      <ChevronRight className="h-4 w-4 ml-1" />
                     </Button>
                   </div>
                 </div>
