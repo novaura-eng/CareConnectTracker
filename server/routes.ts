@@ -1928,12 +1928,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Format phone number if provided (using hyphen format to match database: 203-111-3333)
           if (patientData.phoneNumber) {
+            const originalPhone = patientData.phoneNumber;
             const digits = patientData.phoneNumber.replace(/\D/g, '');
             if (digits.length !== 10) {
               errors.push(`Row ${i + 1}: Phone number must be 10 digits`);
               continue;
             }
             patientData.phoneNumber = `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+            console.log(`Row ${i + 1}: Phone formatting - Original: "${originalPhone}" -> Formatted: "${patientData.phoneNumber}"`);
           }
 
           // Validate email format if provided
@@ -1990,6 +1992,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Validate the complete patient data
           const validatedData = insertPatientSchema.parse(patientData);
+          console.log(`Row ${i + 1}: Final patient data before database insert:`, JSON.stringify(validatedData, null, 2));
           
           // Create the patient
           await storage.createPatient(validatedData);
