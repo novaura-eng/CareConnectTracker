@@ -16,6 +16,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, User, MapPin, IdCard, Heart, Upload, Download, X, Search, ChevronLeft, ChevronRight, Check, ChevronsUpDown, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -35,6 +36,10 @@ export default function Patients() {
   // Delete confirmation state
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [patientToDelete, setPatientToDelete] = useState<Patient | null>(null);
+
+  // Bulk selection state
+  const [selectedPatients, setSelectedPatients] = useState<Set<number>>(new Set());
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -226,6 +231,42 @@ export default function Patients() {
   const openCreateDialog = () => {
     resetForm();
     setIsDialogOpen(true);
+  };
+
+  // Bulk selection functions
+  const togglePatientSelection = (patientId: number) => {
+    setSelectedPatients(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(patientId)) {
+        newSet.delete(patientId);
+      } else {
+        newSet.add(patientId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleAllPatients = () => {
+    if (!paginatedPatients) return;
+    
+    const currentPageIds = paginatedPatients.map(p => p.id);
+    const allCurrentSelected = currentPageIds.every(id => selectedPatients.has(id));
+    
+    setSelectedPatients(prev => {
+      const newSet = new Set(prev);
+      if (allCurrentSelected) {
+        // Unselect all on current page
+        currentPageIds.forEach(id => newSet.delete(id));
+      } else {
+        // Select all on current page
+        currentPageIds.forEach(id => newSet.add(id));
+      }
+      return newSet;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedPatients(new Set());
   };
 
   // CSV Import functions
