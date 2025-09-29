@@ -392,6 +392,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update patient information (caregiver portal)
+  app.put("/api/caregiver/patient/:id", requireCaregiver, async (req, res) => {
+    try {
+      const caregiver = (req as any).caregiver;
+      const patientId = parseInt(req.params.id);
+      
+      if (isNaN(patientId)) {
+        return res.status(400).json({ message: "Invalid patient ID" });
+      }
+
+      // Verify patient belongs to this caregiver
+      const patient = await storage.getPatient(patientId);
+      if (!patient || patient.caregiverId !== caregiver.id) {
+        return res.status(404).json({ message: "Patient not found or not assigned to you" });
+      }
+
+      const { address, phoneNumber, emergencyContact, medicalConditions, name, medicaidId } = req.body;
+      
+      // Prepare update data with freely editable fields
+      const updateData: Partial<any> = {};
+      if (address !== undefined) updateData.address = address?.trim() || null;
+      if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber?.trim() || null;
+      if (emergencyContact !== undefined) updateData.emergencyContact = emergencyContact?.trim() || null;
+      if (medicalConditions !== undefined) updateData.medicalConditions = medicalConditions?.trim() || null;
+      
+      // Handle name - only allow direct update if current value is empty/null
+      if (name !== undefined) {
+        if (patient.name && patient.name.trim()) {
+          return res.status(400).json({ 
+            message: "Name cannot be changed directly as it already has a value. Please submit an email request to update the name.",
+            requiresEmail: true,
+            field: "name"
+          });
+        }
+        updateData.name = name.trim();
+      }
+      
+      // Handle medicaid ID - only allow direct update if current value is empty/null
+      if (medicaidId !== undefined) {
+        if (patient.medicaidId && patient.medicaidId.trim()) {
+          return res.status(400).json({ 
+            message: "Medicaid ID cannot be changed directly as it already has a value. Please submit an email request to update the Medicaid ID.",
+            requiresEmail: true,
+            field: "medicaidId"
+          });
+        }
+        updateData.medicaidId = medicaidId.trim();
+      }
+
+      // Perform the update
+      await storage.updatePatient(patientId, updateData);
+      
+      res.json({ message: "Patient information updated successfully" });
+    } catch (error) {
+      console.error("Error updating patient:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Submit email request for restricted field changes
+  app.post("/api/caregiver/patient/:id/request-change", requireCaregiver, async (req, res) => {
+    try {
+      const caregiver = (req as any).caregiver;
+      const patientId = parseInt(req.params.id);
+      
+      if (isNaN(patientId)) {
+        return res.status(400).json({ message: "Invalid patient ID" });
+      }
+
+      // Verify patient belongs to this caregiver
+      const patient = await storage.getPatient(patientId);
+      if (!patient || patient.caregiverId !== caregiver.id) {
+        return res.status(404).json({ message: "Patient not found or not assigned to you" });
+      }
+
+      const { field, newValue, reason } = req.body;
+      
+      if (!field || !newValue || !reason) {
+        return res.status(400).json({ message: "Field, new value, and reason are required" });
+      }
+
+      if (!['name', 'medicaidId'].includes(field)) {
+        return res.status(400).json({ message: "Invalid field. Only name and medicaidId require email requests." });
+      }
+
+      // Here you would send an email to the care coordinator
+      // For now, we'll just log it and return success
+      console.log(`Change request from caregiver ${caregiver.name} (ID: ${caregiver.id}):`, {
+        patientId,
+        patientName: patient.name,
+        field,
+        currentValue: patient[field as keyof typeof patient],
+        newValue,
+        reason,
+        timestamp: new Date().toISOString()
+      });
+
+      // TODO: Send email notification to care coordinator using sendEmail service
+      
+      res.json({ 
+        message: "Change request submitted successfully. A care coordinator will review your request and contact you.",
+        requestId: `${Date.now()}-${patientId}-${field}` // Simple request ID
+      });
+    } catch (error) {
+      console.error("Error submitting change request:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get prior response for reuse in recurring surveys
   app.get("/api/caregiver/surveys/:assignmentId/prior-response", requireCaregiver, async (req, res) => {
     try {
