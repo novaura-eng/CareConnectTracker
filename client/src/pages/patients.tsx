@@ -11,9 +11,11 @@ import InputMask from "react-input-mask";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, User, MapPin, IdCard, Heart, Upload, Download, X, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, User, MapPin, IdCard, Heart, Upload, Download, X, Search, ChevronLeft, ChevronRight, Check, ChevronsUpDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import Sidebar from "@/components/layout/sidebar";
@@ -36,6 +38,7 @@ export default function Patients() {
   const [searchText, setSearchText] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL_STATUS");
   const [caregiverFilter, setCaregiverFilter] = useState<string>("ALL_CAREGIVERS");
+  const [caregiverComboOpen, setCaregiverComboOpen] = useState(false);
 
   const { data: patients, isLoading } = useQuery<Patient[]>({
     queryKey: ["/api/patients"],
@@ -99,6 +102,15 @@ export default function Patients() {
   React.useEffect(() => {
     setCurrentPage(1);
   }, [searchText, statusFilter, caregiverFilter]);
+
+  // Helper function to get display text for caregiver filter
+  const getCaregiverFilterDisplayText = () => {
+    if (caregiverFilter === "ALL_CAREGIVERS") return "All Caregivers";
+    if (caregiverFilter === "ASSIGNED") return "Assigned";
+    if (caregiverFilter === "UNASSIGNED") return "Unassigned";
+    const caregiver = caregivers?.find(c => c.id.toString() === caregiverFilter);
+    return caregiver ? caregiver.name : "All Caregivers";
+  };
 
   const form = useForm<InsertPatient>({
     resolver: zodResolver(insertPatientSchema),
@@ -675,22 +687,94 @@ export default function Patients() {
                   </SelectContent>
                 </Select>
 
-                {/* Caregiver Filter */}
-                <Select value={caregiverFilter} onValueChange={setCaregiverFilter}>
-                  <SelectTrigger className="w-full md:w-48" data-testid="select-caregiver-filter">
-                    <SelectValue placeholder="Filter by caregiver" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL_CAREGIVERS">All Caregivers</SelectItem>
-                    <SelectItem value="ASSIGNED">Assigned</SelectItem>
-                    <SelectItem value="UNASSIGNED">Unassigned</SelectItem>
-                    {caregivers?.filter(c => c.isActive).map((caregiver) => (
-                      <SelectItem key={caregiver.id} value={caregiver.id.toString()}>
-                        {caregiver.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {/* Caregiver Filter - Searchable Combobox */}
+                <Popover open={caregiverComboOpen} onOpenChange={setCaregiverComboOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={caregiverComboOpen}
+                      className="w-full md:w-48 justify-between"
+                      data-testid="button-filter-caregiver"
+                    >
+                      {getCaregiverFilterDisplayText()}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full md:w-48 p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search caregivers..." className="h-9" />
+                      <CommandList>
+                        <CommandEmpty>No caregiver found.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem
+                            value="ALL_CAREGIVERS"
+                            onSelect={() => {
+                              setCaregiverFilter("ALL_CAREGIVERS");
+                              setCaregiverComboOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={`mr-2 h-4 w-4 ${
+                                caregiverFilter === "ALL_CAREGIVERS" ? "opacity-100" : "opacity-0"
+                              }`}
+                            />
+                            All Caregivers
+                          </CommandItem>
+                          <CommandItem
+                            value="ASSIGNED"
+                            onSelect={() => {
+                              setCaregiverFilter("ASSIGNED");
+                              setCaregiverComboOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={`mr-2 h-4 w-4 ${
+                                caregiverFilter === "ASSIGNED" ? "opacity-100" : "opacity-0"
+                              }`}
+                            />
+                            Assigned
+                          </CommandItem>
+                          <CommandItem
+                            value="UNASSIGNED"
+                            onSelect={() => {
+                              setCaregiverFilter("UNASSIGNED");
+                              setCaregiverComboOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={`mr-2 h-4 w-4 ${
+                                caregiverFilter === "UNASSIGNED" ? "opacity-100" : "opacity-0"
+                              }`}
+                            />
+                            Unassigned
+                          </CommandItem>
+                        </CommandGroup>
+                        {caregivers?.filter(c => c.isActive).length > 0 && (
+                          <CommandGroup heading="Caregivers">
+                            {caregivers.filter(c => c.isActive).map((caregiver) => (
+                              <CommandItem
+                                key={caregiver.id}
+                                value={caregiver.name}
+                                onSelect={() => {
+                                  setCaregiverFilter(caregiver.id.toString());
+                                  setCaregiverComboOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={`mr-2 h-4 w-4 ${
+                                    caregiverFilter === caregiver.id.toString() ? "opacity-100" : "opacity-0"
+                                  }`}
+                                />
+                                {caregiver.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        )}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               {/* Results Summary */}
