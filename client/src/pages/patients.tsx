@@ -965,6 +965,7 @@ export default function Patients() {
                           checked={paginatedPatients && paginatedPatients.length > 0 && paginatedPatients.every(p => selectedPatients.has(p.id))}
                           onCheckedChange={toggleAllPatients}
                           data-testid="checkbox-select-all-patients"
+                          className="h-4 w-4"
                         />
                       </TableHead>
                       <TableHead>Patient Name</TableHead>
@@ -985,6 +986,7 @@ export default function Patients() {
                               checked={selectedPatients.has(patient.id)}
                               onCheckedChange={() => togglePatientSelection(patient.id)}
                               data-testid={`checkbox-select-patient-${patient.id}`}
+                              className="h-4 w-4"
                             />
                           </TableCell>
                           <TableCell className="font-medium">{patient.name}</TableCell>
