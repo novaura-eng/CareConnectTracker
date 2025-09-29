@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, User, MapPin, IdCard, Heart, Upload, Download, X } from "lucide-react";
+import { Plus, User, MapPin, IdCard, Heart, Upload, Download, X, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import Sidebar from "@/components/layout/sidebar";
@@ -28,6 +28,15 @@ export default function Patients() {
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Filter state
+  const [searchText, setSearchText] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL_STATUS");
+  const [caregiverFilter, setCaregiverFilter] = useState<string>("ALL_CAREGIVERS");
+
   const { data: patients, isLoading } = useQuery<Patient[]>({
     queryKey: ["/api/patients"],
   });
@@ -35,6 +44,61 @@ export default function Patients() {
   const { data: caregivers } = useQuery<Caregiver[]>({
     queryKey: ["/api/caregivers"],
   });
+
+  // Filter patients based on search and filter criteria
+  const filteredPatients = React.useMemo(() => {
+    if (!patients) return [];
+    
+    return patients.filter(patient => {
+      // Status filter
+      if (statusFilter && statusFilter !== "ALL_STATUS") {
+        if (statusFilter === "ACTIVE" && !patient.isActive) return false;
+        if (statusFilter === "INACTIVE" && patient.isActive) return false;
+      }
+      
+      // Caregiver filter
+      if (caregiverFilter && caregiverFilter !== "ALL_CAREGIVERS") {
+        if (caregiverFilter === "ASSIGNED" && !patient.caregiverId) return false;
+        if (caregiverFilter === "UNASSIGNED" && patient.caregiverId) return false;
+        if (caregiverFilter !== "ASSIGNED" && caregiverFilter !== "UNASSIGNED" && 
+            patient.caregiverId?.toString() !== caregiverFilter) return false;
+      }
+      
+      // Search text filter
+      if (searchText) {
+        const searchLower = searchText.toLowerCase();
+        const caregiverName = patient.caregiverId ? getCaregiverName(patient.caregiverId).toLowerCase() : '';
+        return (
+          patient.name.toLowerCase().includes(searchLower) ||
+          (patient.medicaidId && patient.medicaidId.toLowerCase().includes(searchLower)) ||
+          (patient.phoneNumber && patient.phoneNumber.toLowerCase().includes(searchLower)) ||
+          (patient.address && patient.address.toLowerCase().includes(searchLower)) ||
+          (patient.emergencyContact && patient.emergencyContact.toLowerCase().includes(searchLower)) ||
+          (patient.medicalConditions && patient.medicalConditions.toLowerCase().includes(searchLower)) ||
+          caregiverName.includes(searchLower)
+        );
+      }
+      
+      return true;
+    });
+  }, [patients, searchText, statusFilter, caregiverFilter]);
+
+  // Paginate the filtered results
+  const paginatedPatients = React.useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredPatients.slice(startIndex, endIndex);
+  }, [filteredPatients, currentPage, itemsPerPage]);
+
+  // Calculate pagination info
+  const totalPages = Math.ceil(filteredPatients.length / itemsPerPage);
+  const hasNextPage = currentPage < totalPages;
+  const hasPrevPage = currentPage > 1;
+
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchText, statusFilter, caregiverFilter]);
 
   const form = useForm<InsertPatient>({
     resolver: zodResolver(insertPatientSchema),
@@ -581,6 +645,62 @@ export default function Patients() {
             </Card>
           </div>
 
+          {/* Search and Filter Controls */}
+          <Card className="mb-6">
+            <CardContent className="p-4">
+              <div className="flex flex-col md:flex-row gap-4">
+                {/* Search Input */}
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                    <Input
+                      placeholder="Search patients by name, Medicaid ID, phone, address, caregiver..."
+                      value={searchText}
+                      onChange={(e) => setSearchText(e.target.value)}
+                      className="pl-9"
+                      data-testid="input-search-patients"
+                    />
+                  </div>
+                </div>
+
+                {/* Status Filter */}
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full md:w-48" data-testid="select-status-filter">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL_STATUS">All Status</SelectItem>
+                    <SelectItem value="ACTIVE">Active</SelectItem>
+                    <SelectItem value="INACTIVE">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Caregiver Filter */}
+                <Select value={caregiverFilter} onValueChange={setCaregiverFilter}>
+                  <SelectTrigger className="w-full md:w-48" data-testid="select-caregiver-filter">
+                    <SelectValue placeholder="Filter by caregiver" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL_CAREGIVERS">All Caregivers</SelectItem>
+                    <SelectItem value="ASSIGNED">Assigned</SelectItem>
+                    <SelectItem value="UNASSIGNED">Unassigned</SelectItem>
+                    {caregivers?.filter(c => c.isActive).map((caregiver) => (
+                      <SelectItem key={caregiver.id} value={caregiver.id.toString()}>
+                        {caregiver.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Results Summary */}
+              <div className="mt-4 text-sm text-slate-600">
+                Showing {paginatedPatients.length} of {filteredPatients.length} patient{filteredPatients.length === 1 ? '' : 's'}
+                {searchText && ` matching "${searchText}"`}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Patients Table */}
           <Card>
             <CardHeader>
@@ -606,8 +726,8 @@ export default function Patients() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {patients && patients.length > 0 ? (
-                      patients.map((patient) => (
+                    {paginatedPatients && paginatedPatients.length > 0 ? (
+                      paginatedPatients.map((patient) => (
                         <TableRow key={patient.id}>
                           <TableCell className="font-medium">{patient.name}</TableCell>
                           <TableCell>{patient.medicaidId}</TableCell>
@@ -642,13 +762,50 @@ export default function Patients() {
                       <TableRow>
                         <TableCell colSpan={6} className="text-center py-8">
                           <User className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-                          <p className="text-lg font-medium text-slate-500">No patients found</p>
-                          <p className="text-sm text-slate-400">Add your first patient to get started</p>
+                          <p className="text-lg font-medium text-slate-500">
+                            {patients && patients.length > 0 ? "No patients match your filters" : "No patients found"}
+                          </p>
+                          <p className="text-sm text-slate-400">
+                            {patients && patients.length > 0 ? "Try adjusting your search or filters" : "Add your first patient to get started"}
+                          </p>
                         </TableCell>
                       </TableRow>
                     )}
                   </TableBody>
                 </Table>
+              )}
+
+              {/* Pagination Controls */}
+              {filteredPatients.length > itemsPerPage && (
+                <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                  <div className="text-sm text-slate-600">
+                    Page {currentPage} of {totalPages}
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(currentPage - 1)}
+                      disabled={!hasPrevPage}
+                      data-testid="button-prev-page"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(currentPage + 1)}
+                      disabled={!hasNextPage}
+                      data-testid="button-next-page"
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
               )}
             </CardContent>
           </Card>
