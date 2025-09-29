@@ -1050,6 +1050,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update patient (protected)
+  app.put("/api/patients/:id", requireAdmin, async (req, res) => {
+    try {
+      const patientId = parseInt(req.params.id);
+      if (isNaN(patientId)) {
+        return res.status(400).json({ message: "Invalid patient ID" });
+      }
+
+      // Check if patient exists
+      const existingPatient = await storage.getPatient(patientId);
+      if (!existingPatient) {
+        return res.status(404).json({ message: "Patient not found" });
+      }
+
+      const validatedData = insertPatientSchema.partial().parse(req.body);
+      const updatedPatient = await storage.updatePatient(patientId, validatedData);
+      res.json(updatedPatient);
+    } catch (error) {
+      console.error("Error updating patient:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete patient (protected)
+  app.delete("/api/patients/:id", requireAdmin, async (req, res) => {
+    try {
+      const patientId = parseInt(req.params.id);
+      if (isNaN(patientId)) {
+        return res.status(400).json({ message: "Invalid patient ID" });
+      }
+
+      // Check if patient exists
+      const existingPatient = await storage.getPatient(patientId);
+      if (!existingPatient) {
+        return res.status(404).json({ message: "Patient not found" });
+      }
+
+      await storage.deletePatient(patientId);
+      res.json({ message: "Patient deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting patient:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // ===== ADMIN SURVEY MANAGEMENT ROUTES =====
   
   // Survey CRUD Operations

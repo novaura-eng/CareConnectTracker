@@ -15,7 +15,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, User, MapPin, IdCard, Heart, Upload, Download, X, Search, ChevronLeft, ChevronRight, Check, ChevronsUpDown } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Plus, User, MapPin, IdCard, Heart, Upload, Download, X, Search, ChevronLeft, ChevronRight, Check, ChevronsUpDown, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import Sidebar from "@/components/layout/sidebar";
@@ -23,12 +24,17 @@ import Sidebar from "@/components/layout/sidebar";
 export default function Patients() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   
   // CSV Import state
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+
+  // Delete confirmation state
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [patientToDelete, setPatientToDelete] = useState<Patient | null>(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -127,35 +133,66 @@ export default function Patients() {
 
   const createMutation = useMutation({
     mutationFn: async (data: InsertPatient) => {
-      console.log("Creating patient with data:", data);
-      const response = await fetch("/api/patients", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error("API Error:", response.status, errorData);
-        throw new Error(`Failed to create patient: ${response.status}`);
+      if (selectedPatient) {
+        // Update existing patient
+        return apiRequest("PUT", `/api/patients/${selectedPatient.id}`, data);
+      } else {
+        // Create new patient
+        const response = await fetch("/api/patients", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        });
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error("API Error:", response.status, errorData);
+          throw new Error(`Failed to create patient: ${response.status}`);
+        }
+        return response.json();
       }
-      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/patients"] });
       form.reset();
       setIsDialogOpen(false);
+      setSelectedPatient(null);
       toast({
         title: "Success",
-        description: "Patient created successfully",
+        description: selectedPatient ? "Patient updated successfully" : "Patient created successfully",
       });
     },
     onError: (error) => {
-      console.error("Patient creation error:", error);
+      console.error("Patient mutation error:", error);
       toast({
         title: "Error",
-        description: `Failed to create patient: ${error.message}`,
+        description: selectedPatient 
+          ? `Failed to update patient: ${error.message}`
+          : `Failed to create patient: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (patientId: number) => {
+      return apiRequest("DELETE", `/api/patients/${patientId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/patients"] });
+      setDeleteConfirmOpen(false);
+      setPatientToDelete(null);
+      toast({
+        title: "Patient Deleted",
+        description: "Patient has been successfully removed from the system.",
+      });
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.message || "Failed to delete patient. Please try again.";
+      toast({
+        title: "Cannot Delete Patient",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -163,6 +200,32 @@ export default function Patients() {
 
   const onSubmit = (data: InsertPatient) => {
     createMutation.mutate(data);
+  };
+
+  // Helper functions
+  const resetForm = () => {
+    form.reset();
+    setSelectedPatient(null);
+  };
+
+  const openEditDialog = (patient: Patient) => {
+    setSelectedPatient(patient);
+    form.reset({
+      name: patient.name,
+      medicaidId: patient.medicaidId || "",
+      caregiverId: patient.caregiverId || undefined,
+      address: patient.address || "",
+      phoneNumber: patient.phoneNumber || "",
+      emergencyContact: patient.emergencyContact || "",
+      medicalConditions: patient.medicalConditions || "",
+      isActive: patient.isActive,
+    });
+    setIsDialogOpen(true);
+  };
+
+  const openCreateDialog = () => {
+    resetForm();
+    setIsDialogOpen(true);
   };
 
   // CSV Import functions
@@ -294,7 +357,7 @@ export default function Patients() {
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Add New Patient</DialogTitle>
+                  <DialogTitle>{selectedPatient ? "Edit Patient" : "Add New Patient"}</DialogTitle>
                 </DialogHeader>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -431,7 +494,10 @@ export default function Patients() {
                       disabled={createMutation.isPending}
                       className="w-full"
                     >
-                      {createMutation.isPending ? "Creating..." : "Create Patient"}
+                      {createMutation.isPending 
+                        ? (selectedPatient ? "Updating..." : "Creating...") 
+                        : (selectedPatient ? "Update Patient" : "Create Patient")
+                      }
                     </Button>
                   </form>
                 </Form>
@@ -460,7 +526,7 @@ export default function Patients() {
               </DialogTrigger>
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Add New Patient</DialogTitle>
+                  <DialogTitle>{selectedPatient ? "Edit Patient" : "Add New Patient"}</DialogTitle>
                 </DialogHeader>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -597,7 +663,10 @@ export default function Patients() {
                       disabled={createMutation.isPending}
                       className="w-full"
                     >
-                      {createMutation.isPending ? "Creating..." : "Create Patient"}
+                      {createMutation.isPending 
+                        ? (selectedPatient ? "Updating..." : "Creating...") 
+                        : (selectedPatient ? "Update Patient" : "Create Patient")
+                      }
                     </Button>
                   </form>
                 </Form>
@@ -749,7 +818,7 @@ export default function Patients() {
                             Unassigned
                           </CommandItem>
                         </CommandGroup>
-                        {caregivers?.filter(c => c.isActive).length > 0 && (
+                        {caregivers && caregivers.filter(c => c.isActive).length > 0 && (
                           <CommandGroup heading="Caregivers">
                             {caregivers.filter(c => c.isActive).map((caregiver) => (
                               <CommandItem
@@ -806,6 +875,7 @@ export default function Patients() {
                       <TableHead>Address</TableHead>
                       <TableHead>Phone</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -839,11 +909,36 @@ export default function Patients() {
                               {patient.isActive ? "Active" : "Inactive"}
                             </Badge>
                           </TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openEditDialog(patient)}
+                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                data-testid={`button-edit-patient-${patient.id}`}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => {
+                                  setPatientToDelete(patient);
+                                  setDeleteConfirmOpen(true);
+                                }}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                data-testid={`button-delete-patient-${patient.id}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
+                        <TableCell colSpan={7} className="text-center py-8">
                           <User className="h-12 w-12 mx-auto mb-4 text-slate-300" />
                           <p className="text-lg font-medium text-slate-500">
                             {patients && patients.length > 0 ? "No patients match your filters" : "No patients found"}
@@ -921,6 +1016,33 @@ export default function Patients() {
           </Card>
         </div>
       </main>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Patient</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{patientToDelete?.name}</strong>? 
+              This action cannot be undone. All associated data including check-ins and survey responses may be affected.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (patientToDelete) {
+                  deleteMutation.mutate(patientToDelete.id);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Import CSV Modal */}
       <Dialog open={importModalOpen} onOpenChange={setImportModalOpen}>

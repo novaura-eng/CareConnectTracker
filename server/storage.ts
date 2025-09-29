@@ -608,6 +608,19 @@ export class DatabaseStorage implements IStorage {
     return patient;
   }
 
+  async updatePatient(id: number, updateData: Partial<InsertPatient>): Promise<Patient> {
+    const [patient] = await db
+      .update(patients)
+      .set(updateData)
+      .where(eq(patients.id, id))
+      .returning();
+    return patient;
+  }
+
+  async deletePatient(id: number): Promise<void> {
+    await db.delete(patients).where(eq(patients.id, id));
+  }
+
   async getWeeklyCheckIn(id: number): Promise<WeeklyCheckIn | undefined> {
     const [checkIn] = await db.select().from(weeklyCheckIns).where(eq(weeklyCheckIns.id, id));
     return checkIn || undefined;
