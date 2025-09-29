@@ -383,12 +383,36 @@ export default function Patients() {
         <div className="p-4 lg:p-6">
           {/* Header - Hidden on mobile to avoid duplication with mobile nav */}
           <div className="hidden lg:flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">Patient Management</h1>
-              <p className="text-slate-600">Manage patient records and caregiver assignments</p>
+            <div className="flex items-center space-x-4">
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">Patient Management</h1>
+                <p className="text-slate-600">Manage patient records and caregiver assignments</p>
+              </div>
+              {patients && (
+                <span className="text-sm text-slate-500">
+                  {filteredPatients?.length || 0} patient{(filteredPatients?.length || 0) !== 1 ? 's' : ''}
+                </span>
+              )}
+              {selectedPatients.size > 0 && (
+                <span className="text-sm text-blue-600 font-medium">
+                  {selectedPatients.size} selected
+                </span>
+              )}
             </div>
             
             <div className="flex gap-2">
+              {/* Bulk Delete Button - Only show when patients are selected */}
+              {selectedPatients.size > 0 && (
+                <Button 
+                  variant="destructive"
+                  onClick={() => setBulkDeleteConfirmOpen(true)}
+                  className="mr-2"
+                  data-testid="button-bulk-delete-patients"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete {selectedPatients.size}
+                </Button>
+              )}
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button>
@@ -910,6 +934,13 @@ export default function Patients() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={paginatedPatients && paginatedPatients.length > 0 && paginatedPatients.every(p => selectedPatients.has(p.id))}
+                          onCheckedChange={toggleAllPatients}
+                          data-testid="checkbox-select-all-patients"
+                        />
+                      </TableHead>
                       <TableHead>Patient Name</TableHead>
                       <TableHead>Medicaid ID</TableHead>
                       <TableHead>Assigned Caregiver</TableHead>
@@ -923,6 +954,13 @@ export default function Patients() {
                     {paginatedPatients && paginatedPatients.length > 0 ? (
                       paginatedPatients.map((patient) => (
                         <TableRow key={patient.id}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedPatients.has(patient.id)}
+                              onCheckedChange={() => togglePatientSelection(patient.id)}
+                              data-testid={`checkbox-select-patient-${patient.id}`}
+                            />
+                          </TableCell>
                           <TableCell className="font-medium">{patient.name}</TableCell>
                           <TableCell>{patient.medicaidId}</TableCell>
                           <TableCell>
@@ -979,7 +1017,7 @@ export default function Patients() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8">
+                        <TableCell colSpan={8} className="text-center py-8">
                           <User className="h-12 w-12 mx-auto mb-4 text-slate-300" />
                           <p className="text-lg font-medium text-slate-500">
                             {patients && patients.length > 0 ? "No patients match your filters" : "No patients found"}
