@@ -1,15 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Users, Phone, MapPin, Heart, Calendar, FileText, Activity, Clock, X } from "lucide-react";
+import { ArrowLeft, Users, Phone, MapPin, Heart, Calendar, FileText, Activity, Clock, X, Edit, Save, Mail, AlertCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import CaregiverLayout from "@/components/caregiver/CaregiverLayout";
 import type { PatientWithSurveyStatus } from "@shared/schema";
 
@@ -19,6 +24,10 @@ export default function CaregiverPatientDetail() {
   const patientId = parseInt(id || "0");
   const [selectedResponse, setSelectedResponse] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [restrictedFieldRequest, setRestrictedFieldRequest] = useState<{ field: string; value: string } | null>(null);
+  const { toast } = useToast();
 
   const { data: patients, isLoading, error } = useQuery<PatientWithSurveyStatus[]>({
     queryKey: ["/api/caregiver/patients/enhanced"],
@@ -33,12 +42,153 @@ export default function CaregiverPatientDetail() {
   // Find the specific patient from the enhanced patient list
   const patient = patients?.find(p => p.id === patientId);
 
+  // Form state for editing
+  const [formData, setFormData] = useState({
+    name: "",
+    medicaidId: "",
+    address: "",
+    phoneNumber: "",
+    emergencyContact: "",
+    medicalConditions: "",
+  });
+
+  // Email request form state
+  const [emailRequestData, setEmailRequestData] = useState({
+    reason: "",
+  });
+
+  // Update form when patient data loads
+  useEffect(() => {
+    if (patient && !isEditing) {
+      setFormData({
+        name: patient.name || "",
+        medicaidId: patient.medicaidId || "",
+        address: patient.address || "",
+        phoneNumber: patient.phoneNumber || "",
+        emergencyContact: patient.emergencyContact || "",
+        medicalConditions: patient.medicalConditions || "",
+      });
+    }
+  }, [patient, isEditing]);
+
+  // Update patient mutation
+  const updatePatientMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("PUT", `/api/caregiver/patient/${patientId}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/caregiver/patients/enhanced"] });
+      setIsEditing(false);
+      toast({
+        title: "Patient Updated",
+        description: "Patient information has been successfully updated.",
+      });
+    },
+    onError: async (error: any) => {
+      const errorData = await error.response?.json();
+      if (errorData?.requiresEmail) {
+        // Show email request modal
+        setRestrictedFieldRequest({
+          field: errorData.field,
+          value: formData[errorData.field as keyof typeof formData]
+        });
+        setIsRequestModalOpen(true);
+      } else {
+        toast({
+          title: "Update Failed",
+          description: errorData?.message || "Failed to update patient information. Please try again.",
+          variant: "destructive",
+        });
+      }
+    },
+  });
+
+  // Email request mutation
+  const submitRequestMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("POST", `/api/caregiver/patient/${patientId}/request-change`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      setIsRequestModalOpen(false);
+      setRestrictedFieldRequest(null);
+      setEmailRequestData({ reason: "" });
+      setIsEditing(false);
+      toast({
+        title: "Request Submitted",
+        description: "Your change request has been submitted. A care coordinator will review it and contact you.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Request Failed",
+        description: error.message || "Failed to submit change request. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleBackToPatients = () => {
     setLocation("/caregiver/patients");
   };
 
   const handleStartSurvey = () => {
     setLocation("/caregiver/dashboard");
+  };
+
+  const handleEdit = () => {
+    if (patient) {
+      setFormData({
+        name: patient.name || "",
+        medicaidId: patient.medicaidId || "",
+        address: patient.address || "",
+        phoneNumber: patient.phoneNumber || "",
+        emergencyContact: patient.emergencyContact || "",
+        medicalConditions: patient.medicalConditions || "",
+      });
+    }
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    if (patient) {
+      setFormData({
+        name: patient.name || "",
+        medicaidId: patient.medicaidId || "",
+        address: patient.address || "",
+        phoneNumber: patient.phoneNumber || "",
+        emergencyContact: patient.emergencyContact || "",
+        medicalConditions: patient.medicalConditions || "",
+      });
+    }
+  };
+
+  const handleSavePatient = () => {
+    updatePatientMutation.mutate(formData);
+  };
+
+  const handleSubmitRequest = () => {
+    if (!restrictedFieldRequest || !emailRequestData.reason.trim()) {
+      toast({
+        title: "Error",
+        description: "Please provide a reason for this change request.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    submitRequestMutation.mutate({
+      field: restrictedFieldRequest.field,
+      newValue: restrictedFieldRequest.value,
+      reason: emailRequestData.reason,
+    });
+  };
+
+  // Helper to check if a field has value (for conditional editing)
+  const hasValue = (value: string | null | undefined) => {
+    return value !== null && value !== undefined && value.trim() !== "";
   };
 
   if (isLoading) {
@@ -127,70 +277,201 @@ export default function CaregiverPatientDetail() {
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Patient Information
-                </CardTitle>
-                <CardDescription>
-                  Personal details and medical information
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="h-5 w-5" />
+                      Patient Information
+                    </CardTitle>
+                    <CardDescription>
+                      Personal details and medical information
+                    </CardDescription>
+                  </div>
+                  {!isEditing ? (
+                    <Button
+                      onClick={handleEdit}
+                      variant="outline"
+                      size="sm"
+                      data-testid="edit-patient-button"
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleSavePatient}
+                        size="sm"
+                        disabled={updatePatientMutation.isPending}
+                        data-testid="save-patient-button"
+                      >
+                        <Save className="h-4 w-4 mr-2" />
+                        {updatePatientMutation.isPending ? "Saving..." : "Save"}
+                      </Button>
+                      <Button
+                        onClick={handleCancelEdit}
+                        variant="outline"
+                        size="sm"
+                        disabled={updatePatientMutation.isPending}
+                        data-testid="cancel-edit-button"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Full Name</label>
-                    <p className="text-lg font-medium">{patient.name}</p>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Medicaid ID</label>
-                    <p className="text-lg font-medium font-mono">{patient.medicaidId}</p>
-                  </div>
-                </div>
-
-                {patient.phoneNumber && (
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-slate-500" />
-                    <span className="text-sm font-medium text-slate-600">Phone:</span>
-                    <span>{patient.phoneNumber}</span>
-                  </div>
-                )}
-
-                {patient.address && (
-                  <div className="flex items-start gap-2">
-                    <MapPin className="h-4 w-4 text-slate-500 mt-0.5" />
-                    <div>
-                      <span className="text-sm font-medium text-slate-600">Address:</span>
-                      <p className="text-sm">{patient.address}</p>
+                {!isEditing ? (
+                  <>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">Full Name</label>
+                        <p className="text-lg font-medium">{patient.name}</p>
+                      </div>
+                      
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">Medicaid ID</label>
+                        <p className="text-lg font-medium font-mono">{patient.medicaidId || "-"}</p>
+                      </div>
                     </div>
-                  </div>
-                )}
 
-                {patient.emergencyContact && (
-                  <div>
-                    <span className="text-sm font-medium text-slate-600">Emergency Contact:</span>
-                    <p className="text-sm">{patient.emergencyContact}</p>
-                  </div>
-                )}
+                    {patient.phoneNumber && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-slate-500" />
+                        <span className="text-sm font-medium text-slate-600">Phone:</span>
+                        <span>{patient.phoneNumber}</span>
+                      </div>
+                    )}
 
-                {patient.medicalConditions && (
-                  <div className="flex items-start gap-2">
-                    <Heart className="h-4 w-4 text-red-500 mt-0.5" />
-                    <div>
-                      <span className="text-sm font-medium text-slate-600">Medical Conditions:</span>
-                      <Badge variant="secondary" className="ml-2">
-                        {patient.medicalConditions}
-                      </Badge>
+                    {patient.address && (
+                      <div className="flex items-start gap-2">
+                        <MapPin className="h-4 w-4 text-slate-500 mt-0.5" />
+                        <div>
+                          <span className="text-sm font-medium text-slate-600">Address:</span>
+                          <p className="text-sm">{patient.address}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {patient.emergencyContact && (
+                      <div>
+                        <span className="text-sm font-medium text-slate-600">Emergency Contact:</span>
+                        <p className="text-sm">{patient.emergencyContact}</p>
+                      </div>
+                    )}
+
+                    {patient.medicalConditions && (
+                      <div className="flex items-start gap-2">
+                        <Heart className="h-4 w-4 text-red-500 mt-0.5" />
+                        <div>
+                          <span className="text-sm font-medium text-slate-600">Medical Conditions:</span>
+                          <Badge variant="secondary" className="ml-2">
+                            {patient.medicalConditions}
+                          </Badge>
+                        </div>
+                      </div>
+                    )}
+
+                    <Separator />
+
+                    <div className="flex items-center gap-2 text-sm text-slate-500">
+                      <Calendar className="h-4 w-4" />
+                      <span>Patient since {new Date(patient.createdAt).toLocaleDateString()}</span>
                     </div>
-                  </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Full Name</Label>
+                        <Input
+                          id="name"
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          disabled={hasValue(patient.name)}
+                          data-testid="input-patient-name"
+                        />
+                        {hasValue(patient.name) && (
+                          <p className="text-xs text-slate-500 flex items-center gap-1">
+                            <AlertCircle className="h-3 w-3" />
+                            Name is locked. Use email request to change.
+                          </p>
+                        )}
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="medicaidId">Medicaid ID</Label>
+                        <Input
+                          id="medicaidId"
+                          value={formData.medicaidId}
+                          onChange={(e) => setFormData({ ...formData, medicaidId: e.target.value })}
+                          disabled={hasValue(patient.medicaidId)}
+                          data-testid="input-patient-medicaid"
+                        />
+                        {hasValue(patient.medicaidId) && (
+                          <p className="text-xs text-slate-500 flex items-center gap-1">
+                            <AlertCircle className="h-3 w-3" />
+                            Medicaid ID is locked. Use email request to change.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="phoneNumber">Phone Number</Label>
+                      <Input
+                        id="phoneNumber"
+                        value={formData.phoneNumber}
+                        onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                        placeholder="203-111-3333"
+                        data-testid="input-patient-phone"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Address</Label>
+                      <Textarea
+                        id="address"
+                        value={formData.address}
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                        placeholder="Full address"
+                        rows={2}
+                        data-testid="input-patient-address"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="emergencyContact">Emergency Contact</Label>
+                      <Input
+                        id="emergencyContact"
+                        value={formData.emergencyContact}
+                        onChange={(e) => setFormData({ ...formData, emergencyContact: e.target.value })}
+                        placeholder="Name and phone number"
+                        data-testid="input-patient-emergency"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="medicalConditions">Medical Conditions</Label>
+                      <Textarea
+                        id="medicalConditions"
+                        value={formData.medicalConditions}
+                        onChange={(e) => setFormData({ ...formData, medicalConditions: e.target.value })}
+                        placeholder="List any medical conditions"
+                        rows={3}
+                        data-testid="input-patient-conditions"
+                      />
+                    </div>
+
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        If name or Medicaid ID already have values, you'll need to submit an email request to change them.
+                      </AlertDescription>
+                    </Alert>
+                  </>
                 )}
-
-                <Separator />
-
-                <div className="flex items-center gap-2 text-sm text-slate-500">
-                  <Calendar className="h-4 w-4" />
-                  <span>Patient since {new Date(patient.createdAt).toLocaleDateString()}</span>
-                </div>
               </CardContent>
             </Card>
           </div>
@@ -472,6 +753,70 @@ export default function CaregiverPatientDetail() {
                   data-testid="close-survey-modal"
                 >
                   Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Request Modal for Restricted Fields */}
+      <Dialog open={isRequestModalOpen} onOpenChange={setIsRequestModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" />
+              Request Field Change
+            </DialogTitle>
+            <DialogDescription>
+              This field requires approval to change. Submit your request with a reason.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {restrictedFieldRequest && (
+            <div className="space-y-4">
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  You are requesting to change <strong>{restrictedFieldRequest.field === 'name' ? 'Name' : 'Medicaid ID'}</strong> to: <strong>{restrictedFieldRequest.value}</strong>
+                </AlertDescription>
+              </Alert>
+
+              <div className="space-y-2">
+                <Label htmlFor="reason">Reason for Change</Label>
+                <Textarea
+                  id="reason"
+                  value={emailRequestData.reason}
+                  onChange={(e) => setEmailRequestData({ reason: e.target.value })}
+                  placeholder="Please explain why this change is needed..."
+                  rows={4}
+                  data-testid="textarea-change-reason"
+                />
+                <p className="text-xs text-slate-500">
+                  A care coordinator will review your request and contact you.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsRequestModalOpen(false);
+                    setRestrictedFieldRequest(null);
+                    setEmailRequestData({ reason: "" });
+                  }}
+                  disabled={submitRequestMutation.isPending}
+                  data-testid="cancel-request-button"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSubmitRequest}
+                  disabled={submitRequestMutation.isPending || !emailRequestData.reason.trim()}
+                  data-testid="submit-request-button"
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  {submitRequestMutation.isPending ? "Submitting..." : "Submit Request"}
                 </Button>
               </div>
             </div>
