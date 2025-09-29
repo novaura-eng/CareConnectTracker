@@ -1953,10 +1953,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const caregiverState = row[caregiverStateIndex].trim();
             
             if (caregiverPhone && caregiverState) {
-              // Format caregiver phone for lookup
+              // Format caregiver phone for lookup (must match database format: 203-927-5573)
               const caregiverDigits = caregiverPhone.replace(/\D/g, '');
               if (caregiverDigits.length === 10) {
-                const formattedCaregiverPhone = `(${caregiverDigits.slice(0, 3)}) ${caregiverDigits.slice(3, 6)}-${caregiverDigits.slice(6)}`;
+                const formattedCaregiverPhone = `${caregiverDigits.slice(0, 3)}-${caregiverDigits.slice(3, 6)}-${caregiverDigits.slice(6)}`;
                 
                 try {
                   const caregiver = await storage.getCaregiverByPhoneAndState(formattedCaregiverPhone, caregiverState);
