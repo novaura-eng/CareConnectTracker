@@ -414,11 +414,6 @@ export default function Patients() {
                 <h1 className="text-2xl font-bold text-slate-900">Patient Management</h1>
                 <p className="text-slate-600">Manage patient records and caregiver assignments</p>
               </div>
-              {patients && (
-                <span className="text-sm text-slate-500">
-                  {filteredPatients?.length || 0} patient{(filteredPatients?.length || 0) !== 1 ? 's' : ''}
-                </span>
-              )}
               {selectedPatients.size > 0 && (
                 <span className="text-sm text-blue-600 font-medium">
                   {selectedPatients.size} selected
