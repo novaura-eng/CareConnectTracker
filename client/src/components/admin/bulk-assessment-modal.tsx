@@ -34,6 +34,7 @@ export default function BulkAssessmentModal({ open, onOpenChange }: BulkAssessme
 
   const { data: caregivers, isLoading: caregiversLoading } = useQuery({
     queryKey: ["/api/caregivers"],
+    enabled: open,
   });
 
   const createAssessmentsMutation = useMutation({
@@ -74,7 +75,10 @@ export default function BulkAssessmentModal({ open, onOpenChange }: BulkAssessme
   };
 
   const filteredCaregivers = selectedState && Array.isArray(caregivers)
-    ? caregivers.filter((c: any) => c.state === selectedState)
+    ? caregivers.filter((c: any) => {
+        console.log('Caregiver:', c.name, 'State:', c.state, 'Selected State:', selectedState, 'Match:', c.state === selectedState);
+        return c.state === selectedState;
+      })
     : [];
 
   const toggleCaregiver = (id: number) => {
@@ -182,11 +186,58 @@ export default function BulkAssessmentModal({ open, onOpenChange }: BulkAssessme
                   <SelectTrigger data-testid="select-state">
                     <SelectValue placeholder="Choose a state" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-[300px]">
+                    <SelectItem value="AL">Alabama (AL)</SelectItem>
+                    <SelectItem value="AK">Alaska (AK)</SelectItem>
+                    <SelectItem value="AZ">Arizona (AZ)</SelectItem>
+                    <SelectItem value="AR">Arkansas (AR)</SelectItem>
+                    <SelectItem value="CA">California (CA)</SelectItem>
+                    <SelectItem value="CO">Colorado (CO)</SelectItem>
                     <SelectItem value="CT">Connecticut (CT)</SelectItem>
-                    <SelectItem value="NY">New York (NY)</SelectItem>
+                    <SelectItem value="DE">Delaware (DE)</SelectItem>
+                    <SelectItem value="FL">Florida (FL)</SelectItem>
+                    <SelectItem value="GA">Georgia (GA)</SelectItem>
+                    <SelectItem value="HI">Hawaii (HI)</SelectItem>
+                    <SelectItem value="ID">Idaho (ID)</SelectItem>
+                    <SelectItem value="IL">Illinois (IL)</SelectItem>
+                    <SelectItem value="IN">Indiana (IN)</SelectItem>
+                    <SelectItem value="IA">Iowa (IA)</SelectItem>
+                    <SelectItem value="KS">Kansas (KS)</SelectItem>
+                    <SelectItem value="KY">Kentucky (KY)</SelectItem>
+                    <SelectItem value="LA">Louisiana (LA)</SelectItem>
+                    <SelectItem value="ME">Maine (ME)</SelectItem>
+                    <SelectItem value="MD">Maryland (MD)</SelectItem>
                     <SelectItem value="MA">Massachusetts (MA)</SelectItem>
+                    <SelectItem value="MI">Michigan (MI)</SelectItem>
+                    <SelectItem value="MN">Minnesota (MN)</SelectItem>
+                    <SelectItem value="MS">Mississippi (MS)</SelectItem>
+                    <SelectItem value="MO">Missouri (MO)</SelectItem>
+                    <SelectItem value="MT">Montana (MT)</SelectItem>
+                    <SelectItem value="NE">Nebraska (NE)</SelectItem>
+                    <SelectItem value="NV">Nevada (NV)</SelectItem>
+                    <SelectItem value="NH">New Hampshire (NH)</SelectItem>
+                    <SelectItem value="NJ">New Jersey (NJ)</SelectItem>
+                    <SelectItem value="NM">New Mexico (NM)</SelectItem>
+                    <SelectItem value="NY">New York (NY)</SelectItem>
+                    <SelectItem value="NC">North Carolina (NC)</SelectItem>
+                    <SelectItem value="ND">North Dakota (ND)</SelectItem>
+                    <SelectItem value="OH">Ohio (OH)</SelectItem>
+                    <SelectItem value="OK">Oklahoma (OK)</SelectItem>
+                    <SelectItem value="OR">Oregon (OR)</SelectItem>
+                    <SelectItem value="PA">Pennsylvania (PA)</SelectItem>
                     <SelectItem value="RI">Rhode Island (RI)</SelectItem>
+                    <SelectItem value="SC">South Carolina (SC)</SelectItem>
+                    <SelectItem value="SD">South Dakota (SD)</SelectItem>
+                    <SelectItem value="TN">Tennessee (TN)</SelectItem>
+                    <SelectItem value="TX">Texas (TX)</SelectItem>
+                    <SelectItem value="UT">Utah (UT)</SelectItem>
+                    <SelectItem value="VT">Vermont (VT)</SelectItem>
+                    <SelectItem value="VA">Virginia (VA)</SelectItem>
+                    <SelectItem value="WA">Washington (WA)</SelectItem>
+                    <SelectItem value="WV">West Virginia (WV)</SelectItem>
+                    <SelectItem value="WI">Wisconsin (WI)</SelectItem>
+                    <SelectItem value="WY">Wyoming (WY)</SelectItem>
+                    <SelectItem value="DC">District of Columbia (DC)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
