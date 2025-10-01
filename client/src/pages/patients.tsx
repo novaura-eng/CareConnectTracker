@@ -83,7 +83,7 @@ export default function Patients() {
         const searchLower = searchText.toLowerCase();
         const caregiverName = patient.caregiverId ? getCaregiverName(patient.caregiverId).toLowerCase() : '';
         return (
-          patient.name.toLowerCase().includes(searchLower) ||
+          (patient.name && patient.name.toLowerCase().includes(searchLower)) ||
           (patient.medicaidId && patient.medicaidId.toLowerCase().includes(searchLower)) ||
           (patient.phoneNumber && patient.phoneNumber.toLowerCase().includes(searchLower)) ||
           (patient.address && patient.address.toLowerCase().includes(searchLower)) ||
