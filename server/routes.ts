@@ -1860,18 +1860,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create patient (protected)
-  app.post("/api/patients", requireAdmin, async (req, res) => {
-    try {
-      const validatedData = insertPatientSchema.parse(req.body);
-      const patient = await storage.createPatient(validatedData);
-      res.json(patient);
-    } catch (error) {
-      console.error("Error creating patient:", error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
   // Get patients by caregiver (protected)
   app.get("/api/patients/:caregiverId", requireAdmin, async (req, res) => {
     try {
