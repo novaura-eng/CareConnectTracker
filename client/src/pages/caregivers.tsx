@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Phone, Mail, MapPin, User, AlertCircle, Trash2, Key, Download, Upload, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Phone, Mail, MapPin, User, AlertCircle, Trash2, Key, Download, Upload, ChevronLeft, ChevronRight, Bell } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -237,6 +237,25 @@ export default function Caregivers() {
     },
   });
 
+  const sendRemindersMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/admin/send-bulk-reminders", {});
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Reminders Sent",
+        description: `Successfully sent reminders to ${data.count || 0} caregiver(s) with pending check-ins.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to send reminders. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSetPassword = () => {
     if (!selectedCaregiverForPassword || !newPassword.trim()) {
       toast({
@@ -431,6 +450,17 @@ export default function Caregivers() {
                   >
                     <Plus className="mr-2 h-4 w-4" />
                     Create Assessments {selectedCaregiverIds.length > 0 && `(${selectedCaregiverIds.length})`}
+                  </Button>
+                  
+                  {/* Send Reminders Button */}
+                  <Button 
+                    variant="outline"
+                    onClick={() => sendRemindersMutation.mutate()}
+                    disabled={sendRemindersMutation.isPending}
+                    data-testid="button-send-bulk-reminders"
+                  >
+                    <Bell className="mr-2 h-4 w-4" />
+                    {sendRemindersMutation.isPending ? "Sending..." : "Send Reminders"}
                   </Button>
                   
                   {/* CSV Import Button */}
