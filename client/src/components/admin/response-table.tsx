@@ -20,6 +20,9 @@ export default function ResponseTable({ responses, isLoading, selectedCaregivers
     new Map(responses?.map(item => [item.caregiver?.id, item.caregiver])).values()
   ).filter(c => c);
 
+  // Track which caregiver IDs we've already shown a checkbox for
+  const seenCaregiverIds = new Set<number>();
+
   const toggleCaregiver = (caregiverId: number) => {
     if (selectedCaregivers.includes(caregiverId)) {
       onSelectionChange(selectedCaregivers.filter(id => id !== caregiverId));
@@ -38,6 +41,14 @@ export default function ResponseTable({ responses, isLoading, selectedCaregivers
 
   const isCaregiverSelected = (caregiverId: number) => {
     return selectedCaregivers.includes(caregiverId);
+  };
+
+  const isFirstOccurrence = (caregiverId: number) => {
+    if (seenCaregiverIds.has(caregiverId)) {
+      return false;
+    }
+    seenCaregiverIds.add(caregiverId);
+    return true;
   };
 
   const formatWeekRange = (startDate: string, endDate: string) => {
@@ -153,17 +164,21 @@ export default function ResponseTable({ responses, isLoading, selectedCaregivers
       <CardContent>
         {/* Mobile Card View */}
         <div className="block md:hidden space-y-4">
-          {responses?.map((item, index) => (
-            <Card key={index} className="border border-slate-200">
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center space-x-3">
-                    <Checkbox
-                      checked={isCaregiverSelected(item.caregiver?.id)}
-                      onCheckedChange={() => toggleCaregiver(item.caregiver?.id)}
-                      className="rounded-sm"
-                      data-testid={`checkbox-caregiver-mobile-${item.caregiver?.id}`}
-                    />
+          {responses?.map((item, index) => {
+            const showCheckbox = isFirstOccurrence(item.caregiver?.id);
+            return (
+              <Card key={index} className="border border-slate-200">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      {showCheckbox && (
+                        <Checkbox
+                          checked={isCaregiverSelected(item.caregiver?.id)}
+                          onCheckedChange={() => toggleCaregiver(item.caregiver?.id)}
+                          className="rounded-sm"
+                          data-testid={`checkbox-caregiver-mobile-${item.caregiver?.id}`}
+                        />
+                      )}
                     <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
                       <span className="text-sm font-medium text-slate-600">
                         {getInitials(item.caregiver?.name || '')}
@@ -215,7 +230,8 @@ export default function ResponseTable({ responses, isLoading, selectedCaregivers
                 </div>
               </CardContent>
             </Card>
-          ))}
+          );
+        })}
         </div>
 
         {/* Desktop Table View */}
@@ -240,16 +256,22 @@ export default function ResponseTable({ responses, isLoading, selectedCaregivers
               </TableRow>
             </TableHeader>
             <TableBody>
-              {responses?.map((item, index) => (
-                <TableRow key={index} className="hover:bg-slate-50">
-                  <TableCell>
-                    <Checkbox
-                      checked={isCaregiverSelected(item.caregiver?.id)}
-                      onCheckedChange={() => toggleCaregiver(item.caregiver?.id)}
-                      className="rounded-sm"
-                      data-testid={`checkbox-caregiver-${item.caregiver?.id}`}
-                    />
-                  </TableCell>
+              {responses?.map((item, index) => {
+                const showCheckbox = isFirstOccurrence(item.caregiver?.id);
+                return (
+                  <TableRow key={index} className="hover:bg-slate-50">
+                    <TableCell>
+                      {showCheckbox ? (
+                        <Checkbox
+                          checked={isCaregiverSelected(item.caregiver?.id)}
+                          onCheckedChange={() => toggleCaregiver(item.caregiver?.id)}
+                          className="rounded-sm"
+                          data-testid={`checkbox-caregiver-${item.caregiver?.id}`}
+                        />
+                      ) : (
+                        <div className="w-4" />
+                      )}
+                    </TableCell>
                   <TableCell>
                     <div className="flex items-center">
                       <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center mr-3">
@@ -304,7 +326,8 @@ export default function ResponseTable({ responses, isLoading, selectedCaregivers
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+              );
+            })}
             </TableBody>
           </Table>
         </div>
