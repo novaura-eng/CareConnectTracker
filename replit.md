@@ -119,6 +119,8 @@ Changelog:
 - August 18, 2025. Implemented comprehensive mobile responsiveness improvements including mobile navigation menu, responsive tables, improved touch targets, and better mobile layouts across all pages
 - August 19, 2025. Removed Replit branding from login experience with custom professional login page
 - August 19, 2025. Added custom favicon with star logo design for professional branding in browser tabs
+- October 01, 2025. Implemented bulk assessment creation feature with checkbox selection on Caregivers page
+- October 01, 2025. Configured automated scheduler to create weekly check-ins every Monday at 10 AM UTC for all caregivers and patients
 ```
 
 ## User Preferences

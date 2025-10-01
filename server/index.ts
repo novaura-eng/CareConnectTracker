@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, log } from "./vite";
+import { schedulerService } from "./services/scheduler";
 
 const app = express();
 app.use(express.json());
@@ -46,6 +47,9 @@ app.use((req, res, next) => {
   
   const server = await registerRoutes(app);
   log(`✅ Routes registered successfully`);
+  
+  // Initialize scheduler (imported at top, runs on import)
+  log(`⏰ Scheduler initialized - Weekly check-ins will be created every Monday at 10 AM UTC`);
   
   // Add deployment health check endpoint with real connectivity tests
   app.get('/api/health', async (req, res) => {

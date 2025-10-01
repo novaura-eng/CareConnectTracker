@@ -8,8 +8,8 @@ class SchedulerService {
   }
 
   private setupWeeklyCheckInSchedule() {
-    // Run every Monday at 9 AM
-    cron.schedule('0 9 * * 1', async () => {
+    // Run every Monday at 10 AM UTC
+    cron.schedule('0 10 * * 1', async () => {
       console.log('Running weekly check-in creation job...');
       await this.createWeeklyCheckIns();
     });
