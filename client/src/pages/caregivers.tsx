@@ -686,7 +686,7 @@ export default function Caregivers() {
                                 <Checkbox
                                   checked={selectedCaregiverIds.length === currentItems.length && currentItems.length > 0}
                                   onCheckedChange={toggleAllCaregivers}
-                                  className="rounded-sm"
+                                  className="rounded-none"
                                   data-testid="checkbox-select-all"
                                 />
                               </TableHead>
@@ -717,7 +717,7 @@ export default function Caregivers() {
                                   <Checkbox
                                     checked={isCaregiverSelected(caregiver.id)}
                                     onCheckedChange={() => toggleCaregiverSelection(caregiver.id)}
-                                    className="rounded-sm"
+                                    className="rounded-none"
                                     data-testid={`checkbox-caregiver-${caregiver.id}`}
                                   />
                                 </TableCell>
