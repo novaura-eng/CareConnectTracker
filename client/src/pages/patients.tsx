@@ -59,6 +59,12 @@ export default function Patients() {
     queryKey: ["/api/caregivers"],
   });
 
+  // Helper function to get caregiver name
+  const getCaregiverName = (caregiverId: number) => {
+    const caregiver = caregivers?.find(c => c.id === caregiverId);
+    return caregiver?.name || "Unassigned";
+  };
+
   // Filter patients based on search and filter criteria
   const filteredPatients = React.useMemo(() => {
     if (!patients) return [];
@@ -396,11 +402,6 @@ export default function Patients() {
     if (files.length > 0) {
       validateAndSetFile(files[0]);
     }
-  };
-
-  const getCaregiverName = (caregiverId: number) => {
-    const caregiver = caregivers?.find(c => c.id === caregiverId);
-    return caregiver?.name || "Unassigned";
   };
 
   return (
