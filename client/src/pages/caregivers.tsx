@@ -13,8 +13,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Phone, Mail, MapPin, User, AlertCircle, Trash2, Key, Download, Upload, ChevronLeft, ChevronRight } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import BulkAssessmentModal from "@/components/admin/bulk-assessment-modal";
+
 export default function Caregivers() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -25,6 +28,10 @@ export default function Caregivers() {
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [selectedCaregiverForPassword, setSelectedCaregiverForPassword] = useState<Caregiver | null>(null);
   const [newPassword, setNewPassword] = useState("");
+  
+  // Bulk assessment state
+  const [selectedCaregiverIds, setSelectedCaregiverIds] = useState<number[]>([]);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   
   // CSV Import state - NEW FUNCTIONALITY
   const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -383,6 +390,27 @@ export default function Caregivers() {
     setCurrentPage(1);
   }, [stateFilter, searchText]);
 
+  // Checkbox selection functions
+  const toggleCaregiverSelection = (caregiverId: number) => {
+    if (selectedCaregiverIds.includes(caregiverId)) {
+      setSelectedCaregiverIds(selectedCaregiverIds.filter(id => id !== caregiverId));
+    } else {
+      setSelectedCaregiverIds([...selectedCaregiverIds, caregiverId]);
+    }
+  };
+
+  const toggleAllCaregivers = () => {
+    if (selectedCaregiverIds.length === currentItems.length) {
+      setSelectedCaregiverIds([]);
+    } else {
+      setSelectedCaregiverIds(currentItems.map(c => c.id));
+    }
+  };
+
+  const isCaregiverSelected = (caregiverId: number) => {
+    return selectedCaregiverIds.includes(caregiverId);
+  };
+
   return (
     <>
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -395,6 +423,16 @@ export default function Caregivers() {
                   <p className="mt-1 text-sm text-slate-600">Manage caregiver profiles and contact information</p>
                 </div>
                 <div className="flex items-center gap-3">
+                  {/* Create Assessments Button */}
+                  <Button 
+                    onClick={() => setIsBulkModalOpen(true)}
+                    disabled={selectedCaregiverIds.length === 0}
+                    data-testid="button-create-assessments"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Assessments {selectedCaregiverIds.length > 0 && `(${selectedCaregiverIds.length})`}
+                  </Button>
+                  
                   {/* CSV Import Button */}
                   <Button 
                     variant="outline" 
@@ -410,7 +448,7 @@ export default function Caregivers() {
                     if (!open) setSelectedCaregiver(null);
                   }}>
                     <DialogTrigger asChild>
-                      <Button onClick={() => setSelectedCaregiver(null)}>
+                      <Button variant="outline" onClick={() => setSelectedCaregiver(null)}>
                         <Plus className="mr-2 h-4 w-4" />
                         Add Caregiver
                       </Button>
@@ -644,6 +682,14 @@ export default function Caregivers() {
                         <Table>
                           <TableHeader>
                             <TableRow>
+                              <TableHead className="w-12">
+                                <Checkbox
+                                  checked={selectedCaregiverIds.length === currentItems.length && currentItems.length > 0}
+                                  onCheckedChange={toggleAllCaregivers}
+                                  className="rounded-sm"
+                                  data-testid="checkbox-select-all"
+                                />
+                              </TableHead>
                               <TableHead>Caregiver</TableHead>
                               <TableHead>Contact</TableHead>
                               <TableHead>Address</TableHead>
@@ -656,7 +702,7 @@ export default function Caregivers() {
                           <TableBody>
                             {(caregivers?.length || 0) === 0 ? (
                               <TableRow>
-                                <TableCell colSpan={7} className="text-center py-8">
+                                <TableCell colSpan={8} className="text-center py-8">
                                   <div className="text-slate-500">
                                     <User className="h-12 w-12 mx-auto mb-4 text-slate-300" />
                                     <p className="text-lg font-medium">No caregivers found</p>
@@ -667,6 +713,14 @@ export default function Caregivers() {
                             ) : (
                               currentItems?.map((caregiver, index) => (
                               <TableRow key={caregiver.id} className="hover:bg-slate-50">
+                                <TableCell>
+                                  <Checkbox
+                                    checked={isCaregiverSelected(caregiver.id)}
+                                    onCheckedChange={() => toggleCaregiverSelection(caregiver.id)}
+                                    className="rounded-sm"
+                                    data-testid={`checkbox-caregiver-${caregiver.id}`}
+                                  />
+                                </TableCell>
                                 <TableCell>
                                   <div className="flex items-center">
                                     <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center mr-3">
@@ -1062,6 +1116,18 @@ export default function Caregivers() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Assessment Modal */}
+      <BulkAssessmentModal
+        open={isBulkModalOpen}
+        onOpenChange={(open) => {
+          setIsBulkModalOpen(open);
+          if (!open) {
+            setSelectedCaregiverIds([]);
+          }
+        }}
+        preSelectedCaregivers={selectedCaregiverIds}
+      />
     </>
   );
 }

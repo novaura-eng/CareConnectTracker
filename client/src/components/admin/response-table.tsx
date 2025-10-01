@@ -10,8 +10,8 @@ import { Check, Clock, AlertTriangle, Hospital, Eye, Phone } from "lucide-react"
 interface ResponseTableProps {
   responses: any[];
   isLoading: boolean;
-  selectedCaregivers: number[];
-  onSelectionChange: (caregiverIds: number[]) => void;
+  selectedCaregivers?: number[];
+  onSelectionChange?: (caregiverIds: number[]) => void;
 }
 
 export default function ResponseTable({ responses, isLoading, selectedCaregivers = [], onSelectionChange }: ResponseTableProps) {
@@ -24,6 +24,7 @@ export default function ResponseTable({ responses, isLoading, selectedCaregivers
   const seenCaregiverIds = new Set<number>();
 
   const toggleCaregiver = (caregiverId: number) => {
+    if (!onSelectionChange) return;
     if (selectedCaregivers.includes(caregiverId)) {
       onSelectionChange(selectedCaregivers.filter(id => id !== caregiverId));
     } else {
@@ -32,6 +33,7 @@ export default function ResponseTable({ responses, isLoading, selectedCaregivers
   };
 
   const toggleAll = () => {
+    if (!onSelectionChange) return;
     if (selectedCaregivers.length === uniqueCaregivers.length) {
       onSelectionChange([]);
     } else {
@@ -171,7 +173,7 @@ export default function ResponseTable({ responses, isLoading, selectedCaregivers
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center space-x-3">
-                      {showCheckbox && (
+                      {showCheckbox && onSelectionChange && (
                         <Checkbox
                           checked={isCaregiverSelected(item.caregiver?.id)}
                           onCheckedChange={() => toggleCaregiver(item.caregiver?.id)}
@@ -239,14 +241,16 @@ export default function ResponseTable({ responses, isLoading, selectedCaregivers
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12">
-                  <Checkbox
-                    checked={selectedCaregivers.length === uniqueCaregivers.length && uniqueCaregivers.length > 0}
-                    onCheckedChange={toggleAll}
-                    className="rounded-sm"
-                    data-testid="checkbox-select-all"
-                  />
-                </TableHead>
+                {onSelectionChange && (
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={selectedCaregivers.length === uniqueCaregivers.length && uniqueCaregivers.length > 0}
+                      onCheckedChange={toggleAll}
+                      className="rounded-sm"
+                      data-testid="checkbox-select-all"
+                    />
+                  </TableHead>
+                )}
                 <TableHead>Caregiver</TableHead>
                 <TableHead>Patient</TableHead>
                 <TableHead>Week</TableHead>
@@ -260,18 +264,20 @@ export default function ResponseTable({ responses, isLoading, selectedCaregivers
                 const showCheckbox = isFirstOccurrence(item.caregiver?.id);
                 return (
                   <TableRow key={index} className="hover:bg-slate-50">
-                    <TableCell>
-                      {showCheckbox ? (
-                        <Checkbox
-                          checked={isCaregiverSelected(item.caregiver?.id)}
-                          onCheckedChange={() => toggleCaregiver(item.caregiver?.id)}
-                          className="rounded-sm"
-                          data-testid={`checkbox-caregiver-${item.caregiver?.id}`}
-                        />
-                      ) : (
-                        <div className="w-4" />
-                      )}
-                    </TableCell>
+                    {onSelectionChange && (
+                      <TableCell>
+                        {showCheckbox ? (
+                          <Checkbox
+                            checked={isCaregiverSelected(item.caregiver?.id)}
+                            onCheckedChange={() => toggleCaregiver(item.caregiver?.id)}
+                            className="rounded-sm"
+                            data-testid={`checkbox-caregiver-${item.caregiver?.id}`}
+                          />
+                        ) : (
+                          <div className="w-4" />
+                        )}
+                      </TableCell>
+                    )}
                   <TableCell>
                     <div className="flex items-center">
                       <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center mr-3">
