@@ -2540,22 +2540,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Send bulk reminders to all pending check-ins
+  // Send bulk reminders to pending check-ins (optionally filtered by caregiver IDs)
   app.post("/api/admin/send-bulk-reminders", requireAdmin, async (req, res) => {
     try {
+      const { caregiverIds } = req.body;
       const pendingCheckIns = await storage.getPendingCheckIns();
       
-      if (pendingCheckIns.length === 0) {
+      // Filter by selected caregiver IDs if provided
+      const filteredCheckIns = caregiverIds && caregiverIds.length > 0
+        ? pendingCheckIns.filter(item => caregiverIds.includes(item.caregiver.id))
+        : pendingCheckIns;
+      
+      if (filteredCheckIns.length === 0) {
         return res.json({ 
           count: 0, 
-          message: "No pending check-ins to send reminders for" 
+          message: caregiverIds?.length > 0 
+            ? "No pending check-ins found for selected caregivers" 
+            : "No pending check-ins to send reminders for" 
         });
       }
 
       let successCount = 0;
       const errors = [];
 
-      for (const item of pendingCheckIns) {
+      for (const item of filteredCheckIns) {
         try {
           const surveyUrl = `${process.env.SURVEY_BASE_URL || 'http://localhost:5000'}/survey/${item.checkIn.id}`;
           
@@ -2577,7 +2585,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         count: successCount,
-        total: pendingCheckIns.length,
+        total: filteredCheckIns.length,
         errors: errors.length > 0 ? errors : undefined,
         message: `Successfully sent ${successCount} reminder${successCount !== 1 ? 's' : ''}`
       });

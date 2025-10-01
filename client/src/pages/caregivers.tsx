@@ -239,13 +239,17 @@ export default function Caregivers() {
 
   const sendRemindersMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("POST", "/api/admin/send-bulk-reminders", {});
+      return await apiRequest("POST", "/api/admin/send-bulk-reminders", {
+        caregiverIds: selectedCaregiverIds.length > 0 ? selectedCaregiverIds : undefined
+      });
     },
     onSuccess: (data: any) => {
       toast({
         title: "Reminders Sent",
         description: `Successfully sent reminders to ${data.count || 0} caregiver(s) with pending check-ins.`,
       });
+      // Clear selection after sending
+      setSelectedCaregiverIds([]);
     },
     onError: () => {
       toast({
@@ -456,11 +460,11 @@ export default function Caregivers() {
                   <Button 
                     variant="outline"
                     onClick={() => sendRemindersMutation.mutate()}
-                    disabled={sendRemindersMutation.isPending}
+                    disabled={selectedCaregiverIds.length === 0 || sendRemindersMutation.isPending}
                     data-testid="button-send-bulk-reminders"
                   >
                     <Bell className="mr-2 h-4 w-4" />
-                    {sendRemindersMutation.isPending ? "Sending..." : "Send Reminders"}
+                    {sendRemindersMutation.isPending ? "Sending..." : `Send Reminders${selectedCaregiverIds.length > 0 ? ` (${selectedCaregiverIds.length})` : ''}`}
                   </Button>
                   
                   {/* CSV Import Button */}
