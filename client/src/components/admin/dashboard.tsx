@@ -17,6 +17,7 @@ export default function Dashboard() {
   const [testEmail, setTestEmail] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [selectedCaregivers, setSelectedCaregivers] = useState<number[]>([]);
   const { toast } = useToast();
 
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -102,6 +103,7 @@ export default function Dashboard() {
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   Create Assessments
+                  {selectedCaregivers.length > 0 && ` (${selectedCaregivers.length})`}
                 </Button>
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                   <DialogTrigger asChild>
@@ -150,7 +152,12 @@ export default function Dashboard() {
               </div>
             </div>
             <StatsCards stats={stats} isLoading={statsLoading} />
-            <ResponseTable responses={responses} isLoading={responsesLoading} />
+            <ResponseTable 
+              responses={responses} 
+              isLoading={responsesLoading}
+              selectedCaregivers={selectedCaregivers}
+              onSelectionChange={setSelectedCaregivers}
+            />
           </TabsContent>
 
           {/* Survey Builder Tab */}
@@ -163,7 +170,13 @@ export default function Dashboard() {
       {/* Bulk Assessment Modal */}
       <BulkAssessmentModal 
         open={isBulkModalOpen} 
-        onOpenChange={setIsBulkModalOpen} 
+        onOpenChange={(open) => {
+          setIsBulkModalOpen(open);
+          if (!open) {
+            setSelectedCaregivers([]);
+          }
+        }}
+        preSelectedCaregivers={selectedCaregivers}
       />
     </div>
   );
