@@ -2170,10 +2170,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Create the patient
           const patient = await storage.createPatient(validatedData);
+          console.log(`Patient imported: ${patient.name} (ID: ${patient.id}, CaregiverId: ${patient.caregiverId || 'none'})`);
           imported++;
 
           // If patient has a caregiver assigned, automatically create weekly check-in for current week
           if (patient.caregiverId) {
+            console.log(`Creating weekly check-in for patient ${patient.name} with caregiver ID ${patient.caregiverId}`);
             try {
               const currentDate = new Date();
               
@@ -2221,6 +2223,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Log error but don't fail patient import
               console.error(`Error creating automatic weekly check-in for patient ${patient.name}:`, checkInError);
             }
+          } else {
+            console.log(`Patient ${patient.name} imported without caregiver - no check-in created`);
           }
 
         } catch (error) {
