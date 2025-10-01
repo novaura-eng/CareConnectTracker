@@ -239,9 +239,10 @@ export default function Caregivers() {
 
   const sendRemindersMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("POST", "/api/admin/send-bulk-reminders", {
+      const response = await apiRequest("POST", "/api/admin/send-bulk-reminders", {
         caregiverIds: selectedCaregiverIds.length > 0 ? selectedCaregiverIds : undefined
       });
+      return await response.json();
     },
     onSuccess: (data: any) => {
       toast({
