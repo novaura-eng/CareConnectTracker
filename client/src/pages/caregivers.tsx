@@ -245,8 +245,8 @@ export default function Caregivers() {
     },
     onSuccess: (data: any) => {
       toast({
-        title: "Reminders Sent",
-        description: `Successfully sent reminders to ${data.count || 0} caregiver(s) with pending check-ins.`,
+        title: data.count > 0 ? "Reminders Sent" : "No Reminders Sent",
+        description: data.message || `Successfully sent ${data.count || 0} reminder${data.count !== 1 ? 's' : ''}`,
       });
       // Clear selection after sending
       setSelectedCaregiverIds([]);
