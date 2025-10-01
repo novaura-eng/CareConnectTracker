@@ -2,13 +2,14 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card, CardContent } from "@/components/ui/card";
-import { CalendarIcon, CheckCircle, Loader2 } from "lucide-react";
+import { CalendarIcon, CheckCircle, Loader2, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format, startOfWeek, endOfWeek, addWeeks } from "date-fns";
@@ -45,6 +46,7 @@ export default function BulkAssessmentModal({ open, onOpenChange }: BulkAssessme
   const [selectedCaregivers, setSelectedCaregivers] = useState<number[]>([]);
   const [selectedWeeks, setSelectedWeeks] = useState<WeekRange[]>([]);
   const [currentStep, setCurrentStep] = useState(1);
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const { toast } = useToast();
 
   const { data: caregivers, isLoading: caregiversLoading } = useQuery({
@@ -80,6 +82,7 @@ export default function BulkAssessmentModal({ open, onOpenChange }: BulkAssessme
     setSelectedCaregivers([]);
     setSelectedWeeks([]);
     setCurrentStep(1);
+    setSearchTerm("");
   };
 
   const handleClose = () => {
@@ -92,7 +95,11 @@ export default function BulkAssessmentModal({ open, onOpenChange }: BulkAssessme
   const filteredCaregivers = selectedState && Array.isArray(caregivers)
     ? caregivers.filter((c: any) => {
         const fullStateName = STATE_MAP[selectedState];
-        return c.state === fullStateName || c.state === selectedState;
+        const matchesState = c.state === fullStateName || c.state === selectedState;
+        const matchesSearch = searchTerm === "" || 
+          c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          c.phone?.includes(searchTerm);
+        return matchesState && matchesSearch;
       })
     : [];
 
@@ -282,6 +289,16 @@ export default function BulkAssessmentModal({ open, onOpenChange }: BulkAssessme
                   >
                     {selectedCaregivers.length === filteredCaregivers.length ? "Deselect All" : "Select All"}
                   </Button>
+                </div>
+                <div className="relative mb-3">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by name or phone..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                    data-testid="input-search-caregivers"
+                  />
                 </div>
                 <Card>
                   <CardContent className="p-4 max-h-64 overflow-y-auto">
