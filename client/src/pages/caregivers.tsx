@@ -683,7 +683,7 @@ export default function Caregivers() {
                           <TableHeader>
                             <TableRow>
                               <TableHead className="w-12 align-middle">
-                                <div className="flex items-center justify-center">
+                                <div className="flex items-center justify-center h-4">
                                   <Checkbox
                                     checked={selectedCaregiverIds.length === currentItems.length && currentItems.length > 0}
                                     onCheckedChange={toggleAllCaregivers}
@@ -716,7 +716,7 @@ export default function Caregivers() {
                               currentItems?.map((caregiver, index) => (
                               <TableRow key={caregiver.id} className="hover:bg-slate-50">
                                 <TableCell className="align-middle">
-                                  <div className="flex items-center justify-center">
+                                  <div className="flex items-center justify-center h-4">
                                     <Checkbox
                                       checked={isCaregiverSelected(caregiver.id)}
                                       onCheckedChange={() => toggleCaregiverSelection(caregiver.id)}
