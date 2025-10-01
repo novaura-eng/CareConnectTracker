@@ -314,6 +314,7 @@ export default function BulkAssessmentModal({ open, onOpenChange }: BulkAssessme
                               id={`caregiver-${caregiver.id}`}
                               checked={selectedCaregivers.includes(caregiver.id)}
                               onCheckedChange={() => toggleCaregiver(caregiver.id)}
+                              className="rounded-sm"
                               data-testid={`checkbox-caregiver-${caregiver.id}`}
                             />
                             <label
