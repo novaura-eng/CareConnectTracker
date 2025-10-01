@@ -14,7 +14,7 @@ interface ResponseTableProps {
   onSelectionChange: (caregiverIds: number[]) => void;
 }
 
-export default function ResponseTable({ responses, isLoading, selectedCaregivers, onSelectionChange }: ResponseTableProps) {
+export default function ResponseTable({ responses, isLoading, selectedCaregivers = [], onSelectionChange }: ResponseTableProps) {
   // Get unique caregivers from responses
   const uniqueCaregivers = Array.from(
     new Map(responses?.map(item => [item.caregiver?.id, item.caregiver])).values()

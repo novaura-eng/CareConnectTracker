@@ -2413,8 +2413,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { state, caregiverIds, weekRanges } = req.body;
       
-      // Validate inputs
-      if (!state || typeof state !== 'string') {
+      // Validate inputs - state is optional when caregivers are pre-selected
+      if (state && typeof state !== 'string') {
         return res.status(400).json({ message: "Valid state is required" });
       }
       
@@ -2433,14 +2433,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Process each caregiver
       for (const caregiverId of caregiverIds) {
         try {
-          // Get caregiver and verify state
+          // Get caregiver and verify state (only if state is provided)
           const caregiver = await storage.getCaregiver(caregiverId);
           if (!caregiver) {
             errors.push(`Caregiver ID ${caregiverId} not found`);
             continue;
           }
           
-          if (caregiver.state !== state) {
+          // Only check state match if state filter is provided
+          if (state && caregiver.state !== state) {
             errors.push(`Caregiver ${caregiver.name} is not in state ${state}`);
             continue;
           }

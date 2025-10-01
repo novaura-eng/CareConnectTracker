@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 interface BulkAssessmentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  preSelectedCaregivers?: number[];
 }
 
 interface WeekRange {
@@ -41,13 +42,21 @@ const STATE_MAP: Record<string, string> = {
   "DC": "District of Columbia"
 };
 
-export default function BulkAssessmentModal({ open, onOpenChange }: BulkAssessmentModalProps) {
+export default function BulkAssessmentModal({ open, onOpenChange, preSelectedCaregivers = [] }: BulkAssessmentModalProps) {
   const [selectedState, setSelectedState] = useState<string>("");
   const [selectedCaregivers, setSelectedCaregivers] = useState<number[]>([]);
   const [selectedWeeks, setSelectedWeeks] = useState<WeekRange[]>([]);
   const [currentStep, setCurrentStep] = useState(1);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const { toast } = useToast();
+
+  // Initialize with pre-selected caregivers and skip to week selection
+  useEffect(() => {
+    if (preSelectedCaregivers.length > 0 && open) {
+      setSelectedCaregivers(preSelectedCaregivers);
+      setCurrentStep(3); // Skip directly to week selection
+    }
+  }, [preSelectedCaregivers, open]);
 
   const { data: caregivers, isLoading: caregiversLoading } = useQuery({
     queryKey: ["/api/caregivers"],
@@ -149,8 +158,11 @@ export default function BulkAssessmentModal({ open, onOpenChange }: BulkAssessme
       end: w.end.toISOString(),
     }));
 
+    // When using pre-selected caregivers, state is not required for filtering
+    const state = preSelectedCaregivers.length > 0 ? "" : (STATE_MAP[selectedState] || selectedState);
+
     createAssessmentsMutation.mutate({
-      state: STATE_MAP[selectedState] || selectedState,
+      state,
       caregiverIds: selectedCaregivers,
       weekRanges,
     });
