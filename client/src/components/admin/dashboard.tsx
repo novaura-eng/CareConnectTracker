@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, Send, Mail, Plus, Copy, BarChart3, FileText } from "lucide-react";
+import { Download, Send, Mail, Plus, Copy, BarChart3, FileText, Bell } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -60,6 +60,25 @@ export default function Dashboard() {
     },
   });
 
+  const sendRemindersMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/admin/send-bulk-reminders", {});
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Reminders Sent",
+        description: `Successfully sent reminders to ${data.count || 0} caregiver(s) with pending check-ins.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to send reminders. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   return (
     <div className="flex-1 bg-slate-50">
       {/* Header */}
@@ -102,6 +121,17 @@ export default function Dashboard() {
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   Create Assessments
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={() => sendRemindersMutation.mutate()}
+                  disabled={sendRemindersMutation.isPending}
+                  data-testid="button-send-bulk-reminders"
+                >
+                  <Bell className="mr-2 h-4 w-4" />
+                  {sendRemindersMutation.isPending ? "Sending..." : "Send Reminders"}
                 </Button>
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                   <DialogTrigger asChild>

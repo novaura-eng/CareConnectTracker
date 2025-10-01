@@ -147,7 +147,7 @@ export default function ResponseTable({ responses, isLoading, selectedCaregivers
     <Card>
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <CardTitle className="text-lg">Recent Check-in Responses</CardTitle>
+          <CardTitle className="text-lg">Recent Check-ins</CardTitle>
           <div className="flex space-x-2">
             <Select defaultValue="all">
               <SelectTrigger className="w-full sm:w-40">

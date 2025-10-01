@@ -2540,6 +2540,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Send bulk reminders to all pending check-ins
+  app.post("/api/admin/send-bulk-reminders", requireAdmin, async (req, res) => {
+    try {
+      const pendingCheckIns = await storage.getPendingCheckIns();
+      
+      if (pendingCheckIns.length === 0) {
+        return res.json({ 
+          count: 0, 
+          message: "No pending check-ins to send reminders for" 
+        });
+      }
+
+      let successCount = 0;
+      const errors = [];
+
+      for (const item of pendingCheckIns) {
+        try {
+          const surveyUrl = `${process.env.SURVEY_BASE_URL || 'http://localhost:5000'}/survey/${item.checkIn.id}`;
+          
+          await smsService.sendWeeklyCheckInReminder(
+            item.caregiver.phone,
+            item.caregiver.name,
+            item.patient.name,
+            surveyUrl
+          );
+
+          successCount++;
+          console.log(`Sent reminder to ${item.caregiver.name} for ${item.patient.name}`);
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+          errors.push(`Failed to send reminder to ${item.caregiver.name}: ${errorMsg}`);
+          console.error(`Error sending reminder to ${item.caregiver.name}:`, error);
+        }
+      }
+
+      res.json({
+        count: successCount,
+        total: pendingCheckIns.length,
+        errors: errors.length > 0 ? errors : undefined,
+        message: `Successfully sent ${successCount} reminder${successCount !== 1 ? 's' : ''}`
+      });
+    } catch (error) {
+      console.error("Error sending bulk reminders:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Test email endpoint
   app.post("/api/admin/test-email", async (req, res) => {
     try {
