@@ -25,6 +25,21 @@ interface WeekRange {
   label: string;
 }
 
+// Map state abbreviations to full names
+const STATE_MAP: Record<string, string> = {
+  "AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas", "CA": "California",
+  "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware", "FL": "Florida", "GA": "Georgia",
+  "HI": "Hawaii", "ID": "Idaho", "IL": "Illinois", "IN": "Indiana", "IA": "Iowa",
+  "KS": "Kansas", "KY": "Kentucky", "LA": "Louisiana", "ME": "Maine", "MD": "Maryland",
+  "MA": "Massachusetts", "MI": "Michigan", "MN": "Minnesota", "MS": "Mississippi", "MO": "Missouri",
+  "MT": "Montana", "NE": "Nebraska", "NV": "Nevada", "NH": "New Hampshire", "NJ": "New Jersey",
+  "NM": "New Mexico", "NY": "New York", "NC": "North Carolina", "ND": "North Dakota", "OH": "Ohio",
+  "OK": "Oklahoma", "OR": "Oregon", "PA": "Pennsylvania", "RI": "Rhode Island", "SC": "South Carolina",
+  "SD": "South Dakota", "TN": "Tennessee", "TX": "Texas", "UT": "Utah", "VT": "Vermont",
+  "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming",
+  "DC": "District of Columbia"
+};
+
 export default function BulkAssessmentModal({ open, onOpenChange }: BulkAssessmentModalProps) {
   const [selectedState, setSelectedState] = useState<string>("");
   const [selectedCaregivers, setSelectedCaregivers] = useState<number[]>([]);
@@ -76,8 +91,8 @@ export default function BulkAssessmentModal({ open, onOpenChange }: BulkAssessme
 
   const filteredCaregivers = selectedState && Array.isArray(caregivers)
     ? caregivers.filter((c: any) => {
-        console.log('Caregiver:', c.name, 'State:', c.state, 'Selected State:', selectedState, 'Match:', c.state === selectedState);
-        return c.state === selectedState;
+        const fullStateName = STATE_MAP[selectedState];
+        return c.state === fullStateName || c.state === selectedState;
       })
     : [];
 
@@ -128,7 +143,7 @@ export default function BulkAssessmentModal({ open, onOpenChange }: BulkAssessme
     }));
 
     createAssessmentsMutation.mutate({
-      state: selectedState,
+      state: STATE_MAP[selectedState] || selectedState,
       caregiverIds: selectedCaregivers,
       weekRanges,
     });
@@ -258,7 +273,7 @@ export default function BulkAssessmentModal({ open, onOpenChange }: BulkAssessme
             <div className="space-y-4">
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <Label>Select Caregivers ({selectedState})</Label>
+                  <Label>Select Caregivers ({STATE_MAP[selectedState] || selectedState})</Label>
                   <Button
                     variant="outline"
                     size="sm"
@@ -273,7 +288,7 @@ export default function BulkAssessmentModal({ open, onOpenChange }: BulkAssessme
                     {caregiversLoading ? (
                       <div className="text-sm text-muted-foreground">Loading caregivers...</div>
                     ) : filteredCaregivers.length === 0 ? (
-                      <div className="text-sm text-muted-foreground">No caregivers found in {selectedState}</div>
+                      <div className="text-sm text-muted-foreground">No caregivers found in {STATE_MAP[selectedState] || selectedState}</div>
                     ) : (
                       <div className="space-y-2">
                         {filteredCaregivers.map((caregiver: any) => (
