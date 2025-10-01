@@ -2408,6 +2408,137 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk create assessments endpoint
+  app.post("/api/admin/bulk-create-assessments", requireAdmin, async (req, res) => {
+    try {
+      const { state, caregiverIds, weekRanges } = req.body;
+      
+      // Validate inputs
+      if (!state || typeof state !== 'string') {
+        return res.status(400).json({ message: "Valid state is required" });
+      }
+      
+      if (!caregiverIds || !Array.isArray(caregiverIds) || caregiverIds.length === 0) {
+        return res.status(400).json({ message: "At least one caregiver ID is required" });
+      }
+      
+      if (!weekRanges || !Array.isArray(weekRanges) || weekRanges.length === 0) {
+        return res.status(400).json({ message: "At least one week range is required" });
+      }
+
+      let created = 0;
+      let skipped = 0;
+      const errors: string[] = [];
+
+      // Process each caregiver
+      for (const caregiverId of caregiverIds) {
+        try {
+          // Get caregiver and verify state
+          const caregiver = await storage.getCaregiver(caregiverId);
+          if (!caregiver) {
+            errors.push(`Caregiver ID ${caregiverId} not found`);
+            continue;
+          }
+          
+          if (caregiver.state !== state) {
+            errors.push(`Caregiver ${caregiver.name} is not in state ${state}`);
+            continue;
+          }
+
+          // Get all patients for this caregiver
+          const patients = await storage.getPatientsByCaregiver(caregiverId);
+          
+          if (patients.length === 0) {
+            errors.push(`Caregiver ${caregiver.name} has no patients assigned`);
+            continue;
+          }
+
+          // Process each week range
+          for (const weekRange of weekRanges) {
+            try {
+              const weekStart = new Date(weekRange.start);
+              const weekEnd = new Date(weekRange.end);
+
+              // Validate dates
+              if (isNaN(weekStart.getTime()) || isNaN(weekEnd.getTime())) {
+                errors.push(`Invalid date range: ${weekRange.start} - ${weekRange.end}`);
+                continue;
+              }
+
+              // Fetch existing check-ins for this week once per week (optimization)
+              const existingCheckIns = await storage.getCheckInsForWeek(weekStart, weekEnd);
+
+              // Process each patient
+              for (const patient of patients) {
+                try {
+                  // Check if check-in already exists for this caregiver-patient-week combination
+                  const exists = existingCheckIns.some(
+                    ci => ci.checkIn.caregiverId === caregiverId && ci.checkIn.patientId === patient.id
+                  );
+
+                  if (exists) {
+                    skipped++;
+                    continue;
+                  }
+
+                  // Create check-in
+                  const checkIn = await storage.createWeeklyCheckIn({
+                    caregiverId,
+                    patientId: patient.id,
+                    weekStartDate: weekStart,
+                    weekEndDate: weekEnd,
+                    isCompleted: false,
+                    remindersSent: 0,
+                  });
+
+                  created++;
+
+                  // Send SMS notification if caregiver has phone
+                  if (caregiver.phone) {
+                    try {
+                      const surveyUrl = `${process.env.SURVEY_BASE_URL || 'http://localhost:5000'}/survey/${checkIn.id}`;
+                      await smsService.sendWeeklyCheckInReminder(
+                        caregiver.phone,
+                        caregiver.name,
+                        patient.name,
+                        surveyUrl
+                      );
+                    } catch (smsError) {
+                      console.error(`SMS error for ${caregiver.name} - ${patient.name}:`, smsError);
+                    }
+                  }
+                } catch (patientError) {
+                  const errorMsg = patientError instanceof Error ? patientError.message : 'Unknown error';
+                  errors.push(`Error creating check-in for ${patient.name}: ${errorMsg}`);
+                }
+              }
+            } catch (weekError) {
+              const errorMsg = weekError instanceof Error ? weekError.message : 'Unknown error';
+              errors.push(`Error processing week ${weekRange.start}: ${errorMsg}`);
+            }
+          }
+        } catch (caregiverError) {
+          const errorMsg = caregiverError instanceof Error ? caregiverError.message : 'Unknown error';
+          errors.push(`Error processing caregiver ID ${caregiverId}: ${errorMsg}`);
+        }
+      }
+
+      const message = `Created ${created} assessment${created !== 1 ? 's' : ''}, skipped ${skipped} duplicate${skipped !== 1 ? 's' : ''}${errors.length > 0 ? `, ${errors.length} error${errors.length !== 1 ? 's' : ''} encountered` : ''}`;
+
+      res.json({
+        success: true,
+        created,
+        skipped,
+        errors: errors.length > 0 ? errors : undefined,
+        message
+      });
+    } catch (error) {
+      console.error("Bulk create assessments error:", error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ message: `Failed to create assessments: ${errorMsg}` });
+    }
+  });
+
   // Test email endpoint
   app.post("/api/admin/test-email", async (req, res) => {
     try {

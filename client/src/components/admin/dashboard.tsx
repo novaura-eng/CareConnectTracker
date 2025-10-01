@@ -3,6 +3,7 @@ import { useState } from "react";
 import StatsCards from "./stats-cards";
 import ResponseTable from "./response-table";
 import SurveyManager from "./survey-manager";
+import BulkAssessmentModal from "./bulk-assessment-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +16,7 @@ import { apiRequest } from "@/lib/queryClient";
 export default function Dashboard() {
   const [testEmail, setTestEmail] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const { toast } = useToast();
 
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -92,6 +94,15 @@ export default function Dashboard() {
                 <p className="text-sm text-slate-600">Monitor caregiver responses and track compliance</p>
               </div>
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+                <Button 
+                  size="sm" 
+                  className="w-full sm:w-auto"
+                  onClick={() => setIsBulkModalOpen(true)}
+                  data-testid="button-open-bulk-assessments"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Assessments
+                </Button>
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" size="sm" className="w-full sm:w-auto">
@@ -148,6 +159,12 @@ export default function Dashboard() {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* Bulk Assessment Modal */}
+      <BulkAssessmentModal 
+        open={isBulkModalOpen} 
+        onOpenChange={setIsBulkModalOpen} 
+      />
     </div>
   );
 }
