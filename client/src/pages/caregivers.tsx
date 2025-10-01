@@ -682,13 +682,15 @@ export default function Caregivers() {
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead className="w-12">
-                                <Checkbox
-                                  checked={selectedCaregiverIds.length === currentItems.length && currentItems.length > 0}
-                                  onCheckedChange={toggleAllCaregivers}
-                                  className="rounded-none"
-                                  data-testid="checkbox-select-all"
-                                />
+                              <TableHead className="w-12 align-middle">
+                                <div className="flex items-center justify-center">
+                                  <Checkbox
+                                    checked={selectedCaregiverIds.length === currentItems.length && currentItems.length > 0}
+                                    onCheckedChange={toggleAllCaregivers}
+                                    className="rounded-none"
+                                    data-testid="checkbox-select-all"
+                                  />
+                                </div>
                               </TableHead>
                               <TableHead>Caregiver</TableHead>
                               <TableHead>Contact</TableHead>
@@ -713,13 +715,15 @@ export default function Caregivers() {
                             ) : (
                               currentItems?.map((caregiver, index) => (
                               <TableRow key={caregiver.id} className="hover:bg-slate-50">
-                                <TableCell>
-                                  <Checkbox
-                                    checked={isCaregiverSelected(caregiver.id)}
-                                    onCheckedChange={() => toggleCaregiverSelection(caregiver.id)}
-                                    className="rounded-none"
-                                    data-testid={`checkbox-caregiver-${caregiver.id}`}
-                                  />
+                                <TableCell className="align-middle">
+                                  <div className="flex items-center justify-center">
+                                    <Checkbox
+                                      checked={isCaregiverSelected(caregiver.id)}
+                                      onCheckedChange={() => toggleCaregiverSelection(caregiver.id)}
+                                      className="rounded-none"
+                                      data-testid={`checkbox-caregiver-${caregiver.id}`}
+                                    />
+                                  </div>
                                 </TableCell>
                                 <TableCell>
                                   <div className="flex items-center">
