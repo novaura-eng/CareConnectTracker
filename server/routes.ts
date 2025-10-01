@@ -2205,8 +2205,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Creating patient with data:", req.body);
       
       // Validate required fields
-      if (!req.body.name || !req.body.medicaidId) {
-        return res.status(400).json({ message: "Name and Medicaid ID are required" });
+      if (!req.body.name) {
+        return res.status(400).json({ message: "Name is required" });
       }
       
       const patient = await storage.createPatient(req.body);
