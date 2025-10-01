@@ -2169,8 +2169,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const validatedData = insertPatientSchema.parse(patientData);
           
           // Create the patient
-          await storage.createPatient(validatedData);
+          const patient = await storage.createPatient(validatedData);
           imported++;
+
+          // If patient has a caregiver assigned, automatically create weekly check-in for current week
+          if (patient.caregiverId) {
+            try {
+              const currentDate = new Date();
+              
+              // Get Monday of current week
+              const weekStart = new Date(currentDate);
+              weekStart.setDate(currentDate.getDate() - currentDate.getDay() + 1);
+              weekStart.setHours(0, 0, 0, 0);
+              
+              // Get Sunday of current week  
+              const weekEnd = new Date(weekStart);
+              weekEnd.setDate(weekStart.getDate() + 6);
+              weekEnd.setHours(23, 59, 59, 999);
+
+              // Check if check-in already exists for this week
+              const existingCheckIns = await storage.getCheckInsForWeek(weekStart, weekEnd);
+              const exists = existingCheckIns.some(
+                ci => ci.checkIn.caregiverId === patient.caregiverId && ci.checkIn.patientId === patient.id
+              );
+
+              if (!exists) {
+                const checkIn = await storage.createWeeklyCheckIn({
+                  caregiverId: patient.caregiverId,
+                  patientId: patient.id,
+                  weekStartDate: weekStart,
+                  weekEndDate: weekEnd,
+                  isCompleted: false,
+                  remindersSent: 0,
+                });
+
+                // Get caregiver details for SMS notification
+                const caregiver = await storage.getCaregiver(patient.caregiverId);
+                if (caregiver && caregiver.phone) {
+                  // Send initial SMS notification
+                  const surveyUrl = `${process.env.SURVEY_BASE_URL || 'http://localhost:5000'}/survey/${checkIn.id}`;
+                  await smsService.sendWeeklyCheckInReminder(
+                    caregiver.phone,
+                    caregiver.name,
+                    patient.name,
+                    surveyUrl
+                  );
+                  console.log(`Created weekly check-in and sent SMS for ${caregiver.name} - ${patient.name}`);
+                }
+              }
+            } catch (checkInError) {
+              // Log error but don't fail patient import
+              console.error(`Error creating automatic weekly check-in for patient ${patient.name}:`, checkInError);
+            }
+          }
 
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : "Unknown error";
