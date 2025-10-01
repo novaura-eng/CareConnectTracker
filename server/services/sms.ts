@@ -1,38 +1,68 @@
 import twilio from 'twilio';
 
-class SMSService {
-  private client: twilio.Twilio;
+let connectionSettings: any;
 
-  constructor() {
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    
-    if (!accountSid || !authToken) {
-      console.warn('Twilio credentials not found. SMS functionality will be disabled.');
-      this.client = null as any;
-      return;
-    }
+async function getCredentials() {
+  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME
+  const xReplitToken = process.env.REPL_IDENTITY 
+    ? 'repl ' + process.env.REPL_IDENTITY 
+    : process.env.WEB_REPL_RENEWAL 
+    ? 'depl ' + process.env.WEB_REPL_RENEWAL 
+    : null;
 
-    this.client = twilio(accountSid, authToken);
+  if (!xReplitToken) {
+    throw new Error('X_REPLIT_TOKEN not found for repl/depl');
   }
 
+  connectionSettings = await fetch(
+    'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=twilio',
+    {
+      headers: {
+        'Accept': 'application/json',
+        'X_REPLIT_TOKEN': xReplitToken
+      }
+    }
+  ).then(res => res.json()).then(data => data.items?.[0]);
+
+  if (!connectionSettings || (!connectionSettings.settings.account_sid || !connectionSettings.settings.api_key || !connectionSettings.settings.api_key_secret)) {
+    throw new Error('Twilio not connected');
+  }
+  return {
+    accountSid: connectionSettings.settings.account_sid,
+    apiKey: connectionSettings.settings.api_key,
+    apiKeySecret: connectionSettings.settings.api_key_secret,
+    phoneNumber: connectionSettings.settings.phone_number
+  };
+}
+
+async function getTwilioClient() {
+  const { accountSid, apiKey, apiKeySecret } = await getCredentials();
+  return twilio(apiKey, apiKeySecret, {
+    accountSid: accountSid
+  });
+}
+
+async function getTwilioFromPhoneNumber() {
+  const { phoneNumber } = await getCredentials();
+  return phoneNumber;
+}
+
+class SMSService {
   async sendWeeklyCheckInReminder(
     phoneNumber: string, 
     caregiverName: string, 
     patientName: string, 
     surveyUrl: string
   ): Promise<void> {
-    if (!this.client) {
-      console.log(`SMS would be sent to ${phoneNumber}: Weekly check-in reminder for ${patientName}`);
-      return;
-    }
-
-    const message = `Hello ${caregiverName}, it's time for your weekly check-in for ${patientName}. Please complete your survey: ${surveyUrl}`;
-
     try {
-      await this.client.messages.create({
+      const client = await getTwilioClient();
+      const fromNumber = await getTwilioFromPhoneNumber();
+      
+      const message = `Hello ${caregiverName}, it's time for your weekly check-in for ${patientName}. Please complete your survey: ${surveyUrl}`;
+
+      await client.messages.create({
         body: message,
-        from: process.env.TWILIO_PHONE_NUMBER,
+        from: fromNumber,
         to: phoneNumber,
       });
       
@@ -44,17 +74,15 @@ class SMSService {
   }
 
   async sendConfirmation(phoneNumber: string, caregiverName: string): Promise<void> {
-    if (!this.client) {
-      console.log(`Confirmation SMS would be sent to ${phoneNumber}`);
-      return;
-    }
-
-    const message = `Thank you ${caregiverName}! Your weekly check-in has been received. We appreciate your dedication to quality care.`;
-
     try {
-      await this.client.messages.create({
+      const client = await getTwilioClient();
+      const fromNumber = await getTwilioFromPhoneNumber();
+      
+      const message = `Thank you ${caregiverName}! Your weekly check-in has been received. We appreciate your dedication to quality care.`;
+
+      await client.messages.create({
         body: message,
-        from: process.env.TWILIO_PHONE_NUMBER,
+        from: fromNumber,
         to: phoneNumber,
       });
       
