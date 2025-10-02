@@ -1074,6 +1074,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const validatedData = insertSurveyResponseSchema.parse({
           ...req.body,
           checkInId,
+          caregiverId: checkInDetails.checkIn.caregiverId,
+          patientId: checkInDetails.checkIn.patientId,
         });
 
         // Create survey response
