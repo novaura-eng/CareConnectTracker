@@ -1880,12 +1880,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete caregiver (protected)
+  // Get caregiver deletion options (check what's associated)
+  app.get("/api/caregivers/:id/deletion-info", requireAdmin, async (req, res) => {
+    try {
+      const caregiverId = parseInt(req.params.id);
+      const info = await storage.getCaregiverDeletionInfo(caregiverId);
+      res.json(info);
+    } catch (error) {
+      console.error("Error fetching deletion info:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Reassign patients to another caregiver
+  app.post("/api/caregivers/:id/reassign-patients", requireAdmin, async (req, res) => {
+    try {
+      const caregiverId = parseInt(req.params.id);
+      const { newCaregiverId } = req.body;
+      
+      if (!newCaregiverId) {
+        return res.status(400).json({ message: "New caregiver ID is required" });
+      }
+      
+      await storage.reassignPatients(caregiverId, newCaregiverId);
+      res.json({ message: "Patients reassigned successfully" });
+    } catch (error) {
+      console.error("Error reassigning patients:", error);
+      const errorMessage = error instanceof Error ? error.message : "Internal server error";
+      res.status(400).json({ message: errorMessage });
+    }
+  });
+
+  // Archive caregiver and their patients
+  app.post("/api/caregivers/:id/archive", requireAdmin, async (req, res) => {
+    try {
+      const caregiverId = parseInt(req.params.id);
+      await storage.archiveCaregiver(caregiverId);
+      res.json({ message: "Caregiver and patients archived successfully" });
+    } catch (error) {
+      console.error("Error archiving caregiver:", error);
+      const errorMessage = error instanceof Error ? error.message : "Internal server error";
+      res.status(500).json({ message: errorMessage });
+    }
+  });
+
+  // Unarchive caregiver and their patients
+  app.post("/api/caregivers/:id/unarchive", requireAdmin, async (req, res) => {
+    try {
+      const caregiverId = parseInt(req.params.id);
+      await storage.unarchiveCaregiver(caregiverId);
+      res.json({ message: "Caregiver and patients unarchived successfully" });
+    } catch (error) {
+      console.error("Error unarchiving caregiver:", error);
+      const errorMessage = error instanceof Error ? error.message : "Internal server error";
+      res.status(500).json({ message: errorMessage });
+    }
+  });
+
+  // Delete caregiver (protected) - now with cascade option
   app.delete("/api/caregivers/:id", requireAdmin, async (req, res) => {
     try {
       const caregiverId = parseInt(req.params.id);
-      await storage.deleteCaregiver(caregiverId);
-      res.json({ message: "Caregiver deleted successfully" });
+      const { cascade } = req.query; // ?cascade=true for delete all
+      
+      if (cascade === 'true') {
+        await storage.deleteCaregiverCascade(caregiverId);
+        res.json({ message: "Caregiver and all associated records deleted successfully" });
+      } else {
+        await storage.deleteCaregiver(caregiverId);
+        res.json({ message: "Caregiver deleted successfully" });
+      }
     } catch (error) {
       console.error("Error deleting caregiver:", error);
       const errorMessage = error instanceof Error ? error.message : "Internal server error";

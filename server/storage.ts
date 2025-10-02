@@ -62,6 +62,11 @@ export interface IStorage {
   checkPasswordSet(id: number): Promise<boolean>; // check if password is set
   getAllCaregivers(): Promise<Caregiver[]>;
   deleteCaregiver(id: number): Promise<void>;
+  getCaregiverDeletionInfo(id: number): Promise<{ patientCount: number; checkInCount: number; patients: Patient[] }>;
+  reassignPatients(oldCaregiverId: number, newCaregiverId: number): Promise<void>;
+  archiveCaregiver(id: number): Promise<void>;
+  unarchiveCaregiver(id: number): Promise<void>;
+  deleteCaregiverCascade(id: number): Promise<void>;
   
   // Password reset methods
   createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken>;
@@ -334,6 +339,135 @@ export class DatabaseStorage implements IStorage {
     // Delete associated user account (if one exists)
     await db.delete(users).where(eq(users.caregiverId, id));
     
+    // Finally, delete the caregiver
+    await db.delete(caregivers).where(eq(caregivers.id, id));
+  }
+
+  async getCaregiverDeletionInfo(id: number): Promise<{ patientCount: number; checkInCount: number; patients: Patient[] }> {
+    const associatedPatients = await db.select().from(patients).where(eq(patients.caregiverId, id));
+    const associatedCheckIns = await db.select().from(weeklyCheckIns).where(eq(weeklyCheckIns.caregiverId, id));
+    
+    return {
+      patientCount: associatedPatients.length,
+      checkInCount: associatedCheckIns.length,
+      patients: associatedPatients,
+    };
+  }
+
+  async reassignPatients(oldCaregiverId: number, newCaregiverId: number): Promise<void> {
+    // Verify new caregiver exists
+    const newCaregiver = await this.getCaregiver(newCaregiverId);
+    if (!newCaregiver) {
+      throw new Error("New caregiver not found");
+    }
+
+    // Reassign all patients
+    await db
+      .update(patients)
+      .set({ caregiverId: newCaregiverId })
+      .where(eq(patients.caregiverId, oldCaregiverId));
+
+    // Reassign all weekly check-ins
+    await db
+      .update(weeklyCheckIns)
+      .set({ caregiverId: newCaregiverId })
+      .where(eq(weeklyCheckIns.caregiverId, oldCaregiverId));
+
+    // Reassign all survey responses
+    await db
+      .update(surveyResponses)
+      .set({ caregiverId: newCaregiverId })
+      .where(eq(surveyResponses.caregiverId, oldCaregiverId));
+
+    // Reassign all survey assignments
+    await db
+      .update(surveyAssignments)
+      .set({ caregiverId: newCaregiverId })
+      .where(eq(surveyAssignments.caregiverId, oldCaregiverId));
+  }
+
+  async archiveCaregiver(id: number): Promise<void> {
+    // Archive the caregiver
+    await db
+      .update(caregivers)
+      .set({ isActive: false })
+      .where(eq(caregivers.id, id));
+
+    // Archive all associated patients
+    await db
+      .update(patients)
+      .set({ isActive: false })
+      .where(eq(patients.caregiverId, id));
+  }
+
+  async unarchiveCaregiver(id: number): Promise<void> {
+    // Unarchive the caregiver
+    await db
+      .update(caregivers)
+      .set({ isActive: true })
+      .where(eq(caregivers.id, id));
+
+    // Unarchive all associated patients
+    await db
+      .update(patients)
+      .set({ isActive: true })
+      .where(eq(patients.caregiverId, id));
+  }
+
+  async deleteCaregiverCascade(id: number): Promise<void> {
+    // Get all associated patients
+    const associatedPatients = await db.select().from(patients).where(eq(patients.caregiverId, id));
+    const patientIds = associatedPatients.map(p => p.id);
+
+    // Delete survey response items for this caregiver
+    const caregiverSurveyResponses = await db.select().from(surveyResponses).where(eq(surveyResponses.caregiverId, id));
+    const caregiverResponseIds = caregiverSurveyResponses.map(r => r.id);
+    
+    if (caregiverResponseIds.length > 0) {
+      await db.delete(surveyResponseItems).where(
+        inArray(surveyResponseItems.responseId, caregiverResponseIds)
+      );
+    }
+
+    // Delete survey response items for associated patients
+    if (patientIds.length > 0) {
+      const patientSurveyResponses = await db.select().from(surveyResponses).where(
+        inArray(surveyResponses.patientId, patientIds)
+      );
+      const patientResponseIds = patientSurveyResponses.map(r => r.id);
+      
+      if (patientResponseIds.length > 0) {
+        await db.delete(surveyResponseItems).where(
+          inArray(surveyResponseItems.responseId, patientResponseIds)
+        );
+      }
+
+      // Delete all survey responses for patients
+      await db.delete(surveyResponses).where(
+        inArray(surveyResponses.patientId, patientIds)
+      );
+    }
+
+    // Delete survey responses for caregiver
+    await db.delete(surveyResponses).where(eq(surveyResponses.caregiverId, id));
+
+    // Delete survey assignments
+    await db.delete(surveyAssignments).where(eq(surveyAssignments.caregiverId, id));
+
+    // Delete all weekly check-ins
+    await db.delete(weeklyCheckIns).where(eq(weeklyCheckIns.caregiverId, id));
+
+    // Delete all associated patients
+    if (patientIds.length > 0) {
+      await db.delete(patients).where(inArray(patients.id, patientIds));
+    }
+
+    // Delete password reset tokens
+    await db.delete(passwordResetTokens).where(eq(passwordResetTokens.caregiverId, id));
+
+    // Delete associated user account
+    await db.delete(users).where(eq(users.caregiverId, id));
+
     // Finally, delete the caregiver
     await db.delete(caregivers).where(eq(caregivers.id, id));
   }
