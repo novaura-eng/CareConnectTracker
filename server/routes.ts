@@ -1863,9 +1863,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Validate request data (allow partial updates)
       const validatedData = insertCaregiverSchema.partial().parse(req.body);
+      console.log("Updating caregiver", caregiverId, "with data:", validatedData);
       
       // Update caregiver
       const updatedCaregiver = await storage.updateCaregiver(caregiverId, validatedData);
+      console.log("Update result:", updatedCaregiver);
+      
+      if (!updatedCaregiver) {
+        return res.status(500).json({ message: "Failed to update caregiver" });
+      }
+      
       res.json(updatedCaregiver);
     } catch (error) {
       console.error("Error updating caregiver:", error);
