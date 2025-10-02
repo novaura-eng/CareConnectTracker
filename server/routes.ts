@@ -16,7 +16,8 @@ import {
   insertSurveyScheduleSchema,
   StateCodeSchema,
   scheduleTypeSchema,
-  type StateCode
+  type StateCode,
+  type InsertSurveyResponseItem
 } from "@shared/schema";
 import { z } from "zod";
 import { smsService } from "./services/sms";
@@ -1071,15 +1072,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json({ message: "Survey submitted successfully", response });
       } else {
         // This is a dynamic survey submission
+        const { answers, meta, ...otherFields } = req.body;
+        
+        // Create the parent survey response record with meta data
         const validatedData = insertSurveyResponseSchema.parse({
-          ...req.body,
+          ...otherFields,
           checkInId,
           caregiverId: checkInDetails.checkIn.caregiverId,
           patientId: checkInDetails.checkIn.patientId,
+          meta: meta || {}, // Store meta data
         });
 
         // Create survey response
         const response = await storage.createSurveyResponse(validatedData);
+        
+        // Create individual response items for each answer
+        if (answers && typeof answers === 'object') {
+          const responseItems = [];
+          
+          for (const [questionId, answer] of Object.entries(answers)) {
+            if (answer !== undefined && answer !== null && answer !== '') {
+              const item: InsertSurveyResponseItem = {
+                responseId: response.id,
+                questionId: parseInt(questionId),
+                answer: answer, // Store as JSONB
+              };
+              
+              // Also store in indexed columns based on type for faster querying
+              if (typeof answer === 'string') {
+                item.answerText = answer;
+              } else if (typeof answer === 'number') {
+                item.answerNumber = answer;
+              } else if (typeof answer === 'boolean') {
+                item.answerBoolean = answer;
+              } else if (answer instanceof Date || (typeof answer === 'string' && !isNaN(Date.parse(answer)))) {
+                item.answerDate = new Date(answer);
+              }
+              
+              responseItems.push(item);
+            }
+          }
+          
+          // Bulk create all response items
+          if (responseItems.length > 0) {
+            await storage.bulkCreateSurveyResponseItems(responseItems);
+          }
+        }
         
         // Mark check-in as completed
         await storage.updateCheckInCompletion(checkInId);
