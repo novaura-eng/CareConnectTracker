@@ -2628,6 +2628,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Send custom message to individual caregiver
+  app.post("/api/admin/send-message", requireAdmin, async (req, res) => {
+    try {
+      const { caregiverId, message } = req.body;
+      
+      if (!caregiverId || !message) {
+        return res.status(400).json({ message: "Caregiver ID and message are required" });
+      }
+      
+      const caregiver = await storage.getCaregiverById(caregiverId);
+      
+      if (!caregiver) {
+        return res.status(404).json({ message: "Caregiver not found" });
+      }
+      
+      await smsService.sendCustomMessage(caregiver.phone, message);
+      
+      res.json({
+        success: true,
+        message: `Message sent successfully to ${caregiver.name}`
+      });
+    } catch (error) {
+      console.error("Error sending message:", error);
+      res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  // Send custom message to multiple caregivers
+  app.post("/api/admin/send-bulk-message", requireAdmin, async (req, res) => {
+    try {
+      const { caregiverIds, message } = req.body;
+      
+      if (!caregiverIds || !Array.isArray(caregiverIds) || caregiverIds.length === 0) {
+        return res.status(400).json({ message: "Caregiver IDs array is required" });
+      }
+      
+      if (!message || message.trim().length === 0) {
+        return res.status(400).json({ message: "Message is required" });
+      }
+      
+      let successCount = 0;
+      const errors = [];
+      
+      for (const caregiverId of caregiverIds) {
+        try {
+          const caregiver = await storage.getCaregiverById(caregiverId);
+          
+          if (!caregiver) {
+            errors.push(`Caregiver with ID ${caregiverId} not found`);
+            continue;
+          }
+          
+          await smsService.sendCustomMessage(caregiver.phone, message);
+          successCount++;
+          console.log(`Sent message to ${caregiver.name}`);
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+          errors.push(`Failed to send to caregiver ID ${caregiverId}: ${errorMsg}`);
+          console.error(`Error sending to caregiver ID ${caregiverId}:`, error);
+        }
+      }
+      
+      res.json({
+        success: true,
+        count: successCount,
+        total: caregiverIds.length,
+        errors: errors.length > 0 ? errors : undefined,
+        message: `Successfully sent message to ${successCount} of ${caregiverIds.length} caregiver${caregiverIds.length !== 1 ? 's' : ''}`
+      });
+    } catch (error) {
+      console.error("Error sending bulk messages:", error);
+      res.status(500).json({ message: "Failed to send bulk messages" });
+    }
+  });
+
   // Test email endpoint
   app.post("/api/admin/test-email", async (req, res) => {
     try {

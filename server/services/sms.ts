@@ -92,6 +92,24 @@ class SMSService {
       throw error;
     }
   }
+
+  async sendCustomMessage(phoneNumber: string, message: string): Promise<void> {
+    try {
+      const client = await getTwilioClient();
+      const fromNumber = await getTwilioFromPhoneNumber();
+
+      await client.messages.create({
+        body: message,
+        from: fromNumber,
+        to: phoneNumber,
+      });
+      
+      console.log(`Custom SMS sent successfully to ${phoneNumber}`);
+    } catch (error) {
+      console.error('Error sending custom SMS:', error);
+      throw error;
+    }
+  }
 }
 
 export const smsService = new SMSService();
