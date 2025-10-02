@@ -56,6 +56,7 @@ export interface IStorage {
   getCaregiverByPhoneAndState(phone: string, state: string): Promise<Caregiver | undefined>;
   getCaregiversByState(state: string): Promise<Caregiver[]>;
   createCaregiver(caregiver: InsertCaregiver): Promise<Caregiver>;
+  updateCaregiver(id: number, data: Partial<InsertCaregiver>): Promise<Caregiver>;
   setCaregiverPassword(id: number, passwordHash: string): Promise<void>; // new secure method
   verifyCaregiverPassword(id: number, passwordHash: string): Promise<boolean>; // verify password
   checkPasswordSet(id: number): Promise<boolean>; // check if password is set
@@ -267,6 +268,15 @@ export class DatabaseStorage implements IStorage {
       .values(insertCaregiver)
       .returning();
     return caregiver;
+  }
+
+  async updateCaregiver(id: number, data: Partial<InsertCaregiver>): Promise<Caregiver> {
+    const [updatedCaregiver] = await db
+      .update(caregivers)
+      .set(data)
+      .where(eq(caregivers.id, id))
+      .returning();
+    return updatedCaregiver;
   }
 
   async getAllCaregivers(): Promise<Caregiver[]> {

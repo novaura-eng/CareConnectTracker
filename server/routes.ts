@@ -1847,6 +1847,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update caregiver (protected)
+  app.put("/api/caregivers/:id", requireAdmin, async (req, res) => {
+    try {
+      const caregiverId = parseInt(req.params.id);
+      if (isNaN(caregiverId)) {
+        return res.status(400).json({ message: "Invalid caregiver ID" });
+      }
+
+      // Check if caregiver exists
+      const existingCaregiver = await storage.getCaregiver(caregiverId);
+      if (!existingCaregiver) {
+        return res.status(404).json({ message: "Caregiver not found" });
+      }
+
+      // Validate request data (allow partial updates)
+      const validatedData = insertCaregiverSchema.partial().parse(req.body);
+      
+      // Update caregiver
+      const updatedCaregiver = await storage.updateCaregiver(caregiverId, validatedData);
+      res.json(updatedCaregiver);
+    } catch (error) {
+      console.error("Error updating caregiver:", error);
+      const errorMessage = error instanceof Error ? error.message : "Internal server error";
+      res.status(500).json({ message: errorMessage });
+    }
+  });
+
   // Delete caregiver (protected)
   app.delete("/api/caregivers/:id", requireAdmin, async (req, res) => {
     try {
