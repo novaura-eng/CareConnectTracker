@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Phone, Mail, MapPin, User, AlertCircle, Trash2, Key, Download, Upload, ChevronLeft, ChevronRight, Bell } from "lucide-react";
+import { Plus, Phone, Mail, MapPin, User, AlertCircle, Trash2, Key, Download, Upload, ChevronLeft, ChevronRight, Bell, Archive } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
