@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { z } from "zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ interface SurveyFormProps {
 
 export default function SurveyForm({ checkInDetails, patientId }: SurveyFormProps) {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [copiedFromPrevious, setCopiedFromPrevious] = useState(false);
   
@@ -82,6 +84,10 @@ export default function SurveyForm({ checkInDetails, patientId }: SurveyFormProp
         title: "Survey Submitted",
         description: "Thank you! Your weekly check-in has been received.",
       });
+      // Redirect to check-ins page after a brief delay
+      setTimeout(() => {
+        setLocation("/caregiver/checkins");
+      }, 1500);
     },
     onError: (error) => {
       toast({
@@ -368,18 +374,18 @@ export default function SurveyForm({ checkInDetails, patientId }: SurveyFormProp
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <Card className="w-full max-w-md mx-4">
           <CardContent className="pt-6 text-center">
-            <div className="w-16 h-16 bg-healthcare-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <HeartHandshake className="h-8 w-8 text-healthcare-600" />
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
             <h2 className="text-xl font-semibold text-slate-900 mb-2">
-              Thank You!
+              Check-in Submitted!
             </h2>
             <p className="text-slate-600 mb-4">
-              Your weekly check-in has been submitted successfully. You will receive a confirmation text message shortly.
+              Redirecting you back to your check-ins...
             </p>
-            <Button onClick={() => window.close()} className="w-full">
-              Close
-            </Button>
+            <div className="flex justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+            </div>
           </CardContent>
         </Card>
       </div>
