@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import logoPath from "@assets/image_1751386830041.png";
+import logoPath from "@assets/Asset 2_1759371151479.png";
 
 const navigation = [
   { name: "Weekly Check-ins", href: "/admin", icon: ClipboardCheck },

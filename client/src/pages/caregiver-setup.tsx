@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Key, CheckCircle, AlertCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import logoPath from "@assets/image_1751386830041.png";
+import logoPath from "@assets/Asset 2_1759371151479.png";
 
 export default function CaregiverSetup() {
   const [, navigate] = useLocation();

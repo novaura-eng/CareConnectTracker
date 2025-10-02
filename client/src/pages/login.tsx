@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, Lock, Building2 } from "lucide-react";
-import logoPath from "@assets/image_1751386830041.png";
+import logoPath from "@assets/Asset 2_1759371151479.png";
 
 export default function Login() {
   const handleLogin = () => {
