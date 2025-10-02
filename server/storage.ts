@@ -302,6 +302,29 @@ export class DatabaseStorage implements IStorage {
       throw new Error(`Cannot delete caregiver. ${associatedCheckIns.length} weekly check-in(s) are associated with this caregiver. Please remove check-ins first.`);
     }
     
+    // Delete associated survey response items first (they reference survey responses)
+    const associatedSurveyResponses = await db.select().from(surveyResponses).where(eq(surveyResponses.caregiverId, id));
+    const responseIds = associatedSurveyResponses.map(r => r.id);
+    
+    if (responseIds.length > 0) {
+      await db.delete(surveyResponseItems).where(
+        inArray(surveyResponseItems.responseId, responseIds)
+      );
+    }
+    
+    // Delete associated survey responses
+    await db.delete(surveyResponses).where(eq(surveyResponses.caregiverId, id));
+    
+    // Delete associated survey assignments
+    await db.delete(surveyAssignments).where(eq(surveyAssignments.caregiverId, id));
+    
+    // Delete associated password reset tokens
+    await db.delete(passwordResetTokens).where(eq(passwordResetTokens.caregiverId, id));
+    
+    // Delete associated user account (if one exists)
+    await db.delete(users).where(eq(users.caregiverId, id));
+    
+    // Finally, delete the caregiver
     await db.delete(caregivers).where(eq(caregivers.id, id));
   }
 
