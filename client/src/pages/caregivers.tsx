@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import BulkAssessmentModal from "@/components/admin/bulk-assessment-modal";
+import CaregiverDeletionModal from "@/components/caregivers/caregiver-deletion-modal";
 
 export default function Caregivers() {
   const { toast } = useToast();
@@ -187,29 +188,6 @@ export default function Caregivers() {
         description: selectedCaregiver 
           ? "Failed to update caregiver. Please try again."
           : "Failed to add caregiver. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (caregiverId: number) => {
-      return apiRequest("DELETE", `/api/caregivers/${caregiverId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/caregivers"] });
-      setDeleteConfirmOpen(false);
-      setCaregiverToDelete(null);
-      toast({
-        title: "Caregiver Deleted",
-        description: "Caregiver has been successfully removed from the system.",
-      });
-    },
-    onError: (error: any) => {
-      const errorMessage = error?.message || "Failed to delete caregiver. Please try again.";
-      toast({
-        title: "Cannot Delete Caregiver",
-        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -974,31 +952,15 @@ export default function Caregivers() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Caregiver</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete <strong>{caregiverToDelete?.name}</strong>? 
-              This action cannot be undone. All associated data including patients and check-ins may be affected.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (caregiverToDelete) {
-                  deleteMutation.mutate(caregiverToDelete.id);
-                }
-              }}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Caregiver Deletion Modal */}
+      <CaregiverDeletionModal
+        caregiver={caregiverToDelete}
+        isOpen={deleteConfirmOpen}
+        onClose={() => {
+          setDeleteConfirmOpen(false);
+          setCaregiverToDelete(null);
+        }}
+      />
 
       {/* Password Dialog */}
       <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
