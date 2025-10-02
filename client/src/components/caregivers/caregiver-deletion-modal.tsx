@@ -129,6 +129,12 @@ export default function CaregiverDeletionModal({ caregiver, isOpen, onClose }: C
   const handleProceed = () => {
     if (!caregiver) return;
 
+    // If no patients, just delete the caregiver directly
+    if (!hasPatients) {
+      deleteAllMutation.mutate(caregiver.id);
+      return;
+    }
+
     if (deletionOption === "reassign") {
       if (!selectedNewCaregiver) {
         toast({
@@ -159,6 +165,15 @@ export default function CaregiverDeletionModal({ caregiver, isOpen, onClose }: C
 
   const hasPatients = (deletionInfo?.patientCount || 0) > 0;
   const isPending = reassignMutation.isPending || archiveMutation.isPending || deleteAllMutation.isPending;
+
+  // Reset deletion option when caregiver changes or when we detect no patients
+  useEffect(() => {
+    if (!hasPatients) {
+      setDeletionOption("delete_all");
+    } else {
+      setDeletionOption("reassign");
+    }
+  }, [hasPatients, caregiver?.id]);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -276,12 +291,12 @@ export default function CaregiverDeletionModal({ caregiver, isOpen, onClose }: C
             Cancel
           </Button>
           <Button
-            variant={deletionOption === "delete_all" ? "destructive" : deletionOption === "archive" ? "secondary" : "default"}
+            variant={!hasPatients || deletionOption === "delete_all" ? "destructive" : deletionOption === "archive" ? "secondary" : "default"}
             onClick={handleProceed}
             disabled={isPending}
             data-testid="button-confirm-deletion"
           >
-            {isPending ? "Processing..." : deletionOption === "reassign" ? "Reassign & Delete" : deletionOption === "archive" ? "Archive" : "Delete All"}
+            {isPending ? "Processing..." : !hasPatients ? "Delete Caregiver" : deletionOption === "reassign" ? "Reassign & Delete" : deletionOption === "archive" ? "Archive" : "Delete All"}
           </Button>
         </DialogFooter>
       </DialogContent>
