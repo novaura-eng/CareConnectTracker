@@ -43,6 +43,8 @@ export default function CaregiverPatients() {
 
   const { data: patients, isLoading } = useQuery<PatientWithSurveyStatus[]>({
     queryKey: ["/api/caregiver/patients/enhanced"],
+    refetchOnMount: "always",
+    staleTime: 0,
   });
 
   // Update patient mutation

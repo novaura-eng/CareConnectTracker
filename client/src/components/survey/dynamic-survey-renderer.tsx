@@ -260,11 +260,16 @@ export default function DynamicSurveyRenderer({
 
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       setIsSubmitted(true);
-      queryClient.invalidateQueries({ queryKey: ["/api/caregiver/surveys/pending"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/caregiver/checkins/pending"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/caregiver/checkins/completed"] });
+      
+      // Refetch all related queries immediately to ensure fresh data
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ["/api/caregiver/surveys/pending"] }),
+        queryClient.refetchQueries({ queryKey: ["/api/caregiver/checkins/pending"] }),
+        queryClient.refetchQueries({ queryKey: ["/api/caregiver/checkins/completed"] }),
+        queryClient.refetchQueries({ queryKey: ["/api/caregiver/patients/enhanced"] }),
+      ]);
       
       toast({
         title: "Survey Submitted",

@@ -49,10 +49,14 @@ export default function CaregiverCheckIns() {
 
   const { data: pendingCheckIns, isLoading: pendingLoading } = useQuery<CheckIn[]>({
     queryKey: ["/api/caregiver/checkins/pending"],
+    refetchOnMount: "always",
+    staleTime: 0,
   });
 
   const { data: completedSurveys, isLoading: completedLoading } = useQuery<CompletedSurvey[]>({
     queryKey: ["/api/caregiver/checkins/completed"],
+    refetchOnMount: "always",
+    staleTime: 0,
   });
 
 
