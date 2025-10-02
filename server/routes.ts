@@ -2703,7 +2703,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all check-in question templates
+  // Get all check-in question templates (admin)
   app.get("/api/admin/checkin-templates", requireAdmin, async (req, res) => {
     try {
       const { checkInQuestionTemplates } = await import("@shared/schema");
@@ -2718,6 +2718,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(templates);
     } catch (error) {
       console.error("Error fetching check-in templates:", error);
+      res.status(500).json({ message: "Failed to fetch templates" });
+    }
+  });
+
+  // Get enabled check-in question templates (for caregivers)
+  app.get("/api/checkin-templates/enabled", async (req, res) => {
+    try {
+      const { checkInQuestionTemplates } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { asc, eq } = await import("drizzle-orm");
+      
+      const templates = await db
+        .select()
+        .from(checkInQuestionTemplates)
+        .where(eq(checkInQuestionTemplates.isEnabled, true))
+        .orderBy(asc(checkInQuestionTemplates.order));
+      
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching enabled check-in templates:", error);
       res.status(500).json({ message: "Failed to fetch templates" });
     }
   });
