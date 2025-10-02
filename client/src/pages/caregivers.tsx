@@ -46,6 +46,7 @@ export default function Caregivers() {
   // Filter state
   const [stateFilter, setStateFilter] = useState<string>("ALL_STATES");
   const [searchText, setSearchText] = useState<string>("");
+  const [showArchived, setShowArchived] = useState<boolean>(false);
 
   const { data: caregivers, isLoading } = useQuery<Caregiver[]>({
     queryKey: ["/api/caregivers"],
@@ -56,11 +57,16 @@ export default function Caregivers() {
     enabled: !!selectedCaregiver && showPatients,
   });
 
-  // Filter caregivers based on state and search text
+  // Filter caregivers based on state, search text, and archive status
   const filteredCaregivers = React.useMemo(() => {
     if (!caregivers) return [];
     
     return caregivers.filter(caregiver => {
+      // Archive filter - exclude archived unless showArchived is true
+      if (!showArchived && !caregiver.isActive) {
+        return false;
+      }
+      
       // State filter (primary filter)
       if (stateFilter && stateFilter !== "ALL_STATES" && caregiver.state !== stateFilter) {
         return false;
@@ -80,7 +86,7 @@ export default function Caregivers() {
       
       return true;
     });
-  }, [caregivers, stateFilter, searchText]);
+  }, [caregivers, stateFilter, searchText, showArchived]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -210,6 +216,26 @@ export default function Caregivers() {
       toast({
         title: "Error",
         description: error?.message || "Failed to set password. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const unarchiveMutation = useMutation({
+    mutationFn: async (caregiverId: number) => {
+      return apiRequest("POST", `/api/caregivers/${caregiverId}/unarchive`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/caregivers"] });
+      toast({
+        title: "Caregiver Restored",
+        description: "Caregiver and patients have been successfully restored.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to restore caregiver. Please try again.",
         variant: "destructive",
       });
     },
@@ -390,7 +416,7 @@ export default function Caregivers() {
   // Reset to first page when filters change
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [stateFilter, searchText]);
+  }, [stateFilter, searchText, showArchived]);
 
   // Checkbox selection functions
   const toggleCaregiverSelection = (caregiverId: number) => {
@@ -677,12 +703,27 @@ export default function Caregivers() {
                           />
                         </div>
                         
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-center gap-2 pt-7">
+                            <Checkbox
+                              id="show-archived"
+                              checked={showArchived}
+                              onCheckedChange={(checked) => setShowArchived(checked as boolean)}
+                              data-testid="checkbox-show-archived"
+                            />
+                            <Label htmlFor="show-archived" className="text-sm font-medium cursor-pointer">
+                              Show Archived
+                            </Label>
+                          </div>
+                        </div>
+                        
                         <div className="flex items-end">
                           <Button
                             variant="outline"
                             onClick={() => {
                               setStateFilter("ALL_STATES");
                               setSearchText("");
+                              setShowArchived(false);
                               setCurrentPage(1);
                             }}
                             data-testid="button-clear-filters"
@@ -790,55 +831,70 @@ export default function Caregivers() {
                                   )}
                                 </TableCell>
                                 <TableCell>
-                                  <Badge variant={caregiver.isActive ? "secondary" : "outline"}>
-                                    {caregiver.isActive ? "Active" : "Inactive"}
+                                  <Badge variant={caregiver.isActive ? "secondary" : "outline"} className={!caregiver.isActive ? "bg-amber-100 text-amber-700 border-amber-300" : ""}>
+                                    {caregiver.isActive ? "Active" : "Archived"}
                                   </Badge>
                                 </TableCell>
                                 <TableCell>
                                   <div className="flex items-center space-x-2">
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm"
-                                      onClick={() => {
-                                        setSelectedCaregiver(caregiver);
-                                        setIsDialogOpen(true);
-                                      }}
-                                    >
-                                      Edit
-                                    </Button>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm"
-                                      onClick={() => {
-                                        setSelectedCaregiverForPassword(caregiver);
-                                        setPasswordDialogOpen(true);
-                                      }}
-                                      className="text-blue-600 hover:text-blue-700"
-                                    >
-                                      <Key className="h-4 w-4 mr-1" />
-                                      Set Password
-                                    </Button>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm"
-                                      onClick={() => {
-                                        setSelectedCaregiver(caregiver);
-                                        setShowPatients(true);
-                                      }}
-                                    >
-                                      View Patients
-                                    </Button>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm"
-                                      onClick={() => {
-                                        setCaregiverToDelete(caregiver);
-                                        setDeleteConfirmOpen(true);
-                                      }}
-                                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
+                                    {!caregiver.isActive ? (
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm"
+                                        onClick={() => unarchiveMutation.mutate(caregiver.id)}
+                                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                        data-testid={`button-unarchive-${caregiver.id}`}
+                                      >
+                                        <Archive className="h-4 w-4 mr-1" />
+                                        Restore
+                                      </Button>
+                                    ) : (
+                                      <>
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm"
+                                          onClick={() => {
+                                            setSelectedCaregiver(caregiver);
+                                            setIsDialogOpen(true);
+                                          }}
+                                        >
+                                          Edit
+                                        </Button>
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm"
+                                          onClick={() => {
+                                            setSelectedCaregiverForPassword(caregiver);
+                                            setPasswordDialogOpen(true);
+                                          }}
+                                          className="text-blue-600 hover:text-blue-700"
+                                        >
+                                          <Key className="h-4 w-4 mr-1" />
+                                          Set Password
+                                        </Button>
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm"
+                                          onClick={() => {
+                                            setSelectedCaregiver(caregiver);
+                                            setShowPatients(true);
+                                          }}
+                                        >
+                                          View Patients
+                                        </Button>
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm"
+                                          onClick={() => {
+                                            setCaregiverToDelete(caregiver);
+                                            setDeleteConfirmOpen(true);
+                                          }}
+                                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </>
+                                    )}
                                   </div>
                                 </TableCell>
                               </TableRow>
