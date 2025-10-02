@@ -197,6 +197,20 @@ export const surveyStateTags = pgTable("survey_state_tags", {
   unique("unique_survey_state").on(table.surveyId, table.stateCode),
 ]);
 
+// Check-In Question Templates for customizable weekly assessment questions
+export const checkInQuestionTemplates = pgTable("check_in_question_templates", {
+  id: serial("id").primaryKey(),
+  questionKey: text("question_key").notNull().unique(), // e.g., "hospitalVisits", "accidentsFalls"
+  questionText: text("question_text").notNull(), // The main question text
+  helpText: text("help_text"), // Optional description/help text
+  requiresDetails: boolean("requires_details").default(false).notNull(), // Whether it has a follow-up details field
+  detailsPrompt: text("details_prompt"), // Prompt for the details field
+  isEnabled: boolean("is_enabled").default(true).notNull(), // Can be toggled on/off
+  order: integer("order").notNull(), // Display order
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const caregiversRelations = relations(caregivers, ({ many }) => ({
   patients: many(patients),
@@ -413,6 +427,12 @@ export const insertSurveyScheduleSchema = createInsertSchema(surveySchedules).om
   endDate: z.string().optional().transform((str) => str ? new Date(str) : undefined),
 });
 
+export const insertCheckInQuestionTemplateSchema = createInsertSchema(checkInQuestionTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -465,6 +485,9 @@ export type InsertSurveyStateTag = z.infer<typeof insertSurveyStateTagSchema>;
 
 export type SurveySchedule = typeof surveySchedules.$inferSelect;
 export type InsertSurveySchedule = z.infer<typeof insertSurveyScheduleSchema>;
+
+export type CheckInQuestionTemplate = typeof checkInQuestionTemplates.$inferSelect;
+export type InsertCheckInQuestionTemplate = z.infer<typeof insertCheckInQuestionTemplateSchema>;
 
 // Schedule Type Constants
 export const SCHEDULE_TYPES = {
