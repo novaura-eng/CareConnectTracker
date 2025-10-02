@@ -1049,9 +1049,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // For weekly check-ins, handle the legacy survey response format
       if (req.body.hospitalVisits !== undefined) {
-        // Use the existing "Weekly Check In" survey (ID 9)
+        // Legacy check-ins don't use the dynamic survey system, so we skip surveyId
         const dataToValidate = {
-          surveyId: 9, // Use the existing "Weekly Check In" survey
+          surveyId: null, // Legacy check-ins don't have a survey
           checkInId,
           caregiverId: checkInDetails.checkIn.caregiverId,
           patientId: checkInDetails.checkIn.patientId,
@@ -1061,7 +1061,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         };
         
-        const validatedData = insertSurveyResponseSchema.parse(dataToValidate);
+        const validatedData = insertSurveyResponseSchema.partial({ surveyId: true }).parse(dataToValidate);
 
         // Create survey response
         const response = await storage.createSurveyResponse(validatedData);

@@ -166,7 +166,7 @@ export const surveyAssignments = pgTable("survey_assignments", {
 
 export const surveyResponses = pgTable("survey_responses", {
   id: serial("id").primaryKey(),
-  surveyId: integer("survey_id").references(() => surveys.id).notNull(),
+  surveyId: integer("survey_id").references(() => surveys.id), // Nullable for legacy check-ins
   assignmentId: integer("assignment_id").references(() => surveyAssignments.id),
   checkInId: integer("check_in_id").references(() => weeklyCheckIns.id),
   caregiverId: integer("caregiver_id").references(() => caregivers.id).notNull(),
