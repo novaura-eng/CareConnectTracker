@@ -93,6 +93,18 @@ function App() {
 
 function AuthWrapper() {
   const { isAuthenticated, isLoading } = useAuth();
+  
+  // Check if we're on a caregiver route
+  const isCaregiverRoute = window.location.pathname.startsWith('/caregiver');
+
+  // If on caregiver route, always show unauthenticated router (caregiver routes)
+  if (isCaregiverRoute) {
+    return (
+      <div className="min-h-screen">
+        <UnauthenticatedRouter />
+      </div>
+    );
+  }
 
   if (isLoading || !isAuthenticated) {
     return (
