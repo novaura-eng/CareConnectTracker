@@ -61,9 +61,9 @@ export default function CaregiverLogin() {
       queryClient.clear();
       toast({
         title: "Login Successful",
-        description: "Welcome back! Redirecting to your dashboard...",
+        description: "Welcome back! Redirecting to your check-ins...",
       });
-      setLocation("/caregiver/dashboard");
+      setLocation("/caregiver/checkins");
     },
     onError: (error: any) => {
       toast({
