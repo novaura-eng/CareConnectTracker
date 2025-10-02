@@ -2637,7 +2637,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Caregiver ID and message are required" });
       }
       
-      const caregiver = await storage.getCaregiverById(caregiverId);
+      const caregiver = await storage.getCaregiver(caregiverId);
       
       if (!caregiver) {
         return res.status(404).json({ message: "Caregiver not found" });
@@ -2673,7 +2673,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       for (const caregiverId of caregiverIds) {
         try {
-          const caregiver = await storage.getCaregiverById(caregiverId);
+          const caregiver = await storage.getCaregiver(caregiverId);
           
           if (!caregiver) {
             errors.push(`Caregiver with ID ${caregiverId} not found`);
