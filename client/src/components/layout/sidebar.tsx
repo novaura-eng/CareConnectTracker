@@ -1,4 +1,4 @@
-import { HeartHandshake, ClipboardCheck, Users, User, BarChart3, Settings, LogOut, Menu, X, ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
+import { HeartHandshake, ClipboardCheck, Users, User, BarChart3, Settings, LogOut, Menu, X, ChevronLeft, ChevronRight, MessageSquare, FileText } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,6 +13,7 @@ const navigation = [
   { name: "Patients", href: "/patients", icon: User },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Messages", href: "/messages", icon: MessageSquare },
+  { name: "Check-In Questions", href: "/checkin-templates", icon: FileText },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 

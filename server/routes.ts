@@ -2703,6 +2703,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all check-in question templates
+  app.get("/api/admin/checkin-templates", requireAdmin, async (req, res) => {
+    try {
+      const { checkInQuestionTemplates } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { asc } = await import("drizzle-orm");
+      
+      const templates = await db
+        .select()
+        .from(checkInQuestionTemplates)
+        .orderBy(asc(checkInQuestionTemplates.order));
+      
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching check-in templates:", error);
+      res.status(500).json({ message: "Failed to fetch templates" });
+    }
+  });
+
+  // Update a check-in question template
+  app.put("/api/admin/checkin-templates/:id", requireAdmin, async (req, res) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      const { questionText, helpText, detailsPrompt, isEnabled } = req.body;
+      
+      const { checkInQuestionTemplates } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      
+      const updated = await db
+        .update(checkInQuestionTemplates)
+        .set({
+          questionText,
+          helpText,
+          detailsPrompt,
+          isEnabled,
+          updatedAt: new Date(),
+        })
+        .where(eq(checkInQuestionTemplates.id, templateId))
+        .returning();
+      
+      if (updated.length === 0) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      res.json({
+        success: true,
+        template: updated[0],
+        message: "Template updated successfully"
+      });
+    } catch (error) {
+      console.error("Error updating check-in template:", error);
+      res.status(500).json({ message: "Failed to update template" });
+    }
+  });
+
+  // Reorder check-in question templates
+  app.put("/api/admin/checkin-templates/reorder", requireAdmin, async (req, res) => {
+    try {
+      const { templateIds } = req.body;
+      
+      if (!Array.isArray(templateIds)) {
+        return res.status(400).json({ message: "templateIds must be an array" });
+      }
+      
+      const { checkInQuestionTemplates } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      
+      // Update order for each template
+      for (let i = 0; i < templateIds.length; i++) {
+        await db
+          .update(checkInQuestionTemplates)
+          .set({ order: i + 1, updatedAt: new Date() })
+          .where(eq(checkInQuestionTemplates.id, templateIds[i]));
+      }
+      
+      res.json({
+        success: true,
+        message: "Templates reordered successfully"
+      });
+    } catch (error) {
+      console.error("Error reordering templates:", error);
+      res.status(500).json({ message: "Failed to reorder templates" });
+    }
+  });
+
   // Test email endpoint
   app.post("/api/admin/test-email", async (req, res) => {
     try {

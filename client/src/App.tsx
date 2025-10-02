@@ -16,6 +16,7 @@ import Patients from "@/pages/patients";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
 import Messages from "@/pages/messages";
+import CheckInTemplates from "@/pages/checkin-templates";
 import CaregiverStateSelection from "@/pages/caregiver-state-selection";
 import CaregiverLogin from "@/pages/caregiver-login";
 import CaregiverSetup from "@/pages/caregiver-setup";
@@ -70,6 +71,7 @@ function AuthenticatedRouter() {
       <Route path="/patients" component={Patients} />
       <Route path="/reports" component={Reports} />
       <Route path="/messages" component={Messages} />
+      <Route path="/checkin-templates" component={CheckInTemplates} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
