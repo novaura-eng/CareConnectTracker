@@ -26,9 +26,8 @@ export default function Sidebar() {
       <nav className="bg-white shadow-sm border-b border-slate-200 lg:hidden">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              <img src={logoPath} alt="Silver CareConnect Logo" className="h-6 w-6" />
-              <span className="text-base sm:text-lg font-semibold text-slate-900 truncate">Silver CareConnect</span>
+            <div className="flex items-center">
+              <img src={logoPath} alt="Silver CareConnect Logo" className="h-8 w-auto" />
             </div>
             <Button
               variant="ghost"
@@ -90,12 +89,11 @@ export default function Sidebar() {
           <div className="flex items-center h-16 px-3 border-b border-slate-200 relative">
             {!isCollapsed && (
               <div className="flex items-center flex-1 pr-10">
-                <img src={logoPath} alt="Silver CareConnect Logo" className="h-8 w-8 mr-3" />
-                <span className="text-lg font-bold text-slate-900">Silver CareConnect</span>
+                <img src={logoPath} alt="Silver CareConnect Logo" className="h-10 w-auto" />
               </div>
             )}
             {isCollapsed && (
-              <img src={logoPath} alt="Silver CareConnect Logo" className="h-8 w-8 mx-auto" />
+              <img src={logoPath} alt="Silver CareConnect Logo" className="h-8 w-8 mx-auto object-contain" />
             )}
             
             {/* Toggle button positioned in top right */}
