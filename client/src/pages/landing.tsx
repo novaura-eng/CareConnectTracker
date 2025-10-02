@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, Users, MessageSquare, BarChart3, Clock, HeartHandshake } from "lucide-react";
-import logoPath from "@assets/Asset 2_1759371151479.png";
+import logoPath from "@assets/image_1759371513429.png";
 
 export default function Landing() {
   return (
