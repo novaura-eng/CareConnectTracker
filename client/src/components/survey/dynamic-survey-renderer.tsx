@@ -220,15 +220,17 @@ export default function DynamicSurveyRenderer({
   };
 
   const submitSurveyMutation = useMutation({
-    mutationFn: async (formData: FormData) => {
-      console.log("Form submission - raw formData:", formData);
+    mutationFn: async () => {
+      // Get ALL form values including untouched defaults using form.getValues()
+      const allFormValues = form.getValues();
+      console.log("Form submission - all form values:", allFormValues);
       
       // Transform form data to answers object - include ALL questions
       const answers: Record<string, any> = {};
       
       survey.questions.forEach((question) => {
         const fieldName = `question_${question.id}`;
-        const value = formData[fieldName as keyof FormData];
+        const value = allFormValues[fieldName as keyof typeof allFormValues];
         
         // Always include the answer, even if empty
         // The backend validation will handle required field checks
@@ -312,8 +314,8 @@ export default function DynamicSurveyRenderer({
     },
   });
 
-  const handleSubmit = (data: FormData) => {
-    submitSurveyMutation.mutate(data);
+  const handleSubmit = () => {
+    submitSurveyMutation.mutate();
   };
 
   const renderQuestion = (question: SurveyQuestion, questionNumber?: number) => {
