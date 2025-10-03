@@ -122,6 +122,8 @@ Changelog:
 - October 01, 2025. Implemented bulk assessment creation feature with checkbox selection on Caregivers page
 - October 01, 2025. Configured automated scheduler to create weekly check-ins every Monday at 10 AM UTC for all caregivers and patients
 - October 03, 2025. Fixed survey submission to include all questions in payload, not just manually filled fields - ensures complete data capture in survey_responses and survey_response_items tables
+- October 03, 2025. Set all yes/no (boolean) questions to default to "No" (false) in check-in assessments
+- October 03, 2025. Fixed meta field storage in survey_responses table by extending insertSurveyResponseSchema to properly handle JSONB data
 ```
 
 ## User Preferences
