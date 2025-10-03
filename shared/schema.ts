@@ -402,6 +402,8 @@ export const insertSurveyAssignmentSchema = createInsertSchema(surveyAssignments
 export const insertSurveyResponseSchema = createInsertSchema(surveyResponses).omit({
   id: true,
   submittedAt: true,
+}).extend({
+  meta: z.any().optional(), // Allow any JSON structure for meta field
 });
 
 export const insertSurveyResponseItemSchema = createInsertSchema(surveyResponseItems).omit({
