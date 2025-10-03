@@ -221,19 +221,33 @@ export default function DynamicSurveyRenderer({
 
   const submitSurveyMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      // Transform form data to answers object
+      // Transform form data to answers object - include ALL questions
       const answers: Record<string, any> = {};
       
       survey.questions.forEach((question) => {
         const fieldName = `question_${question.id}`;
         const value = formData[fieldName as keyof FormData];
         
-        if (value !== undefined && value !== null && value !== "") {
+        // Always include the answer, even if empty
+        // The backend validation will handle required field checks
+        if (question.type === 'date' && value instanceof Date) {
           // Serialize Date objects to ISO strings for backend compatibility
-          if (question.type === 'date' && value instanceof Date) {
-            answers[question.id.toString()] = value.toISOString();
-          } else {
-            answers[question.id.toString()] = value;
+          answers[question.id.toString()] = value.toISOString();
+        } else if (value !== undefined) {
+          // Include the value as-is (can be empty string, false, null, empty array, etc.)
+          answers[question.id.toString()] = value;
+        } else {
+          // For undefined values, set appropriate null/empty default based on question type
+          switch (question.type) {
+            case 'multi_choice':
+              answers[question.id.toString()] = [];
+              break;
+            case 'text':
+            case 'single_choice':
+              answers[question.id.toString()] = "";
+              break;
+            default:
+              answers[question.id.toString()] = null;
           }
         }
       });

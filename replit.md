@@ -121,6 +121,7 @@ Changelog:
 - August 19, 2025. Added custom favicon with star logo design for professional branding in browser tabs
 - October 01, 2025. Implemented bulk assessment creation feature with checkbox selection on Caregivers page
 - October 01, 2025. Configured automated scheduler to create weekly check-ins every Monday at 10 AM UTC for all caregivers and patients
+- October 03, 2025. Fixed survey submission to include all questions in payload, not just manually filled fields - ensures complete data capture in survey_responses and survey_response_items tables
 ```
 
 ## User Preferences
