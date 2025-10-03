@@ -700,6 +700,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const assignmentId = parseInt(req.params.assignmentId);
       const { answers, meta } = req.body;
       
+      console.log("Survey submission received:", {
+        assignmentId,
+        answersKeys: Object.keys(answers || {}),
+        answersCount: Object.keys(answers || {}).length,
+        answers: answers,
+        meta: meta
+      });
+      
       if (!answers || typeof answers !== 'object') {
         return res.status(400).json({ message: "Answers are required and must be an object" });
       }

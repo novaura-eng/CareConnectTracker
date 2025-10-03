@@ -221,6 +221,8 @@ export default function DynamicSurveyRenderer({
 
   const submitSurveyMutation = useMutation({
     mutationFn: async (formData: FormData) => {
+      console.log("Form submission - raw formData:", formData);
+      
       // Transform form data to answers object - include ALL questions
       const answers: Record<string, any> = {};
       
@@ -254,6 +256,9 @@ export default function DynamicSurveyRenderer({
           }
         }
       });
+
+      console.log("Form submission - transformed answers:", answers);
+      console.log("Form submission - answers count:", Object.keys(answers).length);
 
       const response = await fetch(`/api/caregiver/surveys/${assignment.id}/submit`, {
         method: "POST",
