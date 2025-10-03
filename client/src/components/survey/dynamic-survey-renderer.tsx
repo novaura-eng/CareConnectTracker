@@ -184,7 +184,7 @@ export default function DynamicSurveyRenderer({
           defaults[`question_${question.id}`] = undefined;
           break;
         case 'boolean':
-          defaults[`question_${question.id}`] = undefined;
+          defaults[`question_${question.id}`] = false;
           break;
         case 'date':
           defaults[`question_${question.id}`] = undefined;
@@ -239,6 +239,9 @@ export default function DynamicSurveyRenderer({
         } else {
           // For undefined values, set appropriate null/empty default based on question type
           switch (question.type) {
+            case 'boolean':
+              answers[question.id.toString()] = false;
+              break;
             case 'multi_choice':
               answers[question.id.toString()] = [];
               break;
